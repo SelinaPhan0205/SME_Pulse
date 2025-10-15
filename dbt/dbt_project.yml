@@ -1,0 +1,47 @@
+# ===================================================
+# dbt Project Configuration
+# ===================================================
+# Mục đích: Định nghĩa cấu trúc và behavior của dbt project
+# ===================================================
+
+name: 'sme_pulse'
+version: '1.0.0'
+config-version: 2
+
+# Đường dẫn tới thư mục models
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+# Thư mục output
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# ===== CẤU HÌNH MODELS =====
+models:
+  sme_pulse:
+    # Models trong thư mục silver/ (staging layer)
+    silver:
+      +materialized: incremental      # Chỉ process dữ liệu mới/thay đổi
+      +schema: silver                 # Tạo trong schema 'silver'
+      +on_schema_change: "append_new_columns"  # Tự động thêm cột mới nếu schema thay đổi
+      +unique_key: event_id           # Key để identify records
+      +incremental_strategy: merge    # Strategy: merge (upsert)
+      
+    # Models trong thư mục gold/ (aggregation layer)
+    gold:
+      +materialized: table            # Full refresh mỗi lần chạy
+      +schema: gold                   # Tạo trong schema 'gold'
+
+# ===== VARIABLES =====
+vars:
+  # Watermark để track last processed timestamp
+  start_date: '2025-01-01'
+  
+  # Organization filter (multi-tenant)
+  default_org_id: 'org-sme-001'

@@ -1,0 +1,142 @@
+version: '3.8'
+
+services:
+  # ===== POSTGRES DATABASE =====
+  postgres:
+    image: postgres:15-alpine
+    container_name: sme-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sme-network
+
+  # ===== REDIS CACHE =====
+  redis:
+    image: redis:7-alpine
+    container_name: sme-redis
+    ports:
+      - "${REDIS_PORT}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sme-network
+
+  # ===== AIRFLOW (All-in-one: webserver + scheduler) =====
+  airflow:
+    image: apache/airflow:2.9.3-python3.11
+    container_name: sme-airflow
+    environment:
+      - AIRFLOW_UID=${AIRFLOW_UID}
+      - AIRFLOW__CORE__LOAD_EXAMPLES=${AIRFLOW__CORE__LOAD_EXAMPLES}
+      - AIRFLOW__CORE__EXECUTOR=${AIRFLOW__CORE__EXECUTOR}
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=${AIRFLOW__DATABASE__SQL_ALCHEMY_CONN}
+      - AIRFLOW__CORE__FERNET_KEY=ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg=
+      - AIRFLOW__WEBSERVER__SECRET_KEY=secret
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./dbt:/opt/dbt
+      - ./ops:/opt/ops
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      bash -c "
+        airflow db migrate &&
+        airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com || true &&
+        airflow scheduler & airflow webserver
+      "
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - sme-network
+
+  # ===== DBT RUNNER =====
+  dbt-runner:
+    image: ghcr.io/dbt-labs/dbt-postgres:1.8.2
+    container_name: sme-dbt
+    volumes:
+      - ./dbt:/usr/app
+    working_dir: /usr/app
+    environment:
+      - DBT_PROFILES_DIR=/usr/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - sme-network
+    profiles: ["no-start"]  # Không tự động start, chỉ chạy khi gọi
+
+  # ===== METABASE BI =====
+  metabase:
+    image: metabase/metabase:latest
+    container_name: sme-metabase
+    ports:
+      - "3000:3000"
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: ${POSTGRES_DB}
+      MB_DB_PORT: 5432
+      MB_DB_USER: ${POSTGRES_USER}
+      MB_DB_PASS: ${POSTGRES_PASSWORD}
+      MB_DB_HOST: postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - sme-network
+
+  # ===== MINIO (Optional - S3-compatible storage) =====
+  # Uncomment để kích hoạt MinIO
+  # minio:
+  #   image: minio/minio:latest
+  #   container_name: sme-minio
+  #   ports:
+  #     - "${MINIO_PORT}:9000"
+  #     - "${MINIO_CONSOLE_PORT}:9001"
+  #   environment:
+  #     MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+  #     MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+  #   volumes:
+  #     - minio-data:/data
+  #   command: server /data --console-address ":9001"
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+  #     interval: 30s
+  #     timeout: 20s
+  #     retries: 3
+  #   networks:
+  #     - sme-network
+
+volumes:
+  pgdata:
+    driver: local
+  # minio-data:
+  #   driver: local
+
+networks:
+  sme-network:
+    driver: bridge

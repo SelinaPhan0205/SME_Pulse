@@ -1,0 +1,48 @@
+# ===================================================
+# .gitignore for SME Pulse Project
+# ===================================================
+
+# Environment variables (chứa secrets)
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# dbt
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+dbt/.user.yml
+
+# Airflow
+airflow/logs/
+airflow/airflow.db
+airflow/airflow.cfg
+airflow/webserver_config.py
+airflow/*.pid
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Docker
+*.log
+
+# Metabase
+metabase.db/
+metabase.db.mv.db
+metabase.db.trace.db

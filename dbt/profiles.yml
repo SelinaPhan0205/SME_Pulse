@@ -1,0 +1,21 @@
+# ===================================================
+# dbt Profile Configuration
+# ===================================================
+# Mục đích: Định nghĩa cách dbt kết nối tới Postgres
+# ===================================================
+
+sme_pulse:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: postgres              # Tên service trong docker-compose
+      port: 5432
+      user: sme                   # Từ ${POSTGRES_USER} trong .env
+      password: supersecret       # Từ ${POSTGRES_PASSWORD} trong .env
+      dbname: sme                 # Từ ${POSTGRES_DB} trong .env
+      schema: silver              # Schema mặc định cho dbt
+      threads: 4                  # Số luồng chạy song song
+      keepalives_idle: 0
+      connect_timeout: 10
+      search_path: silver,public
