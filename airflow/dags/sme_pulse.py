@@ -11,6 +11,8 @@ Flow: Ingest → DQ → Transform Silver → DQ → Transform Gold → Cache Inv
 from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
+from airflow.providers.docker.operators.docker import DockerOperator
+from docker.types import Mount
 from datetime import datetime, timedelta
 import subprocess
 
@@ -55,30 +57,22 @@ with DAG(
     # ===== TASK 3: DBT RUN - SILVER LAYER =====
     dbt_silver = BashOperator(
         task_id='dbt_transform_silver',
-        bash_command='''
-        cd /opt/dbt && \
-        dbt deps && \
-        dbt run --select silver.stg_transactions --profiles-dir /opt/dbt
-        ''',
+        bash_command='cd /opt/dbt && export PATH="/home/airflow/.local/bin:$PATH" && export DBT_LOG_PATH=/tmp/dbt_logs && dbt run --select silver.stg_transactions --profiles-dir /opt/dbt --no-write-json --no-partial-parse',
+        env={'DBT_LOG_PATH': '/tmp/dbt_logs'},
     )
 
     # ===== TASK 4: DATA QUALITY CHECK - SILVER LAYER =====
     dq_silver = BashOperator(
         task_id='dq_check_silver',
-        bash_command='''
-        echo "🔍 Data Quality Check - Silver Layer"
-        echo "Kiểm tra: business rules, metric ranges"
-        cd /opt/dbt && dbt test --select silver.stg_transactions --profiles-dir /opt/dbt
-        ''',
+        bash_command='cd /opt/dbt && export PATH="/home/airflow/.local/bin:$PATH" && export DBT_LOG_PATH=/tmp/dbt_logs && dbt test --select silver.stg_transactions --profiles-dir /opt/dbt --no-write-json --no-partial-parse',
+        env={'DBT_LOG_PATH': '/tmp/dbt_logs'},
     )
 
     # ===== TASK 5: DBT RUN - GOLD LAYER =====
     dbt_gold = BashOperator(
         task_id='dbt_transform_gold',
-        bash_command='''
-        cd /opt/dbt && \
-        dbt run --select gold.fact_orders --profiles-dir /opt/dbt
-        ''',
+        bash_command='cd /opt/dbt && export PATH="/home/airflow/.local/bin:$PATH" && export DBT_LOG_PATH=/tmp/dbt_logs && dbt run --select gold.fact_orders --profiles-dir /opt/dbt --no-write-json --no-partial-parse',
+        env={'DBT_LOG_PATH': '/tmp/dbt_logs'},
     )
 
     # ===== TASK 6: INVALIDATE REDIS CACHE =====

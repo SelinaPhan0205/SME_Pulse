@@ -12,10 +12,10 @@ sme_pulse:
       host: postgres              # Tên service trong docker-compose
       port: 5432
       user: sme                   # Từ ${POSTGRES_USER} trong .env
-      password: supersecret       # Từ ${POSTGRES_PASSWORD} trong .env
-      dbname: sme                 # Từ ${POSTGRES_DB} trong .env
-      schema: silver              # Schema mặc định cho dbt
-      threads: 4                  # Số luồng chạy song song
+      password: sme123       # Từ ${POSTGRES_PASSWORD} trong .env
+      dbname: sme             # Từ ${POSTGRES_DB} trong .env
+      schema: public          # Schema mặc định cho dbt
+      threads: 4              # Số luồng chạy song song
       keepalives_idle: 0
       connect_timeout: 10
       search_path: silver,public

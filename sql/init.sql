@@ -7,6 +7,20 @@
 
 \echo '🚀 Bắt đầu khởi tạo database cho SME Pulse...'
 
+-- ===== TẠO DATABASE CHO HIVE METASTORE =====
+\echo '🗄️ Tạo database cho Hive Metastore...'
+
+-- Tạo database riêng cho Hive Metastore (nếu chưa có)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_database WHERE datname = 'metastore_db') THEN
+        PERFORM dblink_exec('dbname=' || current_database(), 'CREATE DATABASE metastore_db');
+    END IF;
+END
+$$;
+
+\echo '✅ Database metastore_db đã sẵn sàng!'
+
 -- ===== TẠO CÁC SCHEMAS =====
 \echo '📁 Tạo schemas: raw, silver, gold...'
 

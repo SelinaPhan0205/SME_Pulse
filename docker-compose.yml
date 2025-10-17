@@ -36,7 +36,9 @@ services:
 
   # ===== AIRFLOW (All-in-one: webserver + scheduler) =====
   airflow:
-    image: apache/airflow:2.9.3-python3.11
+    build:
+      context: .
+      dockerfile: ./airflow/Dockerfile
     container_name: sme-airflow
     environment:
       - AIRFLOW_UID=${AIRFLOW_UID}
@@ -51,19 +53,13 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
-      - ./dbt:/opt/dbt
       - ./ops:/opt/ops
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: >
-      bash -c "
-        airflow db migrate &&
-        airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com || true &&
-        airflow scheduler & airflow webserver
-      "
+    command: airflow standalone
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 30s
@@ -107,33 +103,97 @@ services:
     networks:
       - sme-network
 
-  # ===== MINIO (Optional - S3-compatible storage) =====
-  # Uncomment để kích hoạt MinIO
-  # minio:
-  #   image: minio/minio:latest
-  #   container_name: sme-minio
-  #   ports:
-  #     - "${MINIO_PORT}:9000"
-  #     - "${MINIO_CONSOLE_PORT}:9001"
-  #   environment:
-  #     MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-  #     MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-  #   volumes:
-  #     - minio-data:/data
-  #   command: server /data --console-address ":9001"
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-  #     interval: 30s
-  #     timeout: 20s
-  #     retries: 3
-  #   networks:
-  #     - sme-network
+  # ===== MINIO (S3-compatible Object Storage) =====
+  minio:
+    image: minio/minio:latest
+    container_name: sme-minio
+    ports:
+      - "${MINIO_PORT}:9000"
+      - "${MINIO_CONSOLE_PORT}:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - sme-network
+
+  # ===== HIVE METASTORE (Iceberg Catalog - traditional approach) =====
+  hive-metastore:
+    build:
+      context: ./hive-metastore
+      dockerfile: Dockerfile
+    container_name: sme-hive-metastore
+    ports:
+      - "9083:9083"
+    environment:
+      SERVICE_NAME: metastore
+      DB_DRIVER: postgres
+      AWS_ACCESS_KEY_ID: minio
+      AWS_SECRET_ACCESS_KEY: minio123
+      AWS_REGION: us-east-1
+      SERVICE_OPTS: >
+        -Djavax.jdo.option.ConnectionDriverName=org.postgresql.Driver
+        -Djavax.jdo.option.ConnectionURL=jdbc:postgresql://postgres:5432/metastore_db
+        -Djavax.jdo.option.ConnectionUserName=sme
+        -Djavax.jdo.option.ConnectionPassword=sme123
+        -Dhive.metastore.warehouse.dir=s3a://bronze/warehouse
+      HADOOP_OPTS: >
+        -Dfs.s3a.endpoint=http://minio:9000
+        -Dfs.s3a.access.key=minio
+        -Dfs.s3a.secret.key=minio123
+        -Dfs.s3a.path.style.access=true
+        -Dfs.s3a.connection.ssl.enabled=false
+        -Dfs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/9083 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - sme-network
+
+  # ===== TRINO (Distributed SQL Query Engine) =====
+  trino:
+    build:
+      context: ./trino
+      dockerfile: Dockerfile
+    container_name: sme-trino
+    ports:
+      - "8081:8080"  # Map to 8081 to avoid conflict with Airflow
+    volumes:
+      - ./trino/catalog:/etc/trino/catalog
+    depends_on:
+      minio:
+        condition: service_healthy
+      hive-metastore:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/info"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - sme-network
 
 volumes:
   pgdata:
     driver: local
-  # minio-data:
-  #   driver: local
+  minio-data:
+    driver: local
 
 networks:
   sme-network:

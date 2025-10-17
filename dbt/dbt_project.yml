@@ -8,6 +8,9 @@ name: 'sme_pulse'
 version: '1.0.0'
 config-version: 2
 
+# Profile name phải khớp với tên trong profiles.yml
+profile: 'sme_pulse'
+
 # Đường dẫn tới thư mục models
 model-paths: ["models"]
 analysis-paths: ["analyses"]
