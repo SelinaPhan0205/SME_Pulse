@@ -148,15 +148,7 @@ docker compose exec postgres psql -U sme -d sme -c "SELECT COUNT(*) FROM raw.tra
 docker compose exec postgres psql -U sme -d sme -c "SELECT event_id, payload_json->>'order_id' as order_id, (payload_json->>'total')::numeric as total FROM raw.transactions_raw;"
 ```
 
-**✅ Kết quả mong đợi:** Hiển thị 5 orders với total từ 168,000 đến 472,500 VND
-
----
-
-## BƯỚC 5: Test dbt
-
-### 5.1. Test connection tới database
-```powershell
-docker compose run --rm dbt-runner dbt debug --profiles-dir /usr/app
+**✅ Kết docker compose run --rm dbt-runner dbt debug --profiles-dir /usr/app
 ```
 
 **Giải thích:**
@@ -215,6 +207,14 @@ Done. PASS=1 WARN=0 ERROR=0 SKIP=0 TOTAL=1
 ### 6.3. Chạy tất cả models cùng lúc
 ```powershell
 docker compose run --rm dbt-runner dbt run --profiles-dir /usr/app
+ TOTAL=1
+```
+
+**Giải thích:** dbt đã tạo bảng `gold.fact_orders` tổng hợp doanh thu theo ngày
+
+### 6.3. Chạy tất cả models cùng lúc
+```powershell
+docker compose run --rm dbt-runner run --profiles-dir /usr/app
 ```
 
 **✅ Kết quả:** PASS=2 (stg_transactions + fact_orders)
@@ -352,38 +352,320 @@ docker compose exec redis redis-cli KEYS "v1:*"
 
 ---
 
-## BƯỚC 11: (Optional) Enable MinIO
+## BƯỚC 11: Setup Lakehouse Stack (MinIO + Hive Metastore + Trino)
 
-### 11.1. Uncomment MinIO trong docker-compose.yml
-Mở file `docker-compose.yml`, tìm đến phần MinIO và bỏ comment:
+> **Lưu ý:** Các bước này dành cho người mới pull code về và muốn chạy Lakehouse architecture
 
-```yaml
-# Trước:
-  # minio:
-  #   image: minio/minio:latest
-  #   ...
+### 11.1. Tổng quan
 
-# Sau:
-  minio:
-    image: minio/minio:latest
-    ...
+**Lakehouse Stack gồm 3 services chính:**
+- **MinIO:** Object storage (giống AWS S3) để lưu Parquet files
+- **Hive Metastore:** Catalog lưu metadata của Iceberg tables
+- **Trino:** Distributed SQL query engine
+
+**Yêu cầu:**
+- Docker Desktop đã cài đặt và đang chạy
+- File `.env` đã được tạo (xem BƯỚC 2)
+- PostgreSQL service đã chạy (xem BƯỚC 3)
+
+---
+
+### 11.2. Tạo database cho Hive Metastore
+
+**Hive Metastore cần 1 database riêng để lưu metadata:**
+
+```powershell
+# Đảm bảo Postgres đã chạy
+docker compose up -d postgres
+
+# Đợi Postgres healthy (~10 giây)
+Start-Sleep -Seconds 10
+
+# Tạo database metastore_db
+docker compose exec postgres psql -U sme -d postgres -c "CREATE DATABASE metastore_db;"
 ```
 
-### 11.2. Restart services
+**✅ Kết quả mong đợi:**
+```
+CREATE DATABASE
+```
+
+**Giải thích:** Hive Metastore sẽ dùng database này để lưu:
+- Schemas (bronze, silver, gold)
+- Table definitions
+- Partitions
+- Iceberg snapshots và metadata
+
+---
+
+### 11.3. Build custom Docker images
+
+**Cần build 2 custom images (có thêm AWS libraries cho MinIO):**
+
 ```powershell
+# Build Hive Metastore image (có PostgreSQL JDBC + AWS libs)
+docker compose build hive-metastore
+
+# Build Trino image (có AWS S3A libs)
+docker compose build trino
+```
+
+**⏱️ Thời gian:**
+- Hive Metastore: ~15-30 giây
+- Trino: ~2-3 phút (download 4 JAR files từ Maven)
+
+**✅ Kết quả mong đợi:**
+```
+[+] Building 25.0s (10/10) FINISHED
+ ✔ sme_pulse-hive-metastore  Built
+ ✔ sme_pulse-trino           Built
+```
+
+**Giải thích:**
+- **hive-metastore/Dockerfile:** Copy PostgreSQL JDBC driver + AWS libraries từ `/tools/lib/` sang `/common/lib/`
+- **trino/Dockerfile:** Download hadoop-aws và aws-sdk-bundle vào plugin folders
+
+---
+
+### 11.4. Start tất cả services
+
+```powershell
+# Start tất cả services (bao gồm MinIO, Hive, Trino)
+docker compose up -d
+
+# Đợi tất cả services healthy (~30-45 giây)
+Start-Sleep -Seconds 45
+
+# Kiểm tra status
+docker compose ps
+```
+
+**✅ Kết quả mong đợi:**
+```
+NAME                 STATUS
+sme-postgres         Up (healthy)
+sme-redis            Up (healthy)
+sme-minio            Up (healthy)
+sme-hive-metastore   Up (healthy)
+sme-trino            Up (healthy)
+sme-airflow          Up
+sme-metabase         Up
+```
+
+**❌ Nếu service không healthy:**
+```powershell
+# Xem logs của service có vấn đề
+docker compose logs hive-metastore --tail 50
+docker compose logs trino --tail 50
+```
+
+---
+
+### 11.5. Tạo MinIO buckets
+
+**Tạo 3 buckets cho Medallion Architecture:**
+
+```powershell
+# Tạo alias cho MinIO client
+docker exec sme-minio mc alias set myminio http://localhost:9000 minio minio123
+
+# Tạo bronze bucket (raw data layer)
+docker exec sme-minio mc mb myminio/bronze
+
+# Tạo silver bucket (cleaned data layer)
+docker exec sme-minio mc mb myminio/silver
+
+# Tạo gold bucket (aggregated metrics layer)
+docker exec sme-minio mc mb myminio/gold
+
+# Verify buckets đã tạo
+docker exec sme-minio mc ls myminio/
+```
+
+**✅ Kết quả mong đợi:**
+```
+Bucket created successfully `myminio/bronze`.
+Bucket created successfully `myminio/silver`.
+Bucket created successfully `myminio/gold`.
+
+[2025-10-17 15:00:00 UTC]     0B bronze/
+[2025-10-17 15:00:00 UTC]     0B gold/
+[2025-10-17 15:00:00 UTC]     0B silver/
+```
+
+---
+
+### 11.6. Tạo Iceberg schemas trong Trino
+
+**Tạo 3 schemas tương ứng với 3 buckets:**
+
+```powershell
+# Tạo bronze schema
+docker exec -it sme-trino trino --execute "CREATE SCHEMA IF NOT EXISTS iceberg.bronze;"
+
+# Tạo silver schema
+docker exec -it sme-trino trino --execute "CREATE SCHEMA IF NOT EXISTS iceberg.silver;"
+
+# Tạo gold schema
+docker exec -it sme-trino trino --execute "CREATE SCHEMA IF NOT EXISTS iceberg.gold;"
+
+# Verify schemas đã tạo
+docker exec -it sme-trino trino --execute "SHOW SCHEMAS FROM iceberg;"
+```
+
+**✅ Kết quả mong đợi:**
+```
+CREATE SCHEMA
+CREATE SCHEMA
+CREATE SCHEMA
+
+"bronze"
+"default"
+"gold"
+"information_schema"
+"silver"
+"system"
+```
+
+---
+
+### 11.7. Verify Lakehouse stack hoạt động
+
+**Test các endpoints:**
+
+#### 11.7.1. Test Trino CLI
+```powershell
+# Show tất cả catalogs
+docker exec -it sme-trino trino --execute "SHOW CATALOGS;"
+```
+
+**✅ Kết quả mong đợi:**
+```
+"iceberg"   # Iceberg tables với ACID
+"minio"     # Hive tables
+"system"    # System catalog
+```
+
+#### 11.7.2. Test MinIO Console
+Mở browser: **http://localhost:9001**
+
+**Login:**
+- Username: `minio`
+- Password: `minio123`
+
+**✅ Có thể thấy:** 3 buckets (bronze, silver, gold) đã được tạo
+
+#### 11.7.3. Test Trino Web UI
+Mở browser: **http://localhost:8081**
+
+**✅ Có thể thấy:**
+- Trino coordinator đang chạy
+- Số workers và queries
+
+---
+
+### 11.8. Các file cấu hình quan trọng
+
+**Cần có sẵn các files này trong repo (đã được setup):**
+
+```
+hive-metastore/
+├── Dockerfile                    # Custom Hive image với JDBC + AWS libs
+├── core-site.xml                 # Hadoop S3A config cho MinIO
+└── postgresql-42.7.1.jar         # JDBC driver (1.08MB)
+
+trino/
+├── Dockerfile                    # Custom Trino image với AWS libs
+└── catalog/
+    ├── iceberg.properties        # Iceberg catalog config
+    └── minio.properties          # Hive catalog config
+
+docker-compose.yml                # Có cấu hình minio, hive-metastore, trino
+.env                              # Có MINIO_ROOT_USER, MINIO_ROOT_PASSWORD
+```
+
+**❌ Nếu thiếu file `postgresql-42.7.1.jar`:**
+```powershell
+# Download JDBC driver
+Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/org/postgresql/postgresql/42.7.1/postgresql-42.7.1.jar" -OutFile ".\hive-metastore\postgresql-42.7.1.jar"
+```
+
+---
+
+### 11.9. Troubleshooting
+
+#### Lỗi: "database metastore_db does not exist"
+**Nguyên nhân:** Chưa tạo database cho Hive Metastore
+
+**Giải pháp:**
+```powershell
+docker compose exec postgres psql -U sme -d postgres -c "CREATE DATABASE metastore_db;"
+docker compose restart hive-metastore
+```
+
+#### Lỗi: Trino không start được
+**Kiểm tra logs:**
+```powershell
+docker compose logs trino --tail 100
+```
+
+**Thường do:**
+- Thiếu AWS libraries → Cần rebuild: `docker compose build trino`
+- Hive Metastore chưa healthy → Đợi thêm 30 giây
+- Port 8081 đã bị dùng → Đổi port trong docker-compose.yml
+
+#### Lỗi: "No factory for location: s3a://bronze/..."
+**Nguyên nhân:** Thiếu AWS libraries trong Hive hoặc Trino
+
+**Giải pháp:**
+```powershell
+# Rebuild cả 2 services
+docker compose build hive-metastore trino
+docker compose up -d hive-metastore trino
+```
+
+#### Reset toàn bộ Lakehouse stack
+```powershell
+# Stop và xóa containers + volumes
+docker compose down -v
+
+# Xóa images cũ
+docker rmi sme_pulse-hive-metastore sme_pulse-trino
+
+# Setup lại từ đầu
+docker compose up -d postgres
+Start-Sleep -Seconds 10
+docker compose exec postgres psql -U sme -d postgres -c "CREATE DATABASE metastore_db;"
+docker compose build hive-metastore trino
 docker compose up -d
 ```
 
-### 11.3. Truy cập MinIO Console
-Mở browser: http://localhost:9001
+---
 
-- **Username:** `minio` (từ .env)
-- **Password:** `minio123` (từ .env)
+### 11.10. Kiến trúc đã hoàn thành
 
-### 11.4. Tạo bucket
-1. Click "Buckets" → "Create Bucket"
-2. **Bucket Name:** `sme-pulse`
-3. Click "Create Bucket"
+```
+┌────────────────────────────────────────────────────┐
+│                 QUERY LAYER                         │
+│  ┌──────────────────────────────────────────┐      │
+│  │  Trino (port 8081)                       │      │
+│  │  Catalogs: iceberg, minio, system        │      │
+│  └──────────────────┬───────────────────────┘      │
+├────────────────────┼────────────────────────────────┤
+│              CATALOG LAYER                          │
+│  ┌──────────────────┴───────────────────────┐      │
+│  │  Hive Metastore (port 9083)              │      │
+│  │  Backend: PostgreSQL (metastore_db)      │      │
+│  └──────────────────┬───────────────────────┘      │
+├────────────────────┼────────────────────────────────┤
+│              STORAGE LAYER                          │
+│  ┌──────────────────┴───────────────────────┐      │
+│  │  MinIO (API: 9000, Console: 9001)        │      │
+│  │  Buckets: bronze, silver, gold           │      │
+│  │  Format: Parquet + Snappy compression    │      │
+│  └──────────────────────────────────────────┘      │
+└────────────────────────────────────────────────────┘
+```
 
 ---
 
