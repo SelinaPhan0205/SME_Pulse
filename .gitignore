@@ -46,3 +46,7 @@ airflow/*.pid
 metabase.db/
 metabase.db.mv.db
 metabase.db.trace.db
+
+# Exclude large JAR files (download during build)
+hive-metastore/*.jar
+trino/*.jar
