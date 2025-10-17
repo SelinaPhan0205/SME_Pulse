@@ -584,9 +584,11 @@ docker-compose.yml                # Có cấu hình minio, hive-metastore, trino
 .env                              # Có MINIO_ROOT_USER, MINIO_ROOT_PASSWORD
 ```
 
+> **Lưu ý:** File JAR lớn (aws-java-sdk-bundle) không có trong Git vì vượt quá 100MB. Dockerfile sẽ tự động download khi build.
+
 **❌ Nếu thiếu file `postgresql-42.7.1.jar`:**
 ```powershell
-# Download JDBC driver
+# Download PostgreSQL JDBC driver
 Invoke-WebRequest -Uri "https://repo1.maven.org/maven2/org/postgresql/postgresql/42.7.1/postgresql-42.7.1.jar" -OutFile ".\hive-metastore\postgresql-42.7.1.jar"
 ```
 
