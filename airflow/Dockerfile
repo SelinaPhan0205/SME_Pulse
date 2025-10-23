@@ -4,10 +4,12 @@
 FROM apache/airflow:2.9.3-python3.11
 
 USER airflow
-# Cài dbt-core và dbt-postgres với airflow user
+# Cài dbt-core và dbt-trino cho Lakehouse stack
 RUN pip install --no-cache-dir \
     dbt-core \
-    dbt-postgres==1.8.2
+    dbt-trino==1.8.1 \
+    boto3 \
+    pyarrow
 
 # Copy dbt project vào image từ build context (parent directory)
 COPY --chown=airflow:airflow ./dbt /opt/dbt

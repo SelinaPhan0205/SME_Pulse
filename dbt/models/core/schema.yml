@@ -1,0 +1,47 @@
+version: 2
+
+models:
+  - name: fact_sales
+    description: "Core fact table - aggregated sales metrics by (month, site, product)"
+    columns:
+      - name: month_key
+        description: "Month key from staging (or 'unknown')"
+        tests:
+          - not_null
+
+      - name: site
+        description: "Site/Location identifier"
+        tests:
+          - not_null
+
+      - name: product_id
+        description: "Product identifier"
+        tests:
+          - not_null
+
+      - name: qty_sold
+        description: "Total quantity sold (aggregated)"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: revenue
+        description: "Total revenue (aggregated)"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: cost
+        description: "Total cost (aggregated)"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: gross_profit
+        description: "Total gross profit (aggregated)"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0

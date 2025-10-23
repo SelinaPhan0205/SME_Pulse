@@ -17,7 +17,8 @@
 {{
   config(
     materialized='table',
-    schema='gold'
+    schema='gold',
+    format='PARQUET'
   )
 }}
 
@@ -61,8 +62,8 @@ WITH daily_orders AS (
 )
 
 SELECT
-  -- Generate surrogate key (MD5 hash)
-  MD5(order_date::text || org_id || payment_method) AS fact_key,
+  -- Generate surrogate key (MD5 hash) - Trino syntax
+  TO_HEX(MD5(TO_UTF8(CAST(order_date AS VARCHAR) || org_id || payment_method))) AS fact_key,
   
   -- Dimensions
   order_date,
@@ -85,12 +86,12 @@ SELECT
   max_order_value,
   
   -- Calculated KPIs
-  ROUND((total_discount::numeric / NULLIF(gross_revenue, 0)) * 100, 2) AS discount_rate_pct,
-  ROUND((net_revenue::numeric / NULLIF(total_orders, 0)), 0) AS revenue_per_order,
+  ROUND((CAST(total_discount AS DOUBLE) / NULLIF(gross_revenue, 0)) * 100, 2) AS discount_rate_pct,
+  ROUND((CAST(net_revenue AS DOUBLE) / NULLIF(total_orders, 0)), 0) AS revenue_per_order,
   
   -- Audit
   last_updated_at,
-  NOW() AS dbt_created_at
+  CURRENT_TIMESTAMP AS dbt_created_at
 
 FROM daily_orders
 

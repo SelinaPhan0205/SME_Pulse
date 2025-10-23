@@ -1,0 +1,90 @@
+version: 2
+
+models:
+  - name: stg_sales_snapshot
+    description: "Staging layer - cleaned, standardized sales transactions from Bronze"
+    columns:
+      - name: month_raw
+        description: "Month from source (VARCHAR)"
+        tests:
+          - not_null
+
+      - name: week_raw
+        description: "Week from source (VARCHAR)"
+        tests:
+          - not_null
+
+      - name: site
+        description: "Site/Location identifier"
+        tests:
+          - not_null
+
+      - name: branch_id
+        description: "Branch identifier"
+        tests:
+          - not_null
+
+      - name: channel_id
+        description: "Channel identifier (online, offline, etc.)"
+        tests:
+          - not_null
+
+      - name: distribution_channel
+        description: "Distribution channel name"
+        tests:
+          - not_null
+
+      - name: distribution_channel_code
+        description: "Distribution channel code"
+        tests:
+          - not_null
+
+      - name: customer_id
+        description: "Customer identifier"
+        tests:
+          - not_null
+
+      - name: product_id
+        description: "Product identifier"
+        tests:
+          - not_null
+
+      - name: sold_quantity
+        description: "Quantity sold (must be >= 0)"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: cost_price
+        description: "Cost price per unit (must be >= 0)"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: net_price
+        description: "Net selling price per unit (must be >= 0)"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: total_cost
+        description: "Total cost (cost_price * sold_quantity)"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: total_revenue
+        description: "Total revenue (net_price * sold_quantity)"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+      - name: gross_profit
+        description: "Gross profit ((net_price - cost_price) * sold_quantity)"
+        tests:
+          - not_null

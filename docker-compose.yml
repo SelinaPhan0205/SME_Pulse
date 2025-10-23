@@ -54,6 +54,8 @@ services:
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
       - ./ops:/opt/ops
+      - ./data:/opt/data
+      - ./dbt:/opt/dbt
     depends_on:
       postgres:
         condition: service_healthy
@@ -97,8 +99,12 @@ services:
       MB_DB_USER: ${POSTGRES_USER}
       MB_DB_PASS: ${POSTGRES_PASSWORD}
       MB_DB_HOST: postgres
+    volumes:
+      - ./metabase/trino-jdbc-435.jar:/plugins/trino-jdbc-435.jar
     depends_on:
       postgres:
+        condition: service_healthy
+      trino:
         condition: service_healthy
     networks:
       - sme-network

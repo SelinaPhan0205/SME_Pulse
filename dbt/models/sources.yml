@@ -1,0 +1,36 @@
+version: 2
+
+sources:
+  - name: bronze
+    database: minio
+    schema: default
+    description: "Bronze layer - Raw external Hive tables"
+    
+    tables:
+      - name: sales_snapshot_raw
+        description: "Raw sales snapshot data from Kaggle (831K rows)"
+        columns:
+          - name: month
+            description: "Month identifier (YYYYMM format)"
+          - name: week
+            description: "Week identifier"
+          - name: site
+            description: "Site/Store identifier"
+          - name: branch_id
+            description: "Branch ID"
+          - name: channel_id
+            description: "Channel ID (Online/Offline)"
+          - name: distribution_channel
+            description: "Distribution channel name"
+          - name: distribution_channel_code
+            description: "Distribution channel code"
+          - name: sold_quantity
+            description: "Quantity sold"
+          - name: cost_price
+            description: "Cost price"
+          - name: net_price
+            description: "Net selling price"
+          - name: customer_id
+            description: "Customer ID"
+          - name: product_id
+            description: "Product ID"

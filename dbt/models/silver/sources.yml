@@ -7,12 +7,13 @@
 version: 2
 
 sources:
-  - name: raw
-    description: "Dữ liệu thô từ các nguồn (POS, Payments, Shipments, Bank)"
-    schema: raw
+  - name: bronze
+    description: "Dữ liệu thô từ các nguồn (POS, Payments, Shipments, Bank) lưu trong Iceberg Bronze layer"
+    database: iceberg
+    schema: bronze
     tables:
       - name: transactions_raw
-        description: "Bảng lưu tất cả transactions từ các nguồn"
+        description: "Bảng lưu tất cả transactions từ các nguồn (Iceberg Parquet format)"
         columns:
           - name: event_id
             description: "ID duy nhất của event"
@@ -21,7 +22,7 @@ sources:
               - not_null
           
           - name: payload_json
-            description: "Dữ liệu JSON gốc"
+            description: "Dữ liệu JSON gốc (stored as VARCHAR in Trino)"
             tests:
               - not_null
           

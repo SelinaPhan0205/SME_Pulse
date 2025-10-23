@@ -37,54 +37,53 @@ with DAG(
     tags=['sme-pulse', 'elt', 'production'],
 ) as dag:
 
-    # ===== TASK 1: INGEST DATA =====
-    # Placeholder: Trong thực tế sẽ gọi Airbyte API hoặc custom ingestion script
+    # ===== TASK 1: INGEST DATA TO BRONZE (ICEBERG) =====
     ingest_pos = BashOperator(
         task_id='ingest_pos_data',
-        bash_command='echo "📥 Ingest POS data from API/CSV - Placeholder"',
+        bash_command='python /opt/ops/ingest_bronze.py --source pos --num-orders 50',
     )
 
-    # ===== TASK 2: DATA QUALITY CHECK - BRONZE LAYER =====
+    # ===== TASK 2: DATA QUALITY CHECK - BRONZE LAYER (TRINO) =====
     dq_bronze = BashOperator(
         task_id='dq_check_bronze',
         bash_command='''
-        echo "🔍 Data Quality Check - Bronze Layer"
-        echo "Kiểm tra: null values, schema validation, duplicate event_id"
-        echo "Tool: Great Expectations (placeholder)"
+        echo "🔍 Data Quality Check - Bronze Layer (Iceberg)"
+        docker exec sme-trino trino --execute "SELECT COUNT(*), COUNT(DISTINCT event_id), COUNT(*) FILTER (WHERE payload_json IS NULL) AS null_count FROM iceberg.bronze.transactions_raw WHERE domain = 'order';"
+        echo "✅ DQ check completed"
         ''',
     )
 
-    # ===== TASK 3: DBT RUN - SILVER LAYER =====
+    # ===== TASK 3: DBT RUN - SILVER LAYER (TRINO + ICEBERG) =====
     dbt_silver = BashOperator(
         task_id='dbt_transform_silver',
-        bash_command='cd /opt/dbt && export PATH="/home/airflow/.local/bin:$PATH" && export DBT_LOG_PATH=/tmp/dbt_logs && dbt run --select silver.stg_transactions --profiles-dir /opt/dbt --no-write-json --no-partial-parse',
-        env={'DBT_LOG_PATH': '/tmp/dbt_logs'},
+        bash_command='cd /opt/dbt && dbt run --select stg_transactions --profiles-dir /opt/dbt --target dev',
     )
 
-    # ===== TASK 4: DATA QUALITY CHECK - SILVER LAYER =====
+    # ===== TASK 4: DATA QUALITY CHECK - SILVER LAYER (DBT TESTS) =====
     dq_silver = BashOperator(
         task_id='dq_check_silver',
-        bash_command='cd /opt/dbt && export PATH="/home/airflow/.local/bin:$PATH" && export DBT_LOG_PATH=/tmp/dbt_logs && dbt test --select silver.stg_transactions --profiles-dir /opt/dbt --no-write-json --no-partial-parse',
-        env={'DBT_LOG_PATH': '/tmp/dbt_logs'},
+        bash_command='cd /opt/dbt && dbt test --select stg_transactions --profiles-dir /opt/dbt --target dev',
     )
 
-    # ===== TASK 5: DBT RUN - GOLD LAYER =====
+    # ===== TASK 5: DBT RUN - GOLD LAYER (TRINO + ICEBERG) =====
     dbt_gold = BashOperator(
         task_id='dbt_transform_gold',
-        bash_command='cd /opt/dbt && export PATH="/home/airflow/.local/bin:$PATH" && export DBT_LOG_PATH=/tmp/dbt_logs && dbt run --select gold.fact_orders --profiles-dir /opt/dbt --no-write-json --no-partial-parse',
-        env={'DBT_LOG_PATH': '/tmp/dbt_logs'},
+        bash_command='cd /opt/dbt && dbt run --select fact_orders --profiles-dir /opt/dbt --target dev',
     )
 
     # ===== TASK 6: INVALIDATE REDIS CACHE =====
     def invalidate_cache():
         """
-        Invalidate Redis cache sau khi gold tables được refresh
-        Trong production: xóa keys matching pattern v1:*:cash:*
+        Invalidate Redis cache sau khi gold tables được refresh trong Lakehouse
+        Pattern: v1:*:cash:*, v1:*:revenue:*
         """
-        print("🗑️  Invalidating Redis cache...")
-        print("Pattern: v1:*:cash:overview, v1:*:revenue:*")
-        # Placeholder - trong thực tế sẽ gọi Redis
-        # redis_client.delete('v1:org-sme-001:cash:overview')
+        print("🗑️  Invalidating Redis cache after Lakehouse refresh...")
+        print("Pattern: v1:*:cash:overview, v1:*:revenue:*, v1:*:orders:*")
+        print("Gold tables updated: iceberg.gold.fact_orders")
+        # Placeholder - trong thực tế sẽ gọi Redis FLUSHDB hoặc DELETE pattern
+        # import redis
+        # r = redis.Redis(host='redis', port=6379, db=0)
+        # for key in r.scan_iter("v1:*:cash:*"): r.delete(key)
         print("✅ Cache invalidated successfully!")
 
     invalidate = PythonOperator(
@@ -92,13 +91,16 @@ with DAG(
         python_callable=invalidate_cache,
     )
 
-    # ===== TASK 7: NOTIFY SUCCESS =====
+    # ===== TASK 7: NOTIFY SUCCESS + VERIFY DATA =====
     notify_success = BashOperator(
         task_id='notify_success',
         bash_command='''
-        echo "✨ Pipeline hoàn thành!"
-        echo "Thời gian: $(date)"
-        echo "Có thể kiểm tra kết quả tại Metabase: http://localhost:3000"
+        echo "✨ Lakehouse Pipeline hoàn thành!"
+        echo "📊 Verify Gold data:"
+        docker exec sme-trino trino --execute "SELECT COUNT(*) AS total_fact_rows, SUM(total_revenue) AS total_revenue FROM iceberg.gold.fact_orders;"
+        echo "🔗 Metabase Dashboard: http://localhost:3000"
+        echo "🔗 Trino UI: http://localhost:8081"
+        echo "🔗 MinIO Console: http://localhost:9001"
         ''',
     )
 
