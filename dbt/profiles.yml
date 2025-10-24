@@ -9,11 +9,13 @@ sme_pulse:
   outputs:
     dev:
       type: trino
-      method: none              # No authentication for local dev
-      user: airflow             # Required field for Trino adapter
-      host: trino               # Tên service trong docker-compose
-      port: 8080                # Trino HTTP port (không phải 8081)
-      database: iceberg         # Catalog name trong Trino
-      schema: silver            # Default schema cho dbt models
-      threads: 4                # Số luồng chạy song song
-      http_scheme: http         # HTTP không SSL cho local dev
+      method: none
+      user: admin
+      host: trino
+      port: 8080
+      catalog: silver
+      schema: core
+      threads: 4
+      http_scheme: http
+      session_properties:
+        query_max_run_time: "5m"
