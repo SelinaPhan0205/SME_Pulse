@@ -8,7 +8,7 @@
 }}
 
 WITH base AS (
-  SELECT * FROM {{ ref('stg_sales_snapshot') }}
+  SELECT * FROM {{ ref('stg_transactions') }}
 )
 SELECT
     COALESCE(month_raw, 'unknown')       AS month_key,

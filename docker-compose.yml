@@ -70,21 +70,29 @@ services:
     networks:
       - sme-network
 
-  # ===== DBT RUNNER =====
-  dbt-runner:
-    image: ghcr.io/dbt-labs/dbt-postgres:1.8.2
+  # ===== DBT RUNNER (dbt-trino for Trino integration) =====
+  dbt:
+    build:
+      context: ./dbt
+      dockerfile: Dockerfile
     container_name: sme-dbt
+    working_dir: /workspace/dbt
     volumes:
-      - ./dbt:/usr/app
-    working_dir: /usr/app
+      - ./dbt:/workspace/dbt
+      - ./sql:/workspace/sql
     environment:
-      - DBT_PROFILES_DIR=/usr/app
+      - DBT_PROFILES_DIR=/workspace/dbt
+      - TRINO_HOST=trino
+      - TRINO_PORT=8080
+      - TRINO_USER=admin
+      - TRINO_CATALOG=silver
+      - TRINO_SCHEMA=core
     depends_on:
-      postgres:
+      trino:
         condition: service_healthy
     networks:
       - sme-network
-    profiles: ["no-start"]  # Không tự động start, chỉ chạy khi gọi
+    profiles: ["no-start"]  # Không tự động start, chỉ chạy khi gọi explicit
 
   # ===== METABASE BI =====
   metabase:

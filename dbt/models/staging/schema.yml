@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: stg_sales_snapshot
+  - name: stg_transactions
     description: "Staging layer - cleaned, standardized sales transactions from Bronze"
     columns:
       - name: month_raw

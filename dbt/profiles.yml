@@ -1,7 +1,7 @@
 # ===================================================
 # dbt Profile Configuration
 # ===================================================
-# Mục đích: Định nghĩa cách dbt kết nối tới Postgres
+# Mục đích: Định nghĩa cách dbt kết nối tới Trino
 # ===================================================
 
 sme_pulse:
@@ -10,10 +10,10 @@ sme_pulse:
     dev:
       type: trino
       method: none              # No authentication for local dev
-      user: airflow             # Required field for Trino adapter
+      user: admin               # Trino default user
       host: trino               # Tên service trong docker-compose
-      port: 8080                # Trino HTTP port (không phải 8081)
-      database: iceberg         # Catalog name trong Trino
-      schema: silver            # Default schema cho dbt models
+      port: 8080                # Trino HTTP port
+      catalog: silver           # Catalog cho dbt models (silver catalog)
+      schema: core              # Schema cho dbt models
       threads: 4                # Số luồng chạy song song
       http_scheme: http         # HTTP không SSL cho local dev
