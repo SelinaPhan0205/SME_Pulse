@@ -32,21 +32,18 @@ models:
     staging:
       +materialized: table
       +schema: core                   # silver.core schema
-      +table_format: iceberg
       +database: silver               # silver catalog
       
     # Core models (không có models nữa)
     core:
       +materialized: table
       +schema: core                   # silver.core schema
-      +table_format: iceberg
       +database: silver               # silver catalog
       
     # Gold models (trong thư mục gold/)
     gold:
       +materialized: table
-      +schema: mart                   # gold.mart schema
-      +table_format: iceberg
+      +schema: marts                   # gold.mart schema
       +database: gold                 # gold catalog
 
 # ===== VARIABLES =====

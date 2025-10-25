@@ -2,7 +2,6 @@
   config(
     materialized='table',
     schema='core',
-    table_format='iceberg',
     location='s3a://silver/warehouse/core/stg_transactions'
   )
 }}

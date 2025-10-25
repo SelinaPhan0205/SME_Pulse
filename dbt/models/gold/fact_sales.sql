@@ -1,10 +1,9 @@
 {{
   config(
     materialized='table',
-    schema='mart',
-    table_format='iceberg',
+    schema='marts',
     partitioned_by=['month_key'],
-    location='s3a://gold/warehouse/mart/fact_sales'
+    location='s3a://gold/warehouse/marts/fact_sales'
   )
 }}
 
