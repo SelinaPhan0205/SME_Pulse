@@ -2,7 +2,8 @@
   config(
     materialized='table',
     schema='core',
-    table_format='iceberg'
+    table_format='iceberg',
+    location='s3a://silver/warehouse/core/stg_transactions'
   )
 }}
 
@@ -11,7 +12,8 @@
   ====================================
   Purpose: Read raw Parquet from Bronze external table, clean and conform
   Source: minio.default.sales_snapshot_raw (External Hive table)
-  Target: silver.core.stg_sales_snapshot (Iceberg table)
+  Target: silver.core.stg_transactions (Iceberg table)
+  Location: s3a://silver/warehouse/core/stg_transactions
   
   Data Quality Handling:
   - Convert negative values to 0 (Option 2: COALESCE approach)

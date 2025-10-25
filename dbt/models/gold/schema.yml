@@ -2,10 +2,10 @@ version: 2
 
 models:
   - name: fact_sales
-    description: "Core fact table - aggregated sales metrics by (month, site, product)"
+    description: "Gold layer - Fact table for BI dashboards. Aggregated by (month, site, product)"
     columns:
       - name: month_key
-        description: "Month key from staging (or 'unknown')"
+        description: "Month identifier"
         tests:
           - not_null
 

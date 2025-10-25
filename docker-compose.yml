@@ -82,11 +82,6 @@ services:
       - ./sql:/workspace/sql
     environment:
       - DBT_PROFILES_DIR=/workspace/dbt
-      - TRINO_HOST=trino
-      - TRINO_PORT=8080
-      - TRINO_USER=admin
-      - TRINO_CATALOG=silver
-      - TRINO_SCHEMA=core
     depends_on:
       trino:
         condition: service_healthy
@@ -157,7 +152,7 @@ services:
         -Djavax.jdo.option.ConnectionURL=jdbc:postgresql://postgres:5432/metastore_db
         -Djavax.jdo.option.ConnectionUserName=sme
         -Djavax.jdo.option.ConnectionPassword=sme123
-        -Dhive.metastore.warehouse.dir=s3a://bronze/warehouse
+        -Dhive.metastore.warehouse.dir=s3a://warehouse
       HADOOP_OPTS: >
         -Dfs.s3a.endpoint=http://minio:9000
         -Dfs.s3a.access.key=minio

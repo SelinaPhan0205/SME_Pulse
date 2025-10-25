@@ -1,11 +1,21 @@
 {{
   config(
     materialized='table',
-    schema='core',
+    schema='mart',
     table_format='iceberg',
-    partitioned_by=['month_key']
+    partitioned_by=['month_key'],
+    location='s3a://gold/warehouse/mart/fact_sales'
   )
 }}
+
+-- =====================================================
+-- Gold Layer: Fact Sales (Aggregated for BI)
+-- =====================================================
+-- Purpose: Aggregated fact table for business intelligence
+-- Source: silver.core.stg_transactions (cleaned staging)
+-- Target: gold.mart.fact_sales (Iceberg table)
+-- Granularity: month × site × product
+-- Location: s3a://gold/warehouse/mart/
 
 WITH base AS (
   SELECT * FROM {{ ref('stg_transactions') }}

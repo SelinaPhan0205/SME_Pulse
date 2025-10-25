@@ -14,6 +14,6 @@ sme_pulse:
       host: trino               # Tên service trong docker-compose
       port: 8080                # Trino HTTP port
       catalog: silver           # Catalog cho dbt models (silver catalog)
-      schema: core              # Schema cho dbt models
+      schema: core              # Schema mặc định (silver.core)
       threads: 4                # Số luồng chạy song song
       http_scheme: http         # HTTP không SSL cho local dev

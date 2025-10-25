@@ -28,18 +28,26 @@ clean-targets:
 # ===== CẤU HÌNH MODELS =====
 models:
   sme_pulse:
-    # Models trong thư mục silver/ (staging layer)
-    silver:
-      +materialized: incremental      # Chỉ process dữ liệu mới/thay đổi
-      +schema: silver                 # Tạo trong schema 'silver'
-      +on_schema_change: "append_new_columns"  # Tự động thêm cột mới nếu schema thay đổi
-      +unique_key: event_id           # Key để identify records
-      +incremental_strategy: merge    # Strategy: merge (upsert)
+    # Staging models (trong thư mục staging/)
+    staging:
+      +materialized: table
+      +schema: core                   # silver.core schema
+      +table_format: iceberg
+      +database: silver               # silver catalog
       
-    # Models trong thư mục gold/ (aggregation layer)
+    # Core models (không có models nữa)
+    core:
+      +materialized: table
+      +schema: core                   # silver.core schema
+      +table_format: iceberg
+      +database: silver               # silver catalog
+      
+    # Gold models (trong thư mục gold/)
     gold:
-      +materialized: table            # Full refresh mỗi lần chạy
-      +schema: gold                   # Tạo trong schema 'gold'
+      +materialized: table
+      +schema: mart                   # gold.mart schema
+      +table_format: iceberg
+      +database: gold                 # gold catalog
 
 # ===== VARIABLES =====
 vars:
