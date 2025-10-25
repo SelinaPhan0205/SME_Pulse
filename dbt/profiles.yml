@@ -10,7 +10,7 @@ sme_pulse:
     dev:
       type: trino
       method: none              # No authentication for local dev
-      user: admin               # Trino default user
+      user: tuan_dev            # Tên user kết nối
       host: trino               # Tên service trong docker-compose
       port: 8080                # Trino HTTP port
       catalog: silver           # Catalog cho dbt models (silver catalog)
