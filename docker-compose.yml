@@ -1,24 +1,24 @@
 services:
   # ===== POSTGRES DATABASE =====
-  # postgres:
-  #   image: postgres:15-alpine
-  #   container_name: sme-postgres
-  #   environment:
-  #     POSTGRES_USER: ${POSTGRES_USER}
-  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-  #     POSTGRES_DB: ${POSTGRES_DB}
-  #   ports:
-  #     - "${POSTGRES_PORT}:5432"
-  #   volumes:
-  #     - pgdata:/var/lib/postgresql/data
-  #     - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-  #   networks:
-  #     - sme-network
+  postgres:
+    image: postgres:15-alpine
+    container_name: sme-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sme-network
 
   # ===== REDIS CACHE =====
   redis:
@@ -61,7 +61,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: airflow standalone
+    command: >
+      bash -c "airflow db upgrade && \
+       airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password yourpassword && \
+       airflow webserver"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 30s
@@ -88,6 +91,7 @@ services:
     networks:
       - sme-network
     profiles: ["no-start"]  # Không tự động start, chỉ chạy khi gọi explicit
+    command: tail -f /dev/null  # Giữ container chạy
 
   # ===== METABASE BI =====
   metabase:
@@ -144,19 +148,18 @@ services:
     environment:
       SERVICE_NAME: metastore
       DB_DRIVER: postgres
-      AWS_ACCESS_KEY_ID: minio
-      AWS_SECRET_ACCESS_KEY: minio123
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin123
       AWS_REGION: us-east-1
       SERVICE_OPTS: >
         -Djavax.jdo.option.ConnectionDriverName=org.postgresql.Driver
-        -Djavax.jdo.option.ConnectionURL=jdbc:postgresql://postgres:5432/metastore_db
+        -Djavax.jdo.option.ConnectionURL=jdbc:postgresql://postgres:5432/sme
         -Djavax.jdo.option.ConnectionUserName=sme
         -Djavax.jdo.option.ConnectionPassword=sme123
-        -Dhive.metastore.warehouse.dir=s3a://warehouse
       HADOOP_OPTS: >
         -Dfs.s3a.endpoint=http://minio:9000
-        -Dfs.s3a.access.key=minio
-        -Dfs.s3a.secret.key=minio123
+        -Dfs.s3a.access.key=minioadmin
+        -Dfs.s3a.secret.key=minioadmin123
         -Dfs.s3a.path.style.access=true
         -Dfs.s3a.connection.ssl.enabled=false
         -Dfs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem
