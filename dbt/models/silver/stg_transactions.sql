@@ -1,8 +1,8 @@
 {{
   config(
     materialized='table',
-    schema='core',
-    location='s3a://silver/warehouse/core/stg_transactions'
+    schema='silver',
+    location='s3a://lakehouse/silver/warehouse/core/stg_transactions'
   )
 }}
 

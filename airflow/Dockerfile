@@ -9,6 +9,7 @@ RUN pip install --no-cache-dir \
     dbt-core \
     dbt-trino==1.8.1 \
     boto3 \
+    openpyxl \
     pyarrow
 
 # Copy dbt project vào image từ build context (parent directory)

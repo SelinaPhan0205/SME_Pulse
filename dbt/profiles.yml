@@ -13,7 +13,7 @@ sme_pulse:
       user: tuan_dev            # Tên user kết nối
       host: trino               # Tên service trong docker-compose
       port: 8080                # Trino HTTP port
-      catalog: silver           # Catalog cho dbt models (silver catalog)
-      schema: core              # Schema mặc định (silver.core)
+      database: sme_lake         # Unified Medallion catalog
+      schema: bronze            # Default schema for raw sources (bronze)
       threads: 4                # Số luồng chạy song song
       http_scheme: http         # HTTP không SSL cho local dev

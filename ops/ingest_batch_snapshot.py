@@ -22,11 +22,10 @@ class BatchIngestionMinIO:
     
     def __init__(self):
         """Initialize MinIO connection"""
-        self.endpoint = os.getenv('MINIO_ENDPOINT', 'http://localhost:9000')
+        self.endpoint = os.getenv('MINIO_ENDPOINT', 'http://minio:9000')
         self.access_key = os.getenv('MINIO_ACCESS_KEY', 'minioadmin')
         self.secret_key = os.getenv('MINIO_SECRET_KEY', 'minioadmin123')
-        self.bronze_bucket = os.getenv('BRONZE_BUCKET', 'bronze')
-        
+        self.bronze_bucket = os.getenv('BRONZE_BUCKET', 'sme-lake')
         self.s3_client = None
     
     def connect(self):
@@ -77,7 +76,7 @@ class BatchIngestionMinIO:
         print(f"🚀 BATCH INGESTION TO MINIO")
         print(f"{'='*70}")
         print(f"📂 Source Folder: {folder_path}")
-        print(f"🎯 Target Bucket: s3://{self.bronze_bucket}/raw/{prefix}/")
+        print(f"🎯 Target Bucket: s3://{self.bronze_bucket}/bronze/raw/{prefix}/")
         print(f"🔀 Mode: {'COMBINED (Single Parquet)' if combine else 'INDIVIDUAL (Separate files)'}")
         print(f"{'='*70}\n")
         
@@ -125,7 +124,7 @@ class BatchIngestionMinIO:
         print(f"\n📦 Uploading original Excel files to /source/{prefix}/ ...")
         for i, file_path in enumerate(excel_files, 1):
             filename = os.path.basename(file_path)
-            key = f"source/{prefix}/{filename}"
+            key = f"bronze/source/{prefix}/{filename}"
             try:
                 with open(file_path, "rb") as f:
                     self.s3_client.put_object(
@@ -183,7 +182,7 @@ class BatchIngestionMinIO:
         # Generate S3 key (Bronze/raw/..)
         date_partition = datetime.now().strftime('%Y-%m-%d')
         timestamp = datetime.now().strftime('%H%M%S')
-        s3_key = f"raw/{prefix}/batch_{timestamp}.parquet"
+        s3_key = f"bronze/raw/{prefix}/batch_{timestamp}.parquet"
         print(f"\n💾 Uploading to MinIO...")
         print(f"   🔑 Key: {s3_key}")
         # Upload
@@ -250,7 +249,7 @@ class BatchIngestionMinIO:
                 # Generate S3 key (Bronze/raw/..)
                 date_partition = datetime.now().strftime('%Y-%m-%d')
                 file_base = os.path.splitext(filename)[0]
-                s3_key = f"raw/{prefix}/date={date_partition}/{file_base}.parquet"
+                s3_key = f"bronze/raw/{prefix}/date={date_partition}/{file_base}.parquet"
                 # Upload
                 self.s3_client.put_object(
                     Bucket=self.bronze_bucket,
@@ -285,12 +284,17 @@ class BatchIngestionMinIO:
         return success_count > 0
 
 
-def main():
-    """Main execution"""
-    parser = argparse.ArgumentParser(
-        description='Batch ingest Sales Snapshot Excel files to MinIO',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
+def main(folder=None, prefix='sales_snapshot', combine=True, upload_originals=False, **kwargs):
+    """
+    Main execution for both CLI and Python import.
+    Args can be passed as function arguments (for Airflow) or via CLI (argparse).
+    """
+    # Cho phép truyền folder, prefix, combine, upload_originals từ cả Airflow (kwargs) lẫn CLI
+    if folder is None and len(sys.argv) > 1:
+        parser = argparse.ArgumentParser(
+            description='Batch ingest Sales Snapshot Excel files to MinIO',
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            epilog="""
 Examples:
   # Combine all files into one Parquet (RECOMMENDED for analytics)
   python ingest_sales_snapshot_batch.py --folder ../data/raw/Sales_snapshot_data --prefix sales_snapshot
@@ -299,35 +303,29 @@ Examples:
   python ingest_sales_snapshot_batch.py --folder ../data/raw/Sales_snapshot_data --prefix sales_snapshot --individual
   
 Environment Variables:
-  MINIO_ENDPOINT      MinIO endpoint (default: http://localhost:9000)
+    MINIO_ENDPOINT      MinIO endpoint (default: http://minio:9000)
   MINIO_ACCESS_KEY    Access key (default: minioadmin)
   MINIO_SECRET_KEY    Secret key (default: minioadmin123)
   BRONZE_BUCKET       Bronze bucket name (default: bronze)
-        """
-    )
-    
-    parser.add_argument(
-        '--folder',
-        required=True,
-        help='Path to folder containing Excel files'
-    )
-    parser.add_argument(
-        '--prefix',
-        default='sales_snapshot',
-        help='S3 prefix/folder name (default: sales_snapshot)'
-    )
-    parser.add_argument(
-        '--individual',
-        action='store_true',
-        help='Upload files individually instead of combining (default: combine into one Parquet)'
-    )
-    parser.add_argument(
-        '--upload-originals',
-        action='store_true',
-        help='Also upload original Excel files to Bronze/raw/'
-    )
-    args = parser.parse_args()
-    
+            """
+        )
+        parser.add_argument('--folder', required=True, help='Path to folder containing Excel files')
+        parser.add_argument('--prefix', default='sales_snapshot', help='S3 prefix/folder name (default: sales_snapshot)')
+        parser.add_argument('--individual', action='store_true', help='Upload files individually instead of combining (default: combine into one Parquet)')
+        parser.add_argument('--upload-originals', action='store_true', help='Also upload original Excel files to Bronze/raw/')
+        args = parser.parse_args()
+        folder = args.folder
+        prefix = args.prefix
+        combine = not args.individual
+        upload_originals = args.upload_originals
+    elif folder is None:
+        raise ValueError("Missing required argument: folder")
+    # Nếu Airflow truyền combine hoặc upload_originals qua kwargs, ưu tiên kwargs
+    if 'combine' in kwargs:
+        combine = kwargs['combine']
+    if 'upload_originals' in kwargs:
+        upload_originals = kwargs['upload_originals']
+
     # Print banner
     print("""
     ╔═══════════════════════════════════════════════════════╗
@@ -335,22 +333,25 @@ Environment Variables:
     ║     SME Pulse Lakehouse (Bronze Layer)               ║
     ╚═══════════════════════════════════════════════════════╝
     """)
-    
+
     # Initialize ingestion
     ingestion = BatchIngestionMinIO()
-    ingestion.upload_originals = args.upload_originals
+    ingestion.upload_originals = upload_originals
     # Connect to MinIO
     if not ingestion.connect():
-        sys.exit(1)
+        if __name__ == "__main__":
+            sys.exit(1)
+        return False
     # Batch ingest
     success = ingestion.ingest_batch(
-        folder_path=args.folder,
-        prefix=args.prefix,
-        combine=not args.individual,  # Default is True (combine)
-        upload_originals=args.upload_originals
+        folder_path=folder,
+        prefix=prefix,
+        combine=combine,
+        upload_originals=upload_originals
     )
-    # Exit
-    sys.exit(0 if success else 1)
+    if __name__ == "__main__":
+        sys.exit(0 if success else 1)
+    return success
 
 
 if __name__ == "__main__":

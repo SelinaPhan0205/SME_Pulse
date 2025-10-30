@@ -34,17 +34,82 @@ services:
     networks:
       - sme-network
 
-  # ===== AIRFLOW (All-in-one: webserver + scheduler) =====
-  airflow:
+  # ===== MINIO (S3-compatible Object Storage) =====
+  minio:
+    image: minio/minio:latest
+    container_name: sme-minio
+    ports:
+      - "9000:9000"      # API
+      - "9001:9001"      # Console
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://minio:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sme-network
+
+  # ===== AIRFLOW SCHEDULER =====
+  airflow-scheduler:
     build:
       context: .
       dockerfile: ./airflow/Dockerfile
-    container_name: sme-airflow
+    container_name: sme-airflow-scheduler
     environment:
-      - AIRFLOW_UID=${AIRFLOW_UID}
-      - AIRFLOW__CORE__LOAD_EXAMPLES=${AIRFLOW__CORE__LOAD_EXAMPLES}
-      - AIRFLOW__CORE__EXECUTOR=${AIRFLOW__CORE__EXECUTOR}
-      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=${AIRFLOW__DATABASE__SQL_ALCHEMY_CONN}
+      - AIRFLOW_UID=${AIRFLOW_UID:-50000}
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://sme:sme123@postgres:5432/sme
+      - AIRFLOW__CORE__FERNET_KEY=ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg=
+      - AIRFLOW__WEBSERVER__SECRET_KEY=secret
+      # Performance tuning
+      - AIRFLOW__CORE__PARALLELISM=32
+      - AIRFLOW__CORE__MAX_ACTIVE_RUNS_PER_DAG=16
+      - AIRFLOW__CORE__DAG_CONCURRENCY=16
+      - AIRFLOW__SCHEDULER__SCHEDULER_HEARTBEAT_SEC=5
+      - AIRFLOW__LOGGING__LOGGING_LEVEL=INFO
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/entrypoint.sh:/entrypoint.sh
+      - ./ops:/opt/ops
+      - ./data:/opt/data
+      - ./dbt:/opt/dbt
+      - airflow-db-init:/opt/airflow
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    entrypoint: ["/entrypoint.sh"]
+    command: ["scheduler"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname $(hostname)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - sme-network
+
+  # ===== AIRFLOW WEBSERVER =====
+  airflow-webserver:
+    build:
+      context: .
+      dockerfile: ./airflow/Dockerfile
+    container_name: sme-airflow-webserver
+    environment:
+      - AIRFLOW_UID=${AIRFLOW_UID:-50000}
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://sme:sme123@postgres:5432/sme
       - AIRFLOW__CORE__FERNET_KEY=ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg=
       - AIRFLOW__WEBSERVER__SECRET_KEY=secret
     ports:
@@ -53,18 +118,21 @@ services:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/entrypoint.sh:/entrypoint.sh
       - ./ops:/opt/ops
       - ./data:/opt/data
       - ./dbt:/opt/dbt
+      - airflow-db-init:/opt/airflow
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: >
-      bash -c "airflow db upgrade && \
-       airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password yourpassword && \
-       airflow webserver"
+      airflow-scheduler:
+        condition: service_started
+    entrypoint: ["/entrypoint.sh"]
+    command: ["webserver"]
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 30s
@@ -73,71 +141,7 @@ services:
     networks:
       - sme-network
 
-  # ===== DBT RUNNER (dbt-trino for Trino integration) =====
-  dbt:
-    build:
-      context: ./dbt
-      dockerfile: Dockerfile
-    container_name: sme-dbt
-    working_dir: /workspace/dbt
-    volumes:
-      - ./dbt:/workspace/dbt
-      - ./sql:/workspace/sql
-    environment:
-      - DBT_PROFILES_DIR=/workspace/dbt
-    depends_on:
-      trino:
-        condition: service_healthy
-    networks:
-      - sme-network
-    profiles: ["no-start"]  # Không tự động start, chỉ chạy khi gọi explicit
-    command: tail -f /dev/null  # Giữ container chạy
-
-  # ===== METABASE BI =====
-  metabase:
-    image: metabase/metabase:latest
-    container_name: sme-metabase
-    ports:
-      - "3000:3000"
-    environment:
-      MB_DB_TYPE: postgres
-      MB_DB_DBNAME: ${POSTGRES_DB}
-      MB_DB_PORT: 5432
-      MB_DB_USER: ${POSTGRES_USER}
-      MB_DB_PASS: ${POSTGRES_PASSWORD}
-      MB_DB_HOST: postgres
-    volumes:
-      - ./metabase/trino-jdbc-435.jar:/plugins/trino-jdbc-435.jar
-    depends_on:
-      postgres:
-        condition: service_healthy
-      trino:
-        condition: service_healthy
-    networks:
-      - sme-network
-
-  # ===== MINIO (S3-compatible Object Storage) =====
-  minio:
-    image: minio/minio:latest
-    container_name: sme-minio
-    ports:
-      - "${MINIO_PORT}:9000"
-      - "${MINIO_CONSOLE_PORT}:9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-    volumes:
-      - minio-data:/data
-    command: server /data --console-address ":9001"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
-    networks:
-      - sme-network
-
-  # ===== HIVE METASTORE (Iceberg Catalog - traditional approach) =====
+  # ===== HIVE METASTORE (Iceberg Catalog) =====
   hive-metastore:
     build:
       context: ./hive-metastore
@@ -145,6 +149,9 @@ services:
     container_name: sme-hive-metastore
     ports:
       - "9083:9083"
+    volumes:
+      - ./hive-metastore/hive-site.xml:/opt/hive/conf/hive-site.xml:ro
+      - ./hive-metastore/core-site.xml:/opt/hadoop/etc/hadoop/core-site.xml:ro
     environment:
       SERVICE_NAME: metastore
       DB_DRIVER: postgres
@@ -205,6 +212,8 @@ volumes:
   pgdata:
     driver: local
   minio-data:
+    driver: local
+  airflow-db-init:
     driver: local
 
 networks:

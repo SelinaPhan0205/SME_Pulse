@@ -8,11 +8,11 @@
     </property>
     <property>
         <name>fs.s3a.access.key</name>
-        <value>minio</value>
+        <value>minioadmin</value>
     </property>
     <property>
         <name>fs.s3a.secret.key</name>
-        <value>minio123</value>
+        <value>minioadmin123</value>
     </property>
     <property>
         <name>fs.s3a.path.style.access</name>

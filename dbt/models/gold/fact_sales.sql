@@ -1,9 +1,9 @@
 {{
   config(
     materialized='table',
-    schema='marts',
+    schema='gold',
     partitioned_by=['month_key'],
-    location='s3a://gold/warehouse/marts/fact_sales'
+    location='s3a://lakehouse/gold/warehouse/marts/fact_sales'
   )
 }}
 
