@@ -34,3 +34,58 @@ sources:
             description: "Customer ID"
           - name: product_id
             description: "Product ID"
+      
+      # ===== External Data Sources =====
+      - name: world_bank_indicators_raw
+        description: "World Bank macro indicators (lạm phát, GDP, thất nghiệp...)"
+        columns:
+          - name: indicator_code
+            description: "Mã chỉ số World Bank (ví dụ: FP.CPI.TOTL.ZG)"
+            tests:
+              - not_null
+          - name: country_code
+            description: "Mã quốc gia ISO (VNM = Vietnam)"
+          - name: year
+            description: "Năm của chỉ số"
+          - name: value
+            description: "Giá trị chỉ số (NULL nếu không có dữ liệu)"
+          - name: ingested_at
+            description: "Timestamp khi ingest data"
+      
+      - name: vietnam_provinces_raw
+        description: "Danh sách tỉnh/thành Việt Nam (63 tỉnh)"
+        columns:
+          - name: province_code
+            description: "Mã tỉnh/thành (số)"
+            tests:
+              - unique
+              - not_null
+          - name: province_name
+            description: "Tên tỉnh/thành phố"
+            tests:
+              - not_null
+          - name: phone_code
+            description: "Mã điện thoại vùng"
+          - name: division_type
+            description: "Loại đơn vị hành chính (Tỉnh/Thành phố)"
+          - name: codename
+            description: "Tên không dấu (slug)"
+      
+      - name: vietnam_districts_raw
+        description: "Danh sách quận/huyện Việt Nam (691 quận/huyện)"
+        columns:
+          - name: district_code
+            description: "Mã quận/huyện"
+            tests:
+              - unique
+              - not_null
+          - name: district_name
+            description: "Tên quận/huyện"
+          - name: province_code
+            description: "Mã tỉnh/thành cha"
+            tests:
+              - not_null
+          - name: division_type
+            description: "Loại đơn vị (Quận/Huyện/Thị xã/Thành phố)"
+          - name: codename
+            description: "Tên không dấu (slug)"

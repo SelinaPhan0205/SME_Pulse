@@ -10,7 +10,10 @@ RUN pip install --no-cache-dir \
     dbt-trino==1.8.1 \
     boto3 \
     openpyxl \
-    pyarrow
+    pyarrow \
+    minio \
+    requests \
+    pandas
 
 # Copy dbt project vào image từ build context (parent directory)
 COPY --chown=airflow:airflow ./dbt /opt/dbt

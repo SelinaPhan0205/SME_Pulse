@@ -1,0 +1,96 @@
+version: 2
+
+models:
+  - name: dim_macro_indicators
+    description: "Gold: Time-series macro indicators cho Việt Nam (pivoted format với YoY changes)"
+    columns:
+      - name: indicator_year
+        description: "Năm của chỉ số (PK)"
+        tests:
+          - unique
+          - not_null
+      
+      - name: inflation_rate_pct
+        description: "Lạm phát hàng năm (%)"
+      
+      - name: gdp_growth_pct
+        description: "Tăng trưởng GDP thực (%)"
+      
+      - name: unemployment_rate_pct
+        description: "Tỷ lệ thất nghiệp (%)"
+      
+      - name: inflation_yoy_change
+        description: "Thay đổi lạm phát so với năm trước (percentage points)"
+      
+      - name: gdp_yoy_change
+        description: "Thay đổi GDP growth so với năm trước (percentage points)"
+      
+      - name: unemployment_yoy_change
+        description: "Thay đổi thất nghiệp so với năm trước (percentage points)"
+      
+      - name: data_quality_score
+        description: "Điểm chất lượng data (0-3, 3 = đầy đủ)"
+        tests:
+          - not_null
+    
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "indicator_year >= 2015 AND indicator_year <= YEAR(CURRENT_DATE)"
+
+  - name: dim_location
+    description: "Gold: SCD Type 2 dimension cho địa điểm Việt Nam (district/province/region)"
+    columns:
+      - name: location_key
+        description: "Surrogate key (MD5 hash của district_code|district_name|province_code)"
+        tests:
+          - unique
+          - not_null
+      
+      - name: district_code
+        description: "Mã quận/huyện (natural key)"
+        tests:
+          - unique
+          - not_null
+      
+      - name: province_code
+        description: "Mã tỉnh/thành"
+        tests:
+          - not_null
+      
+      - name: district_name
+        description: "Tên quận/huyện"
+        tests:
+          - not_null
+      
+      - name: province_name
+        description: "Tên tỉnh/thành"
+        tests:
+          - not_null
+      
+      - name: region_name
+        description: "Vùng địa lý (Miền Bắc/Miền Trung/Miền Nam)"
+        tests:
+          - not_null
+      
+      - name: urban_rural_classification
+        description: "Phân loại thành thị/nông thôn"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Thành thị', 'Nông thôn', 'Khác']
+      
+      - name: is_major_city
+        description: "Flag cho 4 thành phố lớn (Hà Nội, Đà Nẵng, TP.HCM, Cần Thơ)"
+        tests:
+          - not_null
+      
+      - name: is_current
+        description: "SCD Type 2: record hiện tại?"
+        tests:
+          - not_null
+    
+    tests:
+      - dbt_utils.expression_is_true:
+          expression: "valid_from IS NOT NULL"
+      - dbt_utils.expression_is_true:
+          expression: "is_current = TRUE OR valid_to IS NOT NULL"

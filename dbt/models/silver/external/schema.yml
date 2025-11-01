@@ -1,0 +1,58 @@
+version: 2
+
+models:
+  - name: stg_wb_indicators
+    description: "Staging: World Bank macro indicators cho Việt Nam (lạm phát, GDP, thất nghiệp)"
+    columns:
+      - name: indicator_code
+        description: "Mã chỉ số World Bank"
+        tests:
+          - not_null
+      - name: indicator_year
+        description: "Năm của chỉ số"
+        tests:
+          - not_null
+      - name: indicator_value
+        description: "Giá trị chỉ số (có thể NULL nếu thiếu data)"
+      - name: indicator_name_vi
+        description: "Tên chỉ số tiếng Việt"
+      - name: indicator_name_en
+        description: "Tên chỉ số tiếng Anh"
+      - name: is_missing_data
+        description: "Flag đánh dấu dữ liệu bị thiếu"
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - indicator_code
+            - indicator_year
+
+  - name: stg_vietnam_locations
+    description: "Staging: Danh sách quận/huyện, tỉnh/thành, vùng địa lý Việt Nam"
+    columns:
+      - name: district_code
+        description: "Mã quận/huyện (unique)"
+        tests:
+          - unique
+          - not_null
+      - name: district_name
+        description: "Tên quận/huyện"
+        tests:
+          - not_null
+      - name: province_code
+        description: "Mã tỉnh/thành"
+        tests:
+          - not_null
+      - name: province_name
+        description: "Tên tỉnh/thành"
+        tests:
+          - not_null
+      - name: region_name
+        description: "Vùng địa lý (Miền Bắc/Miền Trung/Miền Nam)"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Miền Bắc', 'Miền Trung', 'Miền Nam', 'Không xác định']
+      - name: region_name_en
+        description: "Tên vùng tiếng Anh (North/Central/South)"
+        tests:
+          - not_null
