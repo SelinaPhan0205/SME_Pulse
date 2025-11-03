@@ -1,0 +1,10 @@
+source_shipping_method,carrier_code,carrier_name_vi,service_level
+Same-Day,GHN,Giao Hàng Nhanh,SameDay
+Express,GHTK,Giao Hàng Tiết Kiệm,Express
+Standard,VTP,Viettel Post,Standard
+Economy,VNP,Vnpost,Economy
+same-day,GHN,Giao Hàng Nhanh,SameDay
+express,GHTK,Giao Hàng Tiết Kiệm,Express
+standard,VTP,Viettel Post,Standard
+economy,VNP,Vnpost,Economy
+Same Day,GHN,Giao Hàng Nhanh,SameDay

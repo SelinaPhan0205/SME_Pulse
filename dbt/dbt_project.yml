@@ -25,6 +25,12 @@ clean-targets:
   - "target"
   - "dbt_packages"
 
+# ===== CẤU HÌNH SEEDS =====
+seeds:
+  sme_pulse:
+    +schema: silver                   # Seeds vào silver schema
+    +database: sme_lake               # Unified catalog
+
 # ===== CẤU HÌNH MODELS =====
 models:
   sme_pulse:

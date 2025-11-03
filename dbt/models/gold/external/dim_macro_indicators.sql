@@ -1,17 +1,10 @@
-{{
-    config(
-        materialized='incremental',
-        unique_key=['indicator_year', 'indicator_code'],
-        tags=['gold', 'dimensions', 'external']
-    )
-}}
+{{ config(
+    materialized = 'table',
+    tags = ['gold', 'dimension', 'external']
+) }}
 
 WITH source AS (
     SELECT * FROM {{ ref('stg_wb_indicators') }}
-    
-    {% if is_incremental() %}
-        WHERE transformed_at > (SELECT MAX(updated_at) FROM {{ this }})
-    {% endif %}
 ),
 
 -- Pivot indicators into columns for easier analysis

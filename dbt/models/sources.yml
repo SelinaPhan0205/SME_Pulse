@@ -89,3 +89,61 @@ sources:
             description: "Loại đơn vị (Quận/Huyện/Thị xã/Thành phố)"
           - name: codename
             description: "Tên không dấu (slug)"
+      
+      # ===== Transaction Data Sources =====
+      - name: bank_txn_raw
+        description: "Bank transactions from CSV (105,557 rows)"
+        columns:
+          - name: csvbase_row_id
+            description: "Original CSV row ID"
+          - name: booking_id
+            description: "Unique booking/transaction ID"
+            tests:
+              - unique
+              - not_null
+          - name: bookg_dt_tm_gmt
+            description: "Booking datetime (GMT timestamp)"
+          - name: acct_id
+            description: "Account ID"
+          - name: bookg_amt
+            description: "Booking amount"
+          - name: acct_ccy
+            description: "Account currency (USD, EUR, VND...)"
+          - name: bookg_cdt_dbt_ind
+            description: "Credit/Debit indicator"
+          - name: ctpty_nm
+            description: "Counterparty name"
+          - name: year_month
+            description: "Year-month partition (BIGINT)"
+          - name: ingested_at
+            description: "Ingestion timestamp"
+          - name: ingested_year_month
+            description: "Ingestion year-month (VARCHAR)"
+      
+      - name: shipments_payments_raw
+        description: "Shipments & Payments from CSV (302,010 rows)"
+        columns:
+          - name: Transaction_ID
+            description: "Transaction ID (DOUBLE type from CSV)"
+          - name: Customer_ID
+            description: "Customer ID"
+          - name: Name
+            description: "Customer name"
+          - name: Email
+            description: "Customer email"
+          - name: Date
+            description: "Transaction date (TIMESTAMP)"
+          - name: Amount
+            description: "Transaction amount"
+          - name: Payment_Method
+            description: "Payment method used"
+          - name: Order_Status
+            description: "Order status"
+          - name: Shipping_Method
+            description: "Shipping method"
+          - name: Product_Category
+            description: "Product category"
+          - name: ingested_at
+            description: "Ingestion timestamp"
+          - name: ingested_year_month
+            description: "Ingestion year-month"

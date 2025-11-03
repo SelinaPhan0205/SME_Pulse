@@ -1,0 +1,692 @@
+province_code,province_name,district_code,district_name,region
+1,Thành phố Hà Nội,1,Quận Ba Đình,Miền Bắc
+1,Thành phố Hà Nội,2,Quận Hoàn Kiếm,Miền Bắc
+1,Thành phố Hà Nội,3,Quận Tây Hồ,Miền Bắc
+1,Thành phố Hà Nội,4,Quận Long Biên,Miền Bắc
+1,Thành phố Hà Nội,5,Quận Cầu Giấy,Miền Bắc
+1,Thành phố Hà Nội,6,Quận Đống Đa,Miền Bắc
+1,Thành phố Hà Nội,7,Quận Hai Bà Trưng,Miền Bắc
+1,Thành phố Hà Nội,8,Quận Hoàng Mai,Miền Bắc
+1,Thành phố Hà Nội,9,Quận Thanh Xuân,Miền Bắc
+1,Thành phố Hà Nội,16,Huyện Sóc Sơn,Miền Bắc
+1,Thành phố Hà Nội,17,Huyện Đông Anh,Miền Bắc
+1,Thành phố Hà Nội,18,Huyện Gia Lâm,Miền Bắc
+1,Thành phố Hà Nội,19,Quận Nam Từ Liêm,Miền Bắc
+1,Thành phố Hà Nội,20,Huyện Thanh Trì,Miền Bắc
+1,Thành phố Hà Nội,21,Quận Bắc Từ Liêm,Miền Bắc
+1,Thành phố Hà Nội,250,Huyện Mê Linh,Miền Bắc
+1,Thành phố Hà Nội,268,Quận Hà Đông,Miền Bắc
+1,Thành phố Hà Nội,269,Thị xã Sơn Tây,Miền Bắc
+1,Thành phố Hà Nội,271,Huyện Ba Vì,Miền Bắc
+1,Thành phố Hà Nội,272,Huyện Phúc Thọ,Miền Bắc
+1,Thành phố Hà Nội,273,Huyện Đan Phượng,Miền Bắc
+1,Thành phố Hà Nội,274,Huyện Hoài Đức,Miền Bắc
+1,Thành phố Hà Nội,275,Huyện Quốc Oai,Miền Bắc
+1,Thành phố Hà Nội,276,Huyện Thạch Thất,Miền Bắc
+1,Thành phố Hà Nội,277,Huyện Chương Mỹ,Miền Bắc
+1,Thành phố Hà Nội,278,Huyện Thanh Oai,Miền Bắc
+1,Thành phố Hà Nội,279,Huyện Thường Tín,Miền Bắc
+1,Thành phố Hà Nội,280,Huyện Phú Xuyên,Miền Bắc
+1,Thành phố Hà Nội,281,Huyện Ứng Hòa,Miền Bắc
+1,Thành phố Hà Nội,282,Huyện Mỹ Đức,Miền Bắc
+2,Tỉnh Hà Giang,24,Thành phố Hà Giang,Miền Bắc
+2,Tỉnh Hà Giang,26,Huyện Đồng Văn,Miền Bắc
+2,Tỉnh Hà Giang,27,Huyện Mèo Vạc,Miền Bắc
+2,Tỉnh Hà Giang,28,Huyện Yên Minh,Miền Bắc
+2,Tỉnh Hà Giang,29,Huyện Quản Bạ,Miền Bắc
+2,Tỉnh Hà Giang,30,Huyện Vị Xuyên,Miền Bắc
+2,Tỉnh Hà Giang,31,Huyện Bắc Mê,Miền Bắc
+2,Tỉnh Hà Giang,32,Huyện Hoàng Su Phì,Miền Bắc
+2,Tỉnh Hà Giang,33,Huyện Xín Mần,Miền Bắc
+2,Tỉnh Hà Giang,34,Huyện Bắc Quang,Miền Bắc
+2,Tỉnh Hà Giang,35,Huyện Quang Bình,Miền Bắc
+4,Tỉnh Cao Bằng,40,Thành phố Cao Bằng,Miền Bắc
+4,Tỉnh Cao Bằng,42,Huyện Bảo Lâm,Miền Bắc
+4,Tỉnh Cao Bằng,43,Huyện Bảo Lạc,Miền Bắc
+4,Tỉnh Cao Bằng,45,Huyện Hà Quảng,Miền Bắc
+4,Tỉnh Cao Bằng,47,Huyện Trùng Khánh,Miền Bắc
+4,Tỉnh Cao Bằng,48,Huyện Hạ Lang,Miền Bắc
+4,Tỉnh Cao Bằng,49,Huyện Quảng Hòa,Miền Bắc
+4,Tỉnh Cao Bằng,51,Huyện Hoà An,Miền Bắc
+4,Tỉnh Cao Bằng,52,Huyện Nguyên Bình,Miền Bắc
+4,Tỉnh Cao Bằng,53,Huyện Thạch An,Miền Bắc
+6,Tỉnh Bắc Kạn,58,Thành Phố Bắc Kạn,Miền Bắc
+6,Tỉnh Bắc Kạn,60,Huyện Pác Nặm,Miền Bắc
+6,Tỉnh Bắc Kạn,61,Huyện Ba Bể,Miền Bắc
+6,Tỉnh Bắc Kạn,62,Huyện Ngân Sơn,Miền Bắc
+6,Tỉnh Bắc Kạn,63,Huyện Bạch Thông,Miền Bắc
+6,Tỉnh Bắc Kạn,64,Huyện Chợ Đồn,Miền Bắc
+6,Tỉnh Bắc Kạn,65,Huyện Chợ Mới,Miền Bắc
+6,Tỉnh Bắc Kạn,66,Huyện Na Rì,Miền Bắc
+8,Tỉnh Tuyên Quang,70,Thành phố Tuyên Quang,Miền Bắc
+8,Tỉnh Tuyên Quang,71,Huyện Lâm Bình,Miền Bắc
+8,Tỉnh Tuyên Quang,72,Huyện Na Hang,Miền Bắc
+8,Tỉnh Tuyên Quang,73,Huyện Chiêm Hóa,Miền Bắc
+8,Tỉnh Tuyên Quang,74,Huyện Hàm Yên,Miền Bắc
+8,Tỉnh Tuyên Quang,75,Huyện Yên Sơn,Miền Bắc
+8,Tỉnh Tuyên Quang,76,Huyện Sơn Dương,Miền Bắc
+10,Tỉnh Lào Cai,80,Thành phố Lào Cai,Miền Bắc
+10,Tỉnh Lào Cai,82,Huyện Bát Xát,Miền Bắc
+10,Tỉnh Lào Cai,83,Huyện Mường Khương,Miền Bắc
+10,Tỉnh Lào Cai,84,Huyện Si Ma Cai,Miền Bắc
+10,Tỉnh Lào Cai,85,Huyện Bắc Hà,Miền Bắc
+10,Tỉnh Lào Cai,86,Huyện Bảo Thắng,Miền Bắc
+10,Tỉnh Lào Cai,87,Huyện Bảo Yên,Miền Bắc
+10,Tỉnh Lào Cai,88,Thị xã Sa Pa,Miền Bắc
+10,Tỉnh Lào Cai,89,Huyện Văn Bàn,Miền Bắc
+11,Tỉnh Điện Biên,94,Thành phố Điện Biên Phủ,Miền Bắc
+11,Tỉnh Điện Biên,95,Thị xã Mường Lay,Miền Bắc
+11,Tỉnh Điện Biên,96,Huyện Mường Nhé,Miền Bắc
+11,Tỉnh Điện Biên,97,Huyện Mường Chà,Miền Bắc
+11,Tỉnh Điện Biên,98,Huyện Tủa Chùa,Miền Bắc
+11,Tỉnh Điện Biên,99,Huyện Tuần Giáo,Miền Bắc
+11,Tỉnh Điện Biên,100,Huyện Điện Biên,Miền Bắc
+11,Tỉnh Điện Biên,101,Huyện Điện Biên Đông,Miền Bắc
+11,Tỉnh Điện Biên,102,Huyện Mường Ảng,Miền Bắc
+11,Tỉnh Điện Biên,103,Huyện Nậm Pồ,Miền Bắc
+12,Tỉnh Lai Châu,105,Thành phố Lai Châu,Miền Bắc
+12,Tỉnh Lai Châu,106,Huyện Tam Đường,Miền Bắc
+12,Tỉnh Lai Châu,107,Huyện Mường Tè,Miền Bắc
+12,Tỉnh Lai Châu,108,Huyện Sìn Hồ,Miền Bắc
+12,Tỉnh Lai Châu,109,Huyện Phong Thổ,Miền Bắc
+12,Tỉnh Lai Châu,110,Huyện Than Uyên,Miền Bắc
+12,Tỉnh Lai Châu,111,Huyện Tân Uyên,Miền Bắc
+12,Tỉnh Lai Châu,112,Huyện Nậm Nhùn,Miền Bắc
+14,Tỉnh Sơn La,116,Thành phố Sơn La,Miền Bắc
+14,Tỉnh Sơn La,118,Huyện Quỳnh Nhai,Miền Bắc
+14,Tỉnh Sơn La,119,Huyện Thuận Châu,Miền Bắc
+14,Tỉnh Sơn La,120,Huyện Mường La,Miền Bắc
+14,Tỉnh Sơn La,121,Huyện Bắc Yên,Miền Bắc
+14,Tỉnh Sơn La,122,Huyện Phù Yên,Miền Bắc
+14,Tỉnh Sơn La,123,Huyện Mộc Châu,Miền Bắc
+14,Tỉnh Sơn La,124,Huyện Yên Châu,Miền Bắc
+14,Tỉnh Sơn La,125,Huyện Mai Sơn,Miền Bắc
+14,Tỉnh Sơn La,126,Huyện Sông Mã,Miền Bắc
+14,Tỉnh Sơn La,127,Huyện Sốp Cộp,Miền Bắc
+14,Tỉnh Sơn La,128,Huyện Vân Hồ,Miền Bắc
+15,Tỉnh Yên Bái,132,Thành phố Yên Bái,Miền Bắc
+15,Tỉnh Yên Bái,133,Thị xã Nghĩa Lộ,Miền Bắc
+15,Tỉnh Yên Bái,135,Huyện Lục Yên,Miền Bắc
+15,Tỉnh Yên Bái,136,Huyện Văn Yên,Miền Bắc
+15,Tỉnh Yên Bái,137,Huyện Mù Căng Chải,Miền Bắc
+15,Tỉnh Yên Bái,138,Huyện Trấn Yên,Miền Bắc
+15,Tỉnh Yên Bái,139,Huyện Trạm Tấu,Miền Bắc
+15,Tỉnh Yên Bái,140,Huyện Văn Chấn,Miền Bắc
+15,Tỉnh Yên Bái,141,Huyện Yên Bình,Miền Bắc
+17,Tỉnh Hoà Bình,148,Thành phố Hòa Bình,Miền Bắc
+17,Tỉnh Hoà Bình,150,Huyện Đà Bắc,Miền Bắc
+17,Tỉnh Hoà Bình,152,Huyện Lương Sơn,Miền Bắc
+17,Tỉnh Hoà Bình,153,Huyện Kim Bôi,Miền Bắc
+17,Tỉnh Hoà Bình,154,Huyện Cao Phong,Miền Bắc
+17,Tỉnh Hoà Bình,155,Huyện Tân Lạc,Miền Bắc
+17,Tỉnh Hoà Bình,156,Huyện Mai Châu,Miền Bắc
+17,Tỉnh Hoà Bình,157,Huyện Lạc Sơn,Miền Bắc
+17,Tỉnh Hoà Bình,158,Huyện Yên Thủy,Miền Bắc
+17,Tỉnh Hoà Bình,159,Huyện Lạc Thủy,Miền Bắc
+19,Tỉnh Thái Nguyên,164,Thành phố Thái Nguyên,Miền Bắc
+19,Tỉnh Thái Nguyên,165,Thành phố Sông Công,Miền Bắc
+19,Tỉnh Thái Nguyên,167,Huyện Định Hóa,Miền Bắc
+19,Tỉnh Thái Nguyên,168,Huyện Phú Lương,Miền Bắc
+19,Tỉnh Thái Nguyên,169,Huyện Đồng Hỷ,Miền Bắc
+19,Tỉnh Thái Nguyên,170,Huyện Võ Nhai,Miền Bắc
+19,Tỉnh Thái Nguyên,171,Huyện Đại Từ,Miền Bắc
+19,Tỉnh Thái Nguyên,172,Thành phố Phổ Yên,Miền Bắc
+19,Tỉnh Thái Nguyên,173,Huyện Phú Bình,Miền Bắc
+20,Tỉnh Lạng Sơn,178,Thành phố Lạng Sơn,Miền Bắc
+20,Tỉnh Lạng Sơn,180,Huyện Tràng Định,Miền Bắc
+20,Tỉnh Lạng Sơn,181,Huyện Bình Gia,Miền Bắc
+20,Tỉnh Lạng Sơn,182,Huyện Văn Lãng,Miền Bắc
+20,Tỉnh Lạng Sơn,183,Huyện Cao Lộc,Miền Bắc
+20,Tỉnh Lạng Sơn,184,Huyện Văn Quan,Miền Bắc
+20,Tỉnh Lạng Sơn,185,Huyện Bắc Sơn,Miền Bắc
+20,Tỉnh Lạng Sơn,186,Huyện Hữu Lũng,Miền Bắc
+20,Tỉnh Lạng Sơn,187,Huyện Chi Lăng,Miền Bắc
+20,Tỉnh Lạng Sơn,188,Huyện Lộc Bình,Miền Bắc
+20,Tỉnh Lạng Sơn,189,Huyện Đình Lập,Miền Bắc
+22,Tỉnh Quảng Ninh,193,Thành phố Hạ Long,Miền Bắc
+22,Tỉnh Quảng Ninh,194,Thành phố Móng Cái,Miền Bắc
+22,Tỉnh Quảng Ninh,195,Thành phố Cẩm Phả,Miền Bắc
+22,Tỉnh Quảng Ninh,196,Thành phố Uông Bí,Miền Bắc
+22,Tỉnh Quảng Ninh,198,Huyện Bình Liêu,Miền Bắc
+22,Tỉnh Quảng Ninh,199,Huyện Tiên Yên,Miền Bắc
+22,Tỉnh Quảng Ninh,200,Huyện Đầm Hà,Miền Bắc
+22,Tỉnh Quảng Ninh,201,Huyện Hải Hà,Miền Bắc
+22,Tỉnh Quảng Ninh,202,Huyện Ba Chẽ,Miền Bắc
+22,Tỉnh Quảng Ninh,203,Huyện Vân Đồn,Miền Bắc
+22,Tỉnh Quảng Ninh,205,Thành phố Đông Triều,Miền Bắc
+22,Tỉnh Quảng Ninh,206,Thị xã Quảng Yên,Miền Bắc
+22,Tỉnh Quảng Ninh,207,Huyện Cô Tô,Miền Bắc
+24,Tỉnh Bắc Giang,213,Thành phố Bắc Giang,Miền Bắc
+24,Tỉnh Bắc Giang,215,Huyện Yên Thế,Miền Bắc
+24,Tỉnh Bắc Giang,216,Huyện Tân Yên,Miền Bắc
+24,Tỉnh Bắc Giang,217,Huyện Lạng Giang,Miền Bắc
+24,Tỉnh Bắc Giang,218,Huyện Lục Nam,Miền Bắc
+24,Tỉnh Bắc Giang,219,Huyện Lục Ngạn,Miền Bắc
+24,Tỉnh Bắc Giang,220,Huyện Sơn Động,Miền Bắc
+24,Tỉnh Bắc Giang,222,Thị xã Việt Yên,Miền Bắc
+24,Tỉnh Bắc Giang,223,Huyện Hiệp Hòa,Miền Bắc
+24,Tỉnh Bắc Giang,224,Thị xã Chũ,Miền Bắc
+25,Tỉnh Phú Thọ,227,Thành phố Việt Trì,Miền Bắc
+25,Tỉnh Phú Thọ,228,Thị xã Phú Thọ,Miền Bắc
+25,Tỉnh Phú Thọ,230,Huyện Đoan Hùng,Miền Bắc
+25,Tỉnh Phú Thọ,231,Huyện Hạ Hoà,Miền Bắc
+25,Tỉnh Phú Thọ,232,Huyện Thanh Ba,Miền Bắc
+25,Tỉnh Phú Thọ,233,Huyện Phù Ninh,Miền Bắc
+25,Tỉnh Phú Thọ,234,Huyện Yên Lập,Miền Bắc
+25,Tỉnh Phú Thọ,235,Huyện Cẩm Khê,Miền Bắc
+25,Tỉnh Phú Thọ,236,Huyện Tam Nông,Miền Bắc
+25,Tỉnh Phú Thọ,237,Huyện Lâm Thao,Miền Bắc
+25,Tỉnh Phú Thọ,238,Huyện Thanh Sơn,Miền Bắc
+25,Tỉnh Phú Thọ,239,Huyện Thanh Thuỷ,Miền Bắc
+25,Tỉnh Phú Thọ,240,Huyện Tân Sơn,Miền Bắc
+26,Tỉnh Vĩnh Phúc,243,Thành phố Vĩnh Yên,Miền Bắc
+26,Tỉnh Vĩnh Phúc,244,Thành phố Phúc Yên,Miền Bắc
+26,Tỉnh Vĩnh Phúc,246,Huyện Lập Thạch,Miền Bắc
+26,Tỉnh Vĩnh Phúc,247,Huyện Tam Dương,Miền Bắc
+26,Tỉnh Vĩnh Phúc,248,Huyện Tam Đảo,Miền Bắc
+26,Tỉnh Vĩnh Phúc,249,Huyện Bình Xuyên,Miền Bắc
+26,Tỉnh Vĩnh Phúc,251,Huyện Yên Lạc,Miền Bắc
+26,Tỉnh Vĩnh Phúc,252,Huyện Vĩnh Tường,Miền Bắc
+26,Tỉnh Vĩnh Phúc,253,Huyện Sông Lô,Miền Bắc
+27,Tỉnh Bắc Ninh,256,Thành phố Bắc Ninh,Miền Bắc
+27,Tỉnh Bắc Ninh,258,Huyện Yên Phong,Miền Bắc
+27,Tỉnh Bắc Ninh,259,Thị xã Quế Võ,Miền Bắc
+27,Tỉnh Bắc Ninh,260,Huyện Tiên Du,Miền Bắc
+27,Tỉnh Bắc Ninh,261,Thành phố Từ Sơn,Miền Bắc
+27,Tỉnh Bắc Ninh,262,Thị xã Thuận Thành,Miền Bắc
+27,Tỉnh Bắc Ninh,263,Huyện Gia Bình,Miền Bắc
+27,Tỉnh Bắc Ninh,264,Huyện Lương Tài,Miền Bắc
+30,Tỉnh Hải Dương,288,Thành phố Hải Dương,Miền Bắc
+30,Tỉnh Hải Dương,290,Thành phố Chí Linh,Miền Bắc
+30,Tỉnh Hải Dương,291,Huyện Nam Sách,Miền Bắc
+30,Tỉnh Hải Dương,292,Thị xã Kinh Môn,Miền Bắc
+30,Tỉnh Hải Dương,293,Huyện Kim Thành,Miền Bắc
+30,Tỉnh Hải Dương,294,Huyện Thanh Hà,Miền Bắc
+30,Tỉnh Hải Dương,295,Huyện Cẩm Giàng,Miền Bắc
+30,Tỉnh Hải Dương,296,Huyện Bình Giang,Miền Bắc
+30,Tỉnh Hải Dương,297,Huyện Gia Lộc,Miền Bắc
+30,Tỉnh Hải Dương,298,Huyện Tứ Kỳ,Miền Bắc
+30,Tỉnh Hải Dương,299,Huyện Ninh Giang,Miền Bắc
+30,Tỉnh Hải Dương,300,Huyện Thanh Miện,Miền Bắc
+31,Thành phố Hải Phòng,303,Quận Hồng Bàng,Không xác định
+31,Thành phố Hải Phòng,304,Quận Ngô Quyền,Không xác định
+31,Thành phố Hải Phòng,305,Quận Lê Chân,Không xác định
+31,Thành phố Hải Phòng,306,Quận Hải An,Không xác định
+31,Thành phố Hải Phòng,307,Quận Kiến An,Không xác định
+31,Thành phố Hải Phòng,308,Quận Đồ Sơn,Không xác định
+31,Thành phố Hải Phòng,309,Quận Dương Kinh,Không xác định
+31,Thành phố Hải Phòng,311,Thành phố Thuỷ Nguyên,Không xác định
+31,Thành phố Hải Phòng,312,Quận An Dương,Không xác định
+31,Thành phố Hải Phòng,313,Huyện An Lão,Không xác định
+31,Thành phố Hải Phòng,314,Huyện Kiến Thuỵ,Không xác định
+31,Thành phố Hải Phòng,315,Huyện Tiên Lãng,Không xác định
+31,Thành phố Hải Phòng,316,Huyện Vĩnh Bảo,Không xác định
+31,Thành phố Hải Phòng,317,Huyện Cát Hải,Không xác định
+33,Tỉnh Hưng Yên,323,Thành phố Hưng Yên,Miền Bắc
+33,Tỉnh Hưng Yên,325,Huyện Văn Lâm,Miền Bắc
+33,Tỉnh Hưng Yên,326,Huyện Văn Giang,Miền Bắc
+33,Tỉnh Hưng Yên,327,Huyện Yên Mỹ,Miền Bắc
+33,Tỉnh Hưng Yên,328,Thị xã Mỹ Hào,Miền Bắc
+33,Tỉnh Hưng Yên,329,Huyện Ân Thi,Miền Bắc
+33,Tỉnh Hưng Yên,330,Huyện Khoái Châu,Miền Bắc
+33,Tỉnh Hưng Yên,331,Huyện Kim Động,Miền Bắc
+33,Tỉnh Hưng Yên,332,Huyện Tiên Lữ,Miền Bắc
+33,Tỉnh Hưng Yên,333,Huyện Phù Cừ,Miền Bắc
+34,Tỉnh Thái Bình,336,Thành phố Thái Bình,Miền Bắc
+34,Tỉnh Thái Bình,338,Huyện Quỳnh Phụ,Miền Bắc
+34,Tỉnh Thái Bình,339,Huyện Hưng Hà,Miền Bắc
+34,Tỉnh Thái Bình,340,Huyện Đông Hưng,Miền Bắc
+34,Tỉnh Thái Bình,341,Huyện Thái Thụy,Miền Bắc
+34,Tỉnh Thái Bình,342,Huyện Tiền Hải,Miền Bắc
+34,Tỉnh Thái Bình,343,Huyện Kiến Xương,Miền Bắc
+34,Tỉnh Thái Bình,344,Huyện Vũ Thư,Miền Bắc
+35,Tỉnh Hà Nam,347,Thành phố Phủ Lý,Miền Bắc
+35,Tỉnh Hà Nam,349,Thị xã Duy Tiên,Miền Bắc
+35,Tỉnh Hà Nam,350,Thị xã Kim Bảng,Miền Bắc
+35,Tỉnh Hà Nam,351,Huyện Thanh Liêm,Miền Bắc
+35,Tỉnh Hà Nam,352,Huyện Bình Lục,Miền Bắc
+35,Tỉnh Hà Nam,353,Huyện Lý Nhân,Miền Bắc
+36,Tỉnh Nam Định,356,Thành phố Nam Định,Miền Bắc
+36,Tỉnh Nam Định,359,Huyện Vụ Bản,Miền Bắc
+36,Tỉnh Nam Định,360,Huyện Ý Yên,Miền Bắc
+36,Tỉnh Nam Định,361,Huyện Nghĩa Hưng,Miền Bắc
+36,Tỉnh Nam Định,362,Huyện Nam Trực,Miền Bắc
+36,Tỉnh Nam Định,363,Huyện Trực Ninh,Miền Bắc
+36,Tỉnh Nam Định,364,Huyện Xuân Trường,Miền Bắc
+36,Tỉnh Nam Định,365,Huyện Giao Thủy,Miền Bắc
+36,Tỉnh Nam Định,366,Huyện Hải Hậu,Miền Bắc
+37,Tỉnh Ninh Bình,370,Thành phố Tam Điệp,Không xác định
+37,Tỉnh Ninh Bình,372,Huyện Nho Quan,Không xác định
+37,Tỉnh Ninh Bình,373,Huyện Gia Viễn,Không xác định
+37,Tỉnh Ninh Bình,374,Thành phố Hoa Lư,Không xác định
+37,Tỉnh Ninh Bình,375,Huyện Yên Khánh,Không xác định
+37,Tỉnh Ninh Bình,376,Huyện Kim Sơn,Không xác định
+37,Tỉnh Ninh Bình,377,Huyện Yên Mô,Không xác định
+38,Tỉnh Thanh Hóa,380,Thành phố Thanh Hóa,Miền Trung
+38,Tỉnh Thanh Hóa,381,Thị xã Bỉm Sơn,Miền Trung
+38,Tỉnh Thanh Hóa,382,Thành phố Sầm Sơn,Miền Trung
+38,Tỉnh Thanh Hóa,384,Huyện Mường Lát,Miền Trung
+38,Tỉnh Thanh Hóa,385,Huyện Quan Hóa,Miền Trung
+38,Tỉnh Thanh Hóa,386,Huyện Bá Thước,Miền Trung
+38,Tỉnh Thanh Hóa,387,Huyện Quan Sơn,Miền Trung
+38,Tỉnh Thanh Hóa,388,Huyện Lang Chánh,Miền Trung
+38,Tỉnh Thanh Hóa,389,Huyện Ngọc Lặc,Miền Trung
+38,Tỉnh Thanh Hóa,390,Huyện Cẩm Thủy,Miền Trung
+38,Tỉnh Thanh Hóa,391,Huyện Thạch Thành,Miền Trung
+38,Tỉnh Thanh Hóa,392,Huyện Hà Trung,Miền Trung
+38,Tỉnh Thanh Hóa,393,Huyện Vĩnh Lộc,Miền Trung
+38,Tỉnh Thanh Hóa,394,Huyện Yên Định,Miền Trung
+38,Tỉnh Thanh Hóa,395,Huyện Thọ Xuân,Miền Trung
+38,Tỉnh Thanh Hóa,396,Huyện Thường Xuân,Miền Trung
+38,Tỉnh Thanh Hóa,397,Huyện Triệu Sơn,Miền Trung
+38,Tỉnh Thanh Hóa,398,Huyện Thiệu Hóa,Miền Trung
+38,Tỉnh Thanh Hóa,399,Huyện Hoằng Hóa,Miền Trung
+38,Tỉnh Thanh Hóa,400,Huyện Hậu Lộc,Miền Trung
+38,Tỉnh Thanh Hóa,401,Huyện Nga Sơn,Miền Trung
+38,Tỉnh Thanh Hóa,402,Huyện Như Xuân,Miền Trung
+38,Tỉnh Thanh Hóa,403,Huyện Như Thanh,Miền Trung
+38,Tỉnh Thanh Hóa,404,Huyện Nông Cống,Miền Trung
+38,Tỉnh Thanh Hóa,406,Huyện Quảng Xương,Miền Trung
+38,Tỉnh Thanh Hóa,407,Thị xã Nghi Sơn,Miền Trung
+40,Tỉnh Nghệ An,412,Thành phố Vinh,Miền Trung
+40,Tỉnh Nghệ An,414,Thị xã Thái Hoà,Miền Trung
+40,Tỉnh Nghệ An,415,Huyện Quế Phong,Miền Trung
+40,Tỉnh Nghệ An,416,Huyện Quỳ Châu,Miền Trung
+40,Tỉnh Nghệ An,417,Huyện Kỳ Sơn,Miền Trung
+40,Tỉnh Nghệ An,418,Huyện Tương Dương,Miền Trung
+40,Tỉnh Nghệ An,419,Huyện Nghĩa Đàn,Miền Trung
+40,Tỉnh Nghệ An,420,Huyện Quỳ Hợp,Miền Trung
+40,Tỉnh Nghệ An,421,Huyện Quỳnh Lưu,Miền Trung
+40,Tỉnh Nghệ An,422,Huyện Con Cuông,Miền Trung
+40,Tỉnh Nghệ An,423,Huyện Tân Kỳ,Miền Trung
+40,Tỉnh Nghệ An,424,Huyện Anh Sơn,Miền Trung
+40,Tỉnh Nghệ An,425,Huyện Diễn Châu,Miền Trung
+40,Tỉnh Nghệ An,426,Huyện Yên Thành,Miền Trung
+40,Tỉnh Nghệ An,427,Huyện Đô Lương,Miền Trung
+40,Tỉnh Nghệ An,428,Huyện Thanh Chương,Miền Trung
+40,Tỉnh Nghệ An,429,Huyện Nghi Lộc,Miền Trung
+40,Tỉnh Nghệ An,430,Huyện Nam Đàn,Miền Trung
+40,Tỉnh Nghệ An,431,Huyện Hưng Nguyên,Miền Trung
+40,Tỉnh Nghệ An,432,Thị xã Hoàng Mai,Miền Trung
+42,Tỉnh Hà Tĩnh,436,Thành phố Hà Tĩnh,Miền Trung
+42,Tỉnh Hà Tĩnh,437,Thị xã Hồng Lĩnh,Miền Trung
+42,Tỉnh Hà Tĩnh,439,Huyện Hương Sơn,Miền Trung
+42,Tỉnh Hà Tĩnh,440,Huyện Đức Thọ,Miền Trung
+42,Tỉnh Hà Tĩnh,441,Huyện Vũ Quang,Miền Trung
+42,Tỉnh Hà Tĩnh,442,Huyện Nghi Xuân,Miền Trung
+42,Tỉnh Hà Tĩnh,443,Huyện Can Lộc,Miền Trung
+42,Tỉnh Hà Tĩnh,444,Huyện Hương Khê,Miền Trung
+42,Tỉnh Hà Tĩnh,445,Huyện Thạch Hà,Miền Trung
+42,Tỉnh Hà Tĩnh,446,Huyện Cẩm Xuyên,Miền Trung
+42,Tỉnh Hà Tĩnh,447,Huyện Kỳ Anh,Miền Trung
+42,Tỉnh Hà Tĩnh,449,Thị xã Kỳ Anh,Miền Trung
+44,Tỉnh Quảng Bình,450,Thành Phố Đồng Hới,Miền Trung
+44,Tỉnh Quảng Bình,452,Huyện Minh Hóa,Miền Trung
+44,Tỉnh Quảng Bình,453,Huyện Tuyên Hóa,Miền Trung
+44,Tỉnh Quảng Bình,454,Huyện Quảng Trạch,Miền Trung
+44,Tỉnh Quảng Bình,455,Huyện Bố Trạch,Miền Trung
+44,Tỉnh Quảng Bình,456,Huyện Quảng Ninh,Miền Trung
+44,Tỉnh Quảng Bình,457,Huyện Lệ Thủy,Miền Trung
+44,Tỉnh Quảng Bình,458,Thị xã Ba Đồn,Miền Trung
+45,Tỉnh Quảng Trị,461,Thành phố Đông Hà,Miền Trung
+45,Tỉnh Quảng Trị,462,Thị xã Quảng Trị,Miền Trung
+45,Tỉnh Quảng Trị,464,Huyện Vĩnh Linh,Miền Trung
+45,Tỉnh Quảng Trị,465,Huyện Hướng Hóa,Miền Trung
+45,Tỉnh Quảng Trị,466,Huyện Gio Linh,Miền Trung
+45,Tỉnh Quảng Trị,467,Huyện Đa Krông,Miền Trung
+45,Tỉnh Quảng Trị,468,Huyện Cam Lộ,Miền Trung
+45,Tỉnh Quảng Trị,469,Huyện Triệu Phong,Miền Trung
+45,Tỉnh Quảng Trị,470,Huyện Hải Lăng,Miền Trung
+46,Thành phố Huế,474,Quận Thuận Hóa,Miền Trung
+46,Thành phố Huế,475,Quận Phú Xuân,Miền Trung
+46,Thành phố Huế,476,Thị xã Phong Điền,Miền Trung
+46,Thành phố Huế,477,Huyện Quảng Điền,Miền Trung
+46,Thành phố Huế,478,Huyện Phú Vang,Miền Trung
+46,Thành phố Huế,479,Thị xã Hương Thủy,Miền Trung
+46,Thành phố Huế,480,Thị xã Hương Trà,Miền Trung
+46,Thành phố Huế,481,Huyện A Lưới,Miền Trung
+46,Thành phố Huế,482,Huyện Phú Lộc,Miền Trung
+48,Thành phố Đà Nẵng,490,Quận Liên Chiểu,Miền Trung
+48,Thành phố Đà Nẵng,491,Quận Thanh Khê,Miền Trung
+48,Thành phố Đà Nẵng,492,Quận Hải Châu,Miền Trung
+48,Thành phố Đà Nẵng,493,Quận Sơn Trà,Miền Trung
+48,Thành phố Đà Nẵng,494,Quận Ngũ Hành Sơn,Miền Trung
+48,Thành phố Đà Nẵng,495,Quận Cẩm Lệ,Miền Trung
+48,Thành phố Đà Nẵng,497,Huyện Hòa Vang,Miền Trung
+49,Tỉnh Quảng Nam,502,Thành phố Tam Kỳ,Miền Trung
+49,Tỉnh Quảng Nam,503,Thành phố Hội An,Miền Trung
+49,Tỉnh Quảng Nam,504,Huyện Tây Giang,Miền Trung
+49,Tỉnh Quảng Nam,505,Huyện Đông Giang,Miền Trung
+49,Tỉnh Quảng Nam,506,Huyện Đại Lộc,Miền Trung
+49,Tỉnh Quảng Nam,507,Thị xã Điện Bàn,Miền Trung
+49,Tỉnh Quảng Nam,508,Huyện Duy Xuyên,Miền Trung
+49,Tỉnh Quảng Nam,509,Huyện Quế Sơn,Miền Trung
+49,Tỉnh Quảng Nam,510,Huyện Nam Giang,Miền Trung
+49,Tỉnh Quảng Nam,511,Huyện Phước Sơn,Miền Trung
+49,Tỉnh Quảng Nam,512,Huyện Hiệp Đức,Miền Trung
+49,Tỉnh Quảng Nam,513,Huyện Thăng Bình,Miền Trung
+49,Tỉnh Quảng Nam,514,Huyện Tiên Phước,Miền Trung
+49,Tỉnh Quảng Nam,515,Huyện Bắc Trà My,Miền Trung
+49,Tỉnh Quảng Nam,516,Huyện Nam Trà My,Miền Trung
+49,Tỉnh Quảng Nam,517,Huyện Núi Thành,Miền Trung
+49,Tỉnh Quảng Nam,518,Huyện Phú Ninh,Miền Trung
+51,Tỉnh Quảng Ngãi,522,Thành phố Quảng Ngãi,Miền Trung
+51,Tỉnh Quảng Ngãi,524,Huyện Bình Sơn,Miền Trung
+51,Tỉnh Quảng Ngãi,525,Huyện Trà Bồng,Miền Trung
+51,Tỉnh Quảng Ngãi,527,Huyện Sơn Tịnh,Miền Trung
+51,Tỉnh Quảng Ngãi,528,Huyện Tư Nghĩa,Miền Trung
+51,Tỉnh Quảng Ngãi,529,Huyện Sơn Hà,Miền Trung
+51,Tỉnh Quảng Ngãi,530,Huyện Sơn Tây,Miền Trung
+51,Tỉnh Quảng Ngãi,531,Huyện Minh Long,Miền Trung
+51,Tỉnh Quảng Ngãi,532,Huyện Nghĩa Hành,Miền Trung
+51,Tỉnh Quảng Ngãi,533,Huyện Mộ Đức,Miền Trung
+51,Tỉnh Quảng Ngãi,534,Thị xã Đức Phổ,Miền Trung
+51,Tỉnh Quảng Ngãi,535,Huyện Ba Tơ,Miền Trung
+52,Tỉnh Bình Định,540,Thành phố Quy Nhơn,Miền Trung
+52,Tỉnh Bình Định,542,Huyện An Lão,Miền Trung
+52,Tỉnh Bình Định,543,Thị xã Hoài Nhơn,Miền Trung
+52,Tỉnh Bình Định,544,Huyện Hoài Ân,Miền Trung
+52,Tỉnh Bình Định,545,Huyện Phù Mỹ,Miền Trung
+52,Tỉnh Bình Định,546,Huyện Vĩnh Thạnh,Miền Trung
+52,Tỉnh Bình Định,547,Huyện Tây Sơn,Miền Trung
+52,Tỉnh Bình Định,548,Huyện Phù Cát,Miền Trung
+52,Tỉnh Bình Định,549,Thị xã An Nhơn,Miền Trung
+52,Tỉnh Bình Định,550,Huyện Tuy Phước,Miền Trung
+52,Tỉnh Bình Định,551,Huyện Vân Canh,Miền Trung
+54,Tỉnh Phú Yên,555,Thành phố Tuy Hoà,Miền Trung
+54,Tỉnh Phú Yên,557,Thị xã Sông Cầu,Miền Trung
+54,Tỉnh Phú Yên,558,Huyện Đồng Xuân,Miền Trung
+54,Tỉnh Phú Yên,559,Huyện Tuy An,Miền Trung
+54,Tỉnh Phú Yên,560,Huyện Sơn Hòa,Miền Trung
+54,Tỉnh Phú Yên,561,Huyện Sông Hinh,Miền Trung
+54,Tỉnh Phú Yên,562,Huyện Tây Hoà,Miền Trung
+54,Tỉnh Phú Yên,563,Huyện Phú Hoà,Miền Trung
+54,Tỉnh Phú Yên,564,Thị xã Đông Hòa,Miền Trung
+56,Tỉnh Khánh Hòa,568,Thành phố Nha Trang,Miền Trung
+56,Tỉnh Khánh Hòa,569,Thành phố Cam Ranh,Miền Trung
+56,Tỉnh Khánh Hòa,570,Huyện Cam Lâm,Miền Trung
+56,Tỉnh Khánh Hòa,571,Huyện Vạn Ninh,Miền Trung
+56,Tỉnh Khánh Hòa,572,Thị xã Ninh Hòa,Miền Trung
+56,Tỉnh Khánh Hòa,573,Huyện Khánh Vĩnh,Miền Trung
+56,Tỉnh Khánh Hòa,574,Huyện Diên Khánh,Miền Trung
+56,Tỉnh Khánh Hòa,575,Huyện Khánh Sơn,Miền Trung
+56,Tỉnh Khánh Hòa,576,Huyện Trường Sa,Miền Trung
+58,Tỉnh Ninh Thuận,582,Thành phố Phan Rang-Tháp Chàm,Miền Trung
+58,Tỉnh Ninh Thuận,584,Huyện Bác Ái,Miền Trung
+58,Tỉnh Ninh Thuận,585,Huyện Ninh Sơn,Miền Trung
+58,Tỉnh Ninh Thuận,586,Huyện Ninh Hải,Miền Trung
+58,Tỉnh Ninh Thuận,587,Huyện Ninh Phước,Miền Trung
+58,Tỉnh Ninh Thuận,588,Huyện Thuận Bắc,Miền Trung
+58,Tỉnh Ninh Thuận,589,Huyện Thuận Nam,Miền Trung
+60,Tỉnh Bình Thuận,593,Thành phố Phan Thiết,Miền Trung
+60,Tỉnh Bình Thuận,594,Thị xã La Gi,Miền Trung
+60,Tỉnh Bình Thuận,595,Huyện Tuy Phong,Miền Trung
+60,Tỉnh Bình Thuận,596,Huyện Bắc Bình,Miền Trung
+60,Tỉnh Bình Thuận,597,Huyện Hàm Thuận Bắc,Miền Trung
+60,Tỉnh Bình Thuận,598,Huyện Hàm Thuận Nam,Miền Trung
+60,Tỉnh Bình Thuận,599,Huyện Tánh Linh,Miền Trung
+60,Tỉnh Bình Thuận,600,Huyện Đức Linh,Miền Trung
+60,Tỉnh Bình Thuận,601,Huyện Hàm Tân,Miền Trung
+60,Tỉnh Bình Thuận,602,Huyện Phú Quí,Miền Trung
+62,Tỉnh Kon Tum,608,Thành phố Kon Tum,Miền Trung
+62,Tỉnh Kon Tum,610,Huyện Đắk Glei,Miền Trung
+62,Tỉnh Kon Tum,611,Huyện Ngọc Hồi,Miền Trung
+62,Tỉnh Kon Tum,612,Huyện Đắk Tô,Miền Trung
+62,Tỉnh Kon Tum,613,Huyện Kon Plông,Miền Trung
+62,Tỉnh Kon Tum,614,Huyện Kon Rẫy,Miền Trung
+62,Tỉnh Kon Tum,615,Huyện Đắk Hà,Miền Trung
+62,Tỉnh Kon Tum,616,Huyện Sa Thầy,Miền Trung
+62,Tỉnh Kon Tum,617,Huyện Tu Mơ Rông,Miền Trung
+62,Tỉnh Kon Tum,618,Huyện Ia H' Drai,Miền Trung
+64,Tỉnh Gia Lai,622,Thành phố Pleiku,Miền Nam
+64,Tỉnh Gia Lai,623,Thị xã An Khê,Miền Nam
+64,Tỉnh Gia Lai,624,Thị xã Ayun Pa,Miền Nam
+64,Tỉnh Gia Lai,625,Huyện KBang,Miền Nam
+64,Tỉnh Gia Lai,626,Huyện Đăk Đoa,Miền Nam
+64,Tỉnh Gia Lai,627,Huyện Chư Păh,Miền Nam
+64,Tỉnh Gia Lai,628,Huyện Ia Grai,Miền Nam
+64,Tỉnh Gia Lai,629,Huyện Mang Yang,Miền Nam
+64,Tỉnh Gia Lai,630,Huyện Kông Chro,Miền Nam
+64,Tỉnh Gia Lai,631,Huyện Đức Cơ,Miền Nam
+64,Tỉnh Gia Lai,632,Huyện Chư Prông,Miền Nam
+64,Tỉnh Gia Lai,633,Huyện Chư Sê,Miền Nam
+64,Tỉnh Gia Lai,634,Huyện Đăk Pơ,Miền Nam
+64,Tỉnh Gia Lai,635,Huyện Ia Pa,Miền Nam
+64,Tỉnh Gia Lai,637,Huyện Krông Pa,Miền Nam
+64,Tỉnh Gia Lai,638,Huyện Phú Thiện,Miền Nam
+64,Tỉnh Gia Lai,639,Huyện Chư Pưh,Miền Nam
+66,Tỉnh Đắk Lắk,643,Thành phố Buôn Ma Thuột,Miền Nam
+66,Tỉnh Đắk Lắk,644,Thị xã Buôn Hồ,Miền Nam
+66,Tỉnh Đắk Lắk,645,Huyện Ea H'leo,Miền Nam
+66,Tỉnh Đắk Lắk,646,Huyện Ea Súp,Miền Nam
+66,Tỉnh Đắk Lắk,647,Huyện Buôn Đôn,Miền Nam
+66,Tỉnh Đắk Lắk,648,Huyện Cư M'gar,Miền Nam
+66,Tỉnh Đắk Lắk,649,Huyện Krông Búk,Miền Nam
+66,Tỉnh Đắk Lắk,650,Huyện Krông Năng,Miền Nam
+66,Tỉnh Đắk Lắk,651,Huyện Ea Kar,Miền Nam
+66,Tỉnh Đắk Lắk,652,Huyện M'Đrắk,Miền Nam
+66,Tỉnh Đắk Lắk,653,Huyện Krông Bông,Miền Nam
+66,Tỉnh Đắk Lắk,654,Huyện Krông Pắc,Miền Nam
+66,Tỉnh Đắk Lắk,655,Huyện Krông A Na,Miền Nam
+66,Tỉnh Đắk Lắk,656,Huyện Lắk,Miền Nam
+66,Tỉnh Đắk Lắk,657,Huyện Cư Kuin,Miền Nam
+67,Tỉnh Đắk Nông,660,Thành phố Gia Nghĩa,Miền Nam
+67,Tỉnh Đắk Nông,661,Huyện Đăk Glong,Miền Nam
+67,Tỉnh Đắk Nông,662,Huyện Cư Jút,Miền Nam
+67,Tỉnh Đắk Nông,663,Huyện Đắk Mil,Miền Nam
+67,Tỉnh Đắk Nông,664,Huyện Krông Nô,Miền Nam
+67,Tỉnh Đắk Nông,665,Huyện Đắk Song,Miền Nam
+67,Tỉnh Đắk Nông,666,Huyện Đắk R'Lấp,Miền Nam
+67,Tỉnh Đắk Nông,667,Huyện Tuy Đức,Miền Nam
+68,Tỉnh Lâm Đồng,672,Thành phố Đà Lạt,Miền Nam
+68,Tỉnh Lâm Đồng,673,Thành phố Bảo Lộc,Miền Nam
+68,Tỉnh Lâm Đồng,674,Huyện Đam Rông,Miền Nam
+68,Tỉnh Lâm Đồng,675,Huyện Lạc Dương,Miền Nam
+68,Tỉnh Lâm Đồng,676,Huyện Lâm Hà,Miền Nam
+68,Tỉnh Lâm Đồng,677,Huyện Đơn Dương,Miền Nam
+68,Tỉnh Lâm Đồng,678,Huyện Đức Trọng,Miền Nam
+68,Tỉnh Lâm Đồng,679,Huyện Di Linh,Miền Nam
+68,Tỉnh Lâm Đồng,680,Huyện Bảo Lâm,Miền Nam
+68,Tỉnh Lâm Đồng,682,Huyện Đạ Huoai,Miền Nam
+70,Tỉnh Bình Phước,688,Thị xã Phước Long,Miền Nam
+70,Tỉnh Bình Phước,689,Thành phố Đồng Xoài,Miền Nam
+70,Tỉnh Bình Phước,690,Thị xã Bình Long,Miền Nam
+70,Tỉnh Bình Phước,691,Huyện Bù Gia Mập,Miền Nam
+70,Tỉnh Bình Phước,692,Huyện Lộc Ninh,Miền Nam
+70,Tỉnh Bình Phước,693,Huyện Bù Đốp,Miền Nam
+70,Tỉnh Bình Phước,694,Huyện Hớn Quản,Miền Nam
+70,Tỉnh Bình Phước,695,Huyện Đồng Phú,Miền Nam
+70,Tỉnh Bình Phước,696,Huyện Bù Đăng,Miền Nam
+70,Tỉnh Bình Phước,697,Thị xã Chơn Thành,Miền Nam
+70,Tỉnh Bình Phước,698,Huyện Phú Riềng,Miền Nam
+72,Tỉnh Tây Ninh,703,Thành phố Tây Ninh,Miền Nam
+72,Tỉnh Tây Ninh,705,Huyện Tân Biên,Miền Nam
+72,Tỉnh Tây Ninh,706,Huyện Tân Châu,Miền Nam
+72,Tỉnh Tây Ninh,707,Huyện Dương Minh Châu,Miền Nam
+72,Tỉnh Tây Ninh,708,Huyện Châu Thành,Miền Nam
+72,Tỉnh Tây Ninh,709,Thị xã Hòa Thành,Miền Nam
+72,Tỉnh Tây Ninh,710,Huyện Gò Dầu,Miền Nam
+72,Tỉnh Tây Ninh,711,Huyện Bến Cầu,Miền Nam
+72,Tỉnh Tây Ninh,712,Thị xã Trảng Bàng,Miền Nam
+74,Tỉnh Bình Dương,718,Thành phố Thủ Dầu Một,Miền Nam
+74,Tỉnh Bình Dương,719,Huyện Bàu Bàng,Miền Nam
+74,Tỉnh Bình Dương,720,Huyện Dầu Tiếng,Miền Nam
+74,Tỉnh Bình Dương,721,Thành phố Bến Cát,Miền Nam
+74,Tỉnh Bình Dương,722,Huyện Phú Giáo,Miền Nam
+74,Tỉnh Bình Dương,723,Thành phố Tân Uyên,Miền Nam
+74,Tỉnh Bình Dương,724,Thành phố Dĩ An,Miền Nam
+74,Tỉnh Bình Dương,725,Thành phố Thuận An,Miền Nam
+74,Tỉnh Bình Dương,726,Huyện Bắc Tân Uyên,Miền Nam
+75,Tỉnh Đồng Nai,731,Thành phố Biên Hòa,Miền Nam
+75,Tỉnh Đồng Nai,732,Thành phố Long Khánh,Miền Nam
+75,Tỉnh Đồng Nai,734,Huyện Tân Phú,Miền Nam
+75,Tỉnh Đồng Nai,735,Huyện Vĩnh Cửu,Miền Nam
+75,Tỉnh Đồng Nai,736,Huyện Định Quán,Miền Nam
+75,Tỉnh Đồng Nai,737,Huyện Trảng Bom,Miền Nam
+75,Tỉnh Đồng Nai,738,Huyện Thống Nhất,Miền Nam
+75,Tỉnh Đồng Nai,739,Huyện Cẩm Mỹ,Miền Nam
+75,Tỉnh Đồng Nai,740,Huyện Long Thành,Miền Nam
+75,Tỉnh Đồng Nai,741,Huyện Xuân Lộc,Miền Nam
+75,Tỉnh Đồng Nai,742,Huyện Nhơn Trạch,Miền Nam
+77,Tỉnh Bà Rịa - Vũng Tàu,747,Thành phố Vũng Tàu,Miền Nam
+77,Tỉnh Bà Rịa - Vũng Tàu,748,Thành phố Bà Rịa,Miền Nam
+77,Tỉnh Bà Rịa - Vũng Tàu,750,Huyện Châu Đức,Miền Nam
+77,Tỉnh Bà Rịa - Vũng Tàu,751,Huyện Xuyên Mộc,Miền Nam
+77,Tỉnh Bà Rịa - Vũng Tàu,753,Huyện Long Đất,Miền Nam
+77,Tỉnh Bà Rịa - Vũng Tàu,754,Thị xã Phú Mỹ,Miền Nam
+79,Thành phố Hồ Chí Minh,760,Quận 1,Miền Nam
+79,Thành phố Hồ Chí Minh,761,Quận 12,Miền Nam
+79,Thành phố Hồ Chí Minh,764,Quận Gò Vấp,Miền Nam
+79,Thành phố Hồ Chí Minh,765,Quận Bình Thạnh,Miền Nam
+79,Thành phố Hồ Chí Minh,766,Quận Tân Bình,Miền Nam
+79,Thành phố Hồ Chí Minh,767,Quận Tân Phú,Miền Nam
+79,Thành phố Hồ Chí Minh,768,Quận Phú Nhuận,Miền Nam
+79,Thành phố Hồ Chí Minh,769,Thành phố Thủ Đức,Miền Nam
+79,Thành phố Hồ Chí Minh,770,Quận 3,Miền Nam
+79,Thành phố Hồ Chí Minh,771,Quận 10,Miền Nam
+79,Thành phố Hồ Chí Minh,772,Quận 11,Miền Nam
+79,Thành phố Hồ Chí Minh,773,Quận 4,Miền Nam
+79,Thành phố Hồ Chí Minh,774,Quận 5,Miền Nam
+79,Thành phố Hồ Chí Minh,775,Quận 6,Miền Nam
+79,Thành phố Hồ Chí Minh,776,Quận 8,Miền Nam
+79,Thành phố Hồ Chí Minh,777,Quận Bình Tân,Miền Nam
+79,Thành phố Hồ Chí Minh,778,Quận 7,Miền Nam
+79,Thành phố Hồ Chí Minh,783,Huyện Củ Chi,Miền Nam
+79,Thành phố Hồ Chí Minh,784,Huyện Hóc Môn,Miền Nam
+79,Thành phố Hồ Chí Minh,785,Huyện Bình Chánh,Miền Nam
+79,Thành phố Hồ Chí Minh,786,Huyện Nhà Bè,Miền Nam
+79,Thành phố Hồ Chí Minh,787,Huyện Cần Giờ,Miền Nam
+80,Tỉnh Long An,794,Thành phố Tân An,Miền Nam
+80,Tỉnh Long An,795,Thị xã Kiến Tường,Miền Nam
+80,Tỉnh Long An,796,Huyện Tân Hưng,Miền Nam
+80,Tỉnh Long An,797,Huyện Vĩnh Hưng,Miền Nam
+80,Tỉnh Long An,798,Huyện Mộc Hóa,Miền Nam
+80,Tỉnh Long An,799,Huyện Tân Thạnh,Miền Nam
+80,Tỉnh Long An,800,Huyện Thạnh Hóa,Miền Nam
+80,Tỉnh Long An,801,Huyện Đức Huệ,Miền Nam
+80,Tỉnh Long An,802,Huyện Đức Hòa,Miền Nam
+80,Tỉnh Long An,803,Huyện Bến Lức,Miền Nam
+80,Tỉnh Long An,804,Huyện Thủ Thừa,Miền Nam
+80,Tỉnh Long An,805,Huyện Tân Trụ,Miền Nam
+80,Tỉnh Long An,806,Huyện Cần Đước,Miền Nam
+80,Tỉnh Long An,807,Huyện Cần Giuộc,Miền Nam
+80,Tỉnh Long An,808,Huyện Châu Thành,Miền Nam
+82,Tỉnh Tiền Giang,815,Thành phố Mỹ Tho,Miền Nam
+82,Tỉnh Tiền Giang,816,Thành phố Gò Công,Miền Nam
+82,Tỉnh Tiền Giang,817,Thị xã Cai Lậy,Miền Nam
+82,Tỉnh Tiền Giang,818,Huyện Tân Phước,Miền Nam
+82,Tỉnh Tiền Giang,819,Huyện Cái Bè,Miền Nam
+82,Tỉnh Tiền Giang,820,Huyện Cai Lậy,Miền Nam
+82,Tỉnh Tiền Giang,821,Huyện Châu Thành,Miền Nam
+82,Tỉnh Tiền Giang,822,Huyện Chợ Gạo,Miền Nam
+82,Tỉnh Tiền Giang,823,Huyện Gò Công Tây,Miền Nam
+82,Tỉnh Tiền Giang,824,Huyện Gò Công Đông,Miền Nam
+82,Tỉnh Tiền Giang,825,Huyện Tân Phú Đông,Miền Nam
+83,Tỉnh Bến Tre,829,Thành phố Bến Tre,Miền Nam
+83,Tỉnh Bến Tre,831,Huyện Châu Thành,Miền Nam
+83,Tỉnh Bến Tre,832,Huyện Chợ Lách,Miền Nam
+83,Tỉnh Bến Tre,833,Huyện Mỏ Cày Nam,Miền Nam
+83,Tỉnh Bến Tre,834,Huyện Giồng Trôm,Miền Nam
+83,Tỉnh Bến Tre,835,Huyện Bình Đại,Miền Nam
+83,Tỉnh Bến Tre,836,Huyện Ba Tri,Miền Nam
+83,Tỉnh Bến Tre,837,Huyện Thạnh Phú,Miền Nam
+83,Tỉnh Bến Tre,838,Huyện Mỏ Cày Bắc,Miền Nam
+84,Tỉnh Trà Vinh,842,Thành phố Trà Vinh,Miền Nam
+84,Tỉnh Trà Vinh,844,Huyện Càng Long,Miền Nam
+84,Tỉnh Trà Vinh,845,Huyện Cầu Kè,Miền Nam
+84,Tỉnh Trà Vinh,846,Huyện Tiểu Cần,Miền Nam
+84,Tỉnh Trà Vinh,847,Huyện Châu Thành,Miền Nam
+84,Tỉnh Trà Vinh,848,Huyện Cầu Ngang,Miền Nam
+84,Tỉnh Trà Vinh,849,Huyện Trà Cú,Miền Nam
+84,Tỉnh Trà Vinh,850,Huyện Duyên Hải,Miền Nam
+84,Tỉnh Trà Vinh,851,Thị xã Duyên Hải,Miền Nam
+86,Tỉnh Vĩnh Long,855,Thành phố Vĩnh Long,Miền Nam
+86,Tỉnh Vĩnh Long,857,Huyện Long Hồ,Miền Nam
+86,Tỉnh Vĩnh Long,858,Huyện Mang Thít,Miền Nam
+86,Tỉnh Vĩnh Long,859,Huyện Vũng Liêm,Miền Nam
+86,Tỉnh Vĩnh Long,860,Huyện Tam Bình,Miền Nam
+86,Tỉnh Vĩnh Long,861,Thị xã Bình Minh,Miền Nam
+86,Tỉnh Vĩnh Long,862,Huyện Trà Ôn,Miền Nam
+86,Tỉnh Vĩnh Long,863,Huyện Bình Tân,Miền Nam
+87,Tỉnh Đồng Tháp,866,Thành phố Cao Lãnh,Miền Nam
+87,Tỉnh Đồng Tháp,867,Thành phố Sa Đéc,Miền Nam
+87,Tỉnh Đồng Tháp,868,Thành phố Hồng Ngự,Miền Nam
+87,Tỉnh Đồng Tháp,869,Huyện Tân Hồng,Miền Nam
+87,Tỉnh Đồng Tháp,870,Huyện Hồng Ngự,Miền Nam
+87,Tỉnh Đồng Tháp,871,Huyện Tam Nông,Miền Nam
+87,Tỉnh Đồng Tháp,872,Huyện Tháp Mười,Miền Nam
+87,Tỉnh Đồng Tháp,873,Huyện Cao Lãnh,Miền Nam
+87,Tỉnh Đồng Tháp,874,Huyện Thanh Bình,Miền Nam
+87,Tỉnh Đồng Tháp,875,Huyện Lấp Vò,Miền Nam
+87,Tỉnh Đồng Tháp,876,Huyện Lai Vung,Miền Nam
+87,Tỉnh Đồng Tháp,877,Huyện Châu Thành,Miền Nam
+89,Tỉnh An Giang,883,Thành phố Long Xuyên,Miền Nam
+89,Tỉnh An Giang,884,Thành phố Châu Đốc,Miền Nam
+89,Tỉnh An Giang,886,Huyện An Phú,Miền Nam
+89,Tỉnh An Giang,887,Thị xã Tân Châu,Miền Nam
+89,Tỉnh An Giang,888,Huyện Phú Tân,Miền Nam
+89,Tỉnh An Giang,889,Huyện Châu Phú,Miền Nam
+89,Tỉnh An Giang,890,Thị xã Tịnh Biên,Miền Nam
+89,Tỉnh An Giang,891,Huyện Tri Tôn,Miền Nam
+89,Tỉnh An Giang,892,Huyện Châu Thành,Miền Nam
+89,Tỉnh An Giang,893,Huyện Chợ Mới,Miền Nam
+89,Tỉnh An Giang,894,Huyện Thoại Sơn,Miền Nam
+91,Tỉnh Kiên Giang,899,Thành phố Rạch Giá,Miền Nam
+91,Tỉnh Kiên Giang,900,Thành phố Hà Tiên,Miền Nam
+91,Tỉnh Kiên Giang,902,Huyện Kiên Lương,Miền Nam
+91,Tỉnh Kiên Giang,903,Huyện Hòn Đất,Miền Nam
+91,Tỉnh Kiên Giang,904,Huyện Tân Hiệp,Miền Nam
+91,Tỉnh Kiên Giang,905,Huyện Châu Thành,Miền Nam
+91,Tỉnh Kiên Giang,906,Huyện Giồng Riềng,Miền Nam
+91,Tỉnh Kiên Giang,907,Huyện Gò Quao,Miền Nam
+91,Tỉnh Kiên Giang,908,Huyện An Biên,Miền Nam
+91,Tỉnh Kiên Giang,909,Huyện An Minh,Miền Nam
+91,Tỉnh Kiên Giang,910,Huyện Vĩnh Thuận,Miền Nam
+91,Tỉnh Kiên Giang,911,Thành phố Phú Quốc,Miền Nam
+91,Tỉnh Kiên Giang,912,Huyện Kiên Hải,Miền Nam
+91,Tỉnh Kiên Giang,913,Huyện U Minh Thượng,Miền Nam
+91,Tỉnh Kiên Giang,914,Huyện Giang Thành,Miền Nam
+92,Thành phố Cần Thơ,916,Quận Ninh Kiều,Miền Nam
+92,Thành phố Cần Thơ,917,Quận Ô Môn,Miền Nam
+92,Thành phố Cần Thơ,918,Quận Bình Thuỷ,Miền Nam
+92,Thành phố Cần Thơ,919,Quận Cái Răng,Miền Nam
+92,Thành phố Cần Thơ,923,Quận Thốt Nốt,Miền Nam
+92,Thành phố Cần Thơ,924,Huyện Vĩnh Thạnh,Miền Nam
+92,Thành phố Cần Thơ,925,Huyện Cờ Đỏ,Miền Nam
+92,Thành phố Cần Thơ,926,Huyện Phong Điền,Miền Nam
+92,Thành phố Cần Thơ,927,Huyện Thới Lai,Miền Nam
+93,Tỉnh Hậu Giang,930,Thành phố Vị Thanh,Miền Nam
+93,Tỉnh Hậu Giang,931,Thành phố Ngã Bảy,Miền Nam
+93,Tỉnh Hậu Giang,932,Huyện Châu Thành A,Miền Nam
+93,Tỉnh Hậu Giang,933,Huyện Châu Thành,Miền Nam
+93,Tỉnh Hậu Giang,934,Huyện Phụng Hiệp,Miền Nam
+93,Tỉnh Hậu Giang,935,Huyện Vị Thuỷ,Miền Nam
+93,Tỉnh Hậu Giang,936,Huyện Long Mỹ,Miền Nam
+93,Tỉnh Hậu Giang,937,Thị xã Long Mỹ,Miền Nam
+94,Tỉnh Sóc Trăng,941,Thành phố Sóc Trăng,Miền Nam
+94,Tỉnh Sóc Trăng,942,Huyện Châu Thành,Miền Nam
+94,Tỉnh Sóc Trăng,943,Huyện Kế Sách,Miền Nam
+94,Tỉnh Sóc Trăng,944,Huyện Mỹ Tú,Miền Nam
+94,Tỉnh Sóc Trăng,945,Huyện Cù Lao Dung,Miền Nam
+94,Tỉnh Sóc Trăng,946,Huyện Long Phú,Miền Nam
+94,Tỉnh Sóc Trăng,947,Huyện Mỹ Xuyên,Miền Nam
+94,Tỉnh Sóc Trăng,948,Thị xã Ngã Năm,Miền Nam
+94,Tỉnh Sóc Trăng,949,Huyện Thạnh Trị,Miền Nam
+94,Tỉnh Sóc Trăng,950,Thị xã Vĩnh Châu,Miền Nam
+94,Tỉnh Sóc Trăng,951,Huyện Trần Đề,Miền Nam
+95,Tỉnh Bạc Liêu,954,Thành phố Bạc Liêu,Miền Nam
+95,Tỉnh Bạc Liêu,956,Huyện Hồng Dân,Miền Nam
+95,Tỉnh Bạc Liêu,957,Huyện Phước Long,Miền Nam
+95,Tỉnh Bạc Liêu,958,Huyện Vĩnh Lợi,Miền Nam
+95,Tỉnh Bạc Liêu,959,Thị xã Giá Rai,Miền Nam
+95,Tỉnh Bạc Liêu,960,Huyện Đông Hải,Miền Nam
+95,Tỉnh Bạc Liêu,961,Huyện Hoà Bình,Miền Nam
+96,Tỉnh Cà Mau,964,Thành phố Cà Mau,Miền Nam
+96,Tỉnh Cà Mau,966,Huyện U Minh,Miền Nam
+96,Tỉnh Cà Mau,967,Huyện Thới Bình,Miền Nam
+96,Tỉnh Cà Mau,968,Huyện Trần Văn Thời,Miền Nam
+96,Tỉnh Cà Mau,969,Huyện Cái Nước,Miền Nam
+96,Tỉnh Cà Mau,970,Huyện Đầm Dơi,Miền Nam
+96,Tỉnh Cà Mau,971,Huyện Năm Căn,Miền Nam
+96,Tỉnh Cà Mau,972,Huyện Phú Tân,Miền Nam
+96,Tỉnh Cà Mau,973,Huyện Ngọc Hiển,Miền Nam

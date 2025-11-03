@@ -1,9 +1,7 @@
-{{
-    config(
-        materialized='table',
-        tags=['external', 'vietnam_geography']
-    )
-}}
+{{ config(
+    materialized = 'table',
+    tags = ['silver', 'external', 'vietnam_geography']
+) }}
 
 WITH provinces AS (
     SELECT

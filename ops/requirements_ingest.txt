@@ -1,0 +1,13 @@
+# SME Pulse – Data Ingestion Requirements
+# Chạy: pip install -r ops/requirements_ingest.txt
+
+# Data Processing
+pandas==2.1.3
+pyarrow==13.0.0
+numpy==1.24.3
+
+# MinIO / S3
+minio==7.1.17
+
+# Utilities
+python-dateutil==2.8.2

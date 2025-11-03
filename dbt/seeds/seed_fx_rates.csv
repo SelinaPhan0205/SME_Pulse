@@ -1,0 +1,13 @@
+currency_code,currency_name,rate_to_vnd,effective_date,source
+USD,US Dollar,24500.00,2023-01-01,Vietcombank
+GBP,British Pound,31200.00,2023-01-01,Vietcombank
+EUR,Euro,26800.00,2023-01-01,Vietcombank
+AUD,Australian Dollar,16500.00,2023-01-01,Vietcombank
+CAD,Canadian Dollar,18200.00,2023-01-01,Vietcombank
+VND,Vietnamese Dong,1.00,2023-01-01,Base
+USD,US Dollar,25000.00,2024-01-01,Vietcombank
+GBP,British Pound,32500.00,2024-01-01,Vietcombank
+EUR,Euro,27500.00,2024-01-01,Vietcombank
+AUD,Australian Dollar,17000.00,2024-01-01,Vietcombank
+CAD,Canadian Dollar,18800.00,2024-01-01,Vietcombank
+VND,Vietnamese Dong,1.00,2024-01-01,Base

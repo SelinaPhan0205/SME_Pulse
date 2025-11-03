@@ -1,0 +1,9 @@
+source_value,method_code,method_name_vn,is_digital
+Cash,CASH,Tiền mặt,FALSE
+Credit Card,CC,Thẻ tín dụng,TRUE
+Debit Card,DC,Thẻ ghi nợ,TRUE
+PayPal,PAYPAL,Ví điện tử PayPal,TRUE
+cash,CASH,Tiền mặt,FALSE
+credit card,CC,Thẻ tín dụng,TRUE
+debit card,DC,Thẻ ghi nợ,TRUE
+paypal,PAYPAL,Ví điện tử PayPal,TRUE

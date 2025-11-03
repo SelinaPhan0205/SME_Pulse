@@ -1,0 +1,457 @@
+# SME Pulse - Schema Design & Layering Strategy
+
+## 🎯 CHUẨN NHẤT: Medallion Architecture với Star Schema
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     LAKEHOUSE LAYERS                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  BRONZE (schema: bronze)                                    │
+│  ├─ sales_snapshot_raw          ← Raw CSVs/APIs             │
+│  ├─ payments_raw                ← Unchanged data            │
+│  ├─ shipments_raw               ← Exact copy of source      │
+│  └─ bank_txn_raw                ← No transformations        │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  SILVER (schema: silver)                                    │
+│  ├─ stg_orders_vn               ← Cleansed & Vietnamized    │
+│  ├─ stg_payments_vn             ← Type casting              │
+│  ├─ stg_shipments_vn            ← Timezone normalized       │
+│  ├─ stg_bank_txn_vn             ← Currency → VND            │
+│  └─ stg_ar_invoices_vn          ← ⚠️ THÊM MỚI              │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  GOLD (schema: gold) ← ⭐ DIMS/FACTS Ở ĐÂY                  │
+│                                                             │
+│  ├─ 📊 DIMENSIONS (Gold Conformed)                          │
+│  │   ├─ dim_date                ← SCD Type 0                │
+│  │   ├─ dim_customer            ← SCD Type 2 (history)      │
+│  │   ├─ dim_product             ← SCD Type 1                │
+│  │   ├─ dim_channel             ← SCD Type 0                │
+│  │   ├─ dim_payment_method      ← SCD Type 0                │
+│  │   ├─ dim_carrier             ← SCD Type 0                │
+│  │   └─ dim_geo                 ← SCD Type 1                │
+│  │                                                          │
+│  ├─ 📈 FACTS (Gold Grain Tables)                            │
+│  │   ├─ fact_orders             ← 1 row = 1 order line      │
+│  │   ├─ fact_payments           ← 1 row = 1 payment         │
+│  │   ├─ fact_shipments          ← 1 row = 1 shipment        │
+│  │   └─ fact_bank_txn           ← 1 row = 1 bank txn        │
+│  │                                                          │
+│  ├─ 🔗 LINKS (Gold Reconciliation)                         │
+│  │   ├─ link_order_payment      ← M:N bridge                │
+│  │   ├─ link_payment_bank       ← M:N bridge                │
+│  │   └─ link_order_shipment     ← M:N bridge                │
+│  │                                                          │
+│  ├─ 📊 KPI MARTS (Gold Aggregates)                         │
+│  │   ├─ daily_revenue           ← Business metrics          │
+│  │   ├─ payment_success_rate    ← Operational KPIs          │
+│  │   └─ reconciliation_daily    ← Finance reports           │
+│  │                                                          │
+│  └─ 🤖 ML FEATURES (Gold ML-Ready)                         │
+│      ├─ ml_prophet_cashflow     ← Time series (ds, y)       │
+│      ├─ ml_isolation_features   ← Anomaly detection         │
+│      └─ ml_ar_scoring_features  ← Classification labels     │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🎓 LÝ DO TẠI SAO?
+
+### **Bronze = Raw Zone**
+- Nguyên tắc: "Never touch, never delete"
+- Schema: `bronze`
+- Materialized: `table` hoặc external (Iceberg)
+- Retention: Forever (hoặc theo compliance)
+
+### **Silver = Cleaned Zone**  
+- Nguyên tắc: "Single version of truth, denormalized staging"
+- Schema: `silver`
+- Materialized: `incremental` tables
+- Purpose: **Phục vụ Facts**, không phải end-users
+
+### **Gold = Analytics-Ready Zone** ⭐
+- Nguyên tắc: "Star schema for humans & ML"
+- Schema: `gold` (hoặc `analytics`, `warehouse`)
+- Materialized: `table` cho dims, `incremental` cho facts
+- Purpose: **Direct query by BI tools & ML pipelines**
+
+---
+
+## 📐 QUY TẮC THIẾT KẾ
+
+### ✅ **Dims/Facts PHẢI Ở Gold** vì:
+
+1. **Star schema = Gold standard**
+   - Dims có surrogate keys (dim_date.date_key)
+   - Facts có foreign keys (fact_orders.date_key)
+   - End-users chỉ query Gold, không query Silver
+
+2. **Silver = Staging only**
+   - Silver có thể thay đổi logic (re-process)
+   - Gold = stable contract với downstream (BI/ML)
+   - Silver → Gold = "promote to production"
+
+3. **Governance & Security**
+   - Gold có row-level security, data masking
+   - Silver = workspace, Gold = governed
+   - Analysts chỉ có quyền `SELECT gold.*`
+
+4. **Performance**
+   - Gold được optimize cho query (indexes, partitions)
+   - Silver được optimize cho load (merge, dedup)
+
+---
+
+## 🛠️ SỬA LẠI CHO CẬU
+
+### 1️⃣ **Cấu trúc thư mục đúng:**
+
+```
+models/
+├─ bronze.yml                # Sources
+│
+├─ silver/                   # Schema: silver
+│  ├─ stg_orders_vn.sql
+│  ├─ stg_payments_vn.sql
+│  ├─ stg_shipments_vn.sql
+│  ├─ stg_bank_txn_vn.sql
+│  └─ stg_ar_invoices_vn.sql  ← ⚠️ Thêm mới
+│
+└─ gold/                     # Schema: gold ⭐
+   │
+   ├─ dims/
+   │  ├─ dim_date.sql
+   │  ├─ dim_customer.sql
+   │  ├─ dim_product.sql
+   │  ├─ dim_channel.sql
+   │  ├─ dim_payment_method.sql
+   │  ├─ dim_carrier.sql
+   │  └─ dim_geo.sql
+   │
+   ├─ facts/
+   │  ├─ fact_orders.sql
+   │  ├─ fact_payments.sql
+   │  ├─ fact_shipments.sql
+   │  └─ fact_bank_txn.sql
+   │
+   ├─ links/
+   │  ├─ link_order_payment.sql
+   │  ├─ link_payment_bank.sql
+   │  └─ link_order_shipment.sql
+   │
+   ├─ kpi/                   # ← Tách riêng KPIs
+   │  ├─ daily_revenue.sql
+   │  ├─ payment_success_rate.sql
+   │  └─ reconciliation_daily.sql
+   │
+   └─ ml/                    # ← Tách riêng ML features
+      ├─ ml_prophet_cashflow.sql
+      ├─ ml_isolation_features.sql
+      └─ ml_ar_scoring.sql
+```
+
+### 2️⃣ **dbt_project.yml config:**
+
+```yaml
+name: sme_pulse
+version: 1.0.0
+config-version: 2
+
+profile: sme_pulse
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+
+models:
+  sme_pulse:
+    # Silver models → schema: silver
+    silver:
+      +materialized: incremental
+      +schema: silver
+      +on_schema_change: sync_all_columns
+      +tags: ['silver', 'staging']
+      
+    # Gold models → schema: gold ⭐
+    gold:
+      +schema: gold
+      +tags: ['gold', 'production']
+      
+      dims:
+        +materialized: table  # Dims là table
+        +tags: ['dimensions']
+        
+      facts:
+        +materialized: incremental  # Facts là incremental
+        +unique_key: ['order_id']  # Tùy fact
+        +tags: ['facts']
+        +on_schema_change: append_new_columns
+        
+      links:
+        +materialized: incremental
+        +tags: ['reconciliation']
+        
+      kpi:
+        +materialized: incremental
+        +tags: ['metrics', 'kpi']
+        
+      ml:
+        +materialized: incremental
+        +tags: ['ml', 'features']
+```
+
+### 3️⃣ **profiles.yml (không cần sửa schema):**
+
+```yaml
+sme_pulse:
+  target: trino
+  outputs:
+    trino:
+      type: trino
+      method: none
+      host: trino
+      port: 8080
+      database: iceberg
+      schema: gold  # ← Default schema (không quan trọng lắm)
+      threads: 4
+```
+
+**Giải thích:**
+- `schema: gold` trong profiles = default khi không chỉ định
+- **NHƯNG** dbt sẽ dùng `+schema` trong `dbt_project.yml`
+- Silver models → tự động vào `iceberg.silver.*`
+- Gold models → tự động vào `iceberg.gold.*`
+
+---
+
+## 🔄 FLOW EXECUTION (Tuần tự vs Song song)
+
+### **Stage 1: Silver (song song)**
+```bash
+dbt run --select silver.* --threads 4
+# Output: iceberg.silver.stg_orders_vn, stg_payments_vn, ...
+```
+
+### **Stage 2: Gold Dims (song song)**
+```bash
+dbt run --select gold.dims.* --threads 7
+# Output: iceberg.gold.dim_date, dim_customer, ...
+```
+
+### **Stage 3: Gold Facts (song song, nhưng phụ thuộc Dims)**
+```bash
+dbt run --select gold.facts.* --threads 4
+# Output: iceberg.gold.fact_orders, fact_payments, ...
+# ⚠️ fact_orders JOIN dim_channel → phải có dims trước
+```
+
+### **Stage 4: Gold Links (tuần tự sau Facts)**
+```bash
+dbt run --select gold.links.*
+# Output: iceberg.gold.link_order_payment, ...
+# ⚠️ JOIN fact_orders + fact_payments → phải có facts trước
+```
+
+### **Stage 5: Gold KPIs & ML (song song sau Links)**
+```bash
+dbt run --select gold.kpi.* gold.ml.* --threads 6
+# Output: iceberg.gold.daily_revenue, ml_prophet_cashflow, ...
+```
+
+---
+
+## 📊 DAG DEPENDENCIES (Lineage)
+
+```
+bronze.sales_snapshot_raw
+  ↓
+silver.stg_orders_vn
+  ↓ (needs seeds)
+gold.dim_channel ──┐
+                   ├─→ gold.fact_orders ──┐
+gold.dim_customer ─┘                      │
+                                          ├─→ gold.link_order_payment
+silver.stg_payments_vn                    │        ↓
+  ↓                                       │   gold.kpi.payment_success_rate
+gold.fact_payments ───────────────────────┘        ↓
+                                            gold.ml.ml_prophet_cashflow
+```
+
+**Quy tắc:**
+- Silver → không phụ thuộc Gold
+- Dims → không phụ thuộc Facts
+- Facts → CẦN Dims (để join lấy keys)
+- Links → CẦN Facts (để reconcile)
+- KPI/ML → CẦN Links (nếu cần reconciliation data)
+
+---
+
+## ⚠️ VẤN ĐỀ CẬU CÓ THỂ GẶP
+
+### **Hiện tại facts của cậu:**
+
+```sql
+-- fact_orders.sql (từ markdown cậu gửi)
+select
+  s.order_id_nat as order_id,
+  cast(to_char(s.order_date, 'YYYYMMDD') as bigint) as date_key,
+  dch.channel_code as channel_key,  -- ← JOIN dim
+  ...
+from {{ ref('stg_orders_vn') }} s
+left join {{ ref('dim_channel') }} dch  -- ← NẾU dim chưa có?
+  on s.channel_code = dch.channel_code;
+```
+
+**Nếu dim_channel chưa chạy → fact_orders fail!**
+
+### **Giải pháp: dbt selectors**
+
+Tạo `selectors.yml`:
+```yaml
+selectors:
+  - name: build_warehouse
+    description: Build toàn bộ warehouse theo đúng thứ tự
+    definition:
+      union:
+        - method: path
+          value: models/silver
+        - method: path
+          value: models/gold/dims
+        - method: path
+          value: models/gold/facts
+        - method: path
+          value: models/gold/links
+        - method: path
+          value: models/gold/kpi
+        - method: path
+          value: models/gold/ml
+```
+
+**Chạy:**
+```bash
+dbt build --selector build_warehouse
+# dbt tự động sort theo dependencies!
+```
+
+---
+
+## 🎯 TRẢ LỜI CÂU HỎI CỦA CẬU
+
+### ❓ "Thiết kế Silver với Dims/Facts ổn rồi đúng không?"
+
+✅ **Silver ổn 90%** (chỉ thiếu stg_ar_invoices)  
+✅ **Dims/Facts ổn về logic**, NHƯNG:
+- ❌ Cần move từ `models/dims`, `models/facts`
+- ✅ Sang `models/gold/dims`, `models/gold/facts`
+
+### ❓ "Bước chuẩn hóa là được rồi đúng không?"
+
+✅ **Chuẩn hóa ở Silver = HOÀN HẢO**:
+- Timezone, currency, Việt hóa → đúng chỗ
+- Đừng thêm logic business vào Silver
+- Silver = technical cleaning only
+
+### ❓ "Aggregate là chưa ổn thôi hả?"
+
+✅ **Đúng!** Aggregate (KPI, ML features) cần:
+- Time series rollups (daily, weekly)
+- Window functions (7d avg, 30d std)
+- Feature engineering (z-scores, ratios)
+- → Phải làm ở `gold.kpi.*` và `gold.ml.*`
+
+### ❓ "Phải làm Dims/Facts trước khi làm KPI hả?"
+
+✅ **ĐÚNG VẬY!** Vì:
+```sql
+-- gold/kpi/daily_revenue.sql
+SELECT 
+  f.date_key,
+  d.date_actual,  -- ← Cần dim_date
+  c.channel_name_vi,  -- ← Cần dim_channel
+  SUM(f.revenue)
+FROM gold.fact_orders f
+JOIN gold.dim_date d ON f.date_key = d.date_key
+JOIN gold.dim_channel c ON f.channel_key = c.channel_code
+GROUP BY 1,2,3;
+```
+
+**Thứ tự bắt buộc:**
+1. Silver (staging)
+2. Dims (dimensions)
+3. Facts (join dims để lấy keys)
+4. Links (join facts để reconcile)
+5. KPI/ML (aggregate facts + dims)
+
+### ❓ "Dims/Facts lưu ở schema Gold hay Silver?"
+
+✅ **GOLD!** (iceberg.gold.dim_*, iceberg.gold.fact_*)  
+
+**LÝ DO:**
+- Silver = workspace (unstable)
+- Gold = production (stable star schema)
+- BI tools query Gold, không query Silver
+- Dims/Facts = phần của star schema → phải ở Gold
+
+---
+
+## 📋 CHECKLIST CUỐI CÙNG
+
+- [ ] Move `models/dims` → `models/gold/dims`
+- [ ] Move `models/facts` → `models/gold/facts`
+- [ ] Move `models/links` → `models/gold/links`
+- [ ] Update `dbt_project.yml` với `+schema: gold`
+- [ ] Thêm `models/gold/kpi` folder
+- [ ] Thêm `models/gold/ml` folder
+- [ ] Thêm `stg_ar_invoices_vn.sql` vào Silver
+- [ ] Test: `dbt build --selector build_warehouse`
+- [ ] Verify schemas: `SHOW TABLES IN iceberg.silver` và `iceberg.gold`
+
+---
+
+## 🚀 LỆNH CHẠY HOÀN CHỈNH
+
+```bash
+# 1. Seed seeds (vào schema mặc định, không quan trọng)
+dbt seed
+
+# 2. Build toàn bộ (dbt tự sort dependencies)
+dbt build
+
+# HOẶC từng bước:
+
+# 2a. Silver
+dbt run --select silver.*
+
+# 2b. Gold Dims
+dbt run --select gold.dims.*
+
+# 2c. Gold Facts (depends on Dims)
+dbt run --select gold.facts.*
+
+# 2d. Gold Links (depends on Facts)
+dbt run --select gold.links.*
+
+# 2e. Gold KPIs & ML (depends on Links)
+dbt run --select gold.kpi.* gold.ml.*
+
+# 3. Tests
+dbt test
+```
+
+---
+
+## 📚 TÀI LIỆU THAM KHẢO
+
+- [Medallion Architecture (Databricks)](https://www.databricks.com/glossary/medallion-architecture)
+- [dbt Best Practices - Schema Organization](https://docs.getdbt.com/guides/best-practices/how-we-structure/1-guide-overview)
+- [Kimball Star Schema Design](https://www.kimballgroup.com/data-warehouse-business-intelligence-resources/kimball-techniques/dimensional-modeling-techniques/)
+
+---
+
+Cậu còn thắc mắc gì về schemas không? Hoặc muốn tớ viết chi tiết hơn về phần nào? 🎯

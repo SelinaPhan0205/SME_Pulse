@@ -1,10 +1,7 @@
-{{
-    config(
-        materialized='incremental',
-        unique_key=['indicator_code', 'year'],
-        tags=['external', 'world_bank']
-    )
-}}
+{{ config(
+    materialized = 'table',
+    tags = ['silver', 'external', 'world_bank']
+) }}
 
 WITH source AS (
     SELECT * FROM {{ source('bronze', 'world_bank_indicators_raw') }}
@@ -49,11 +46,6 @@ cleaned AS (
         CURRENT_TIMESTAMP AS transformed_at
         
     FROM source
-    
-    {% if is_incremental() %}
-        -- Chỉ lấy data mới từ lần ingest gần nhất
-        WHERE ingested_at > (SELECT MAX(ingested_at) FROM {{ this }})
-    {% endif %}
 )
 
 SELECT * FROM cleaned

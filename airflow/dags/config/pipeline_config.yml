@@ -1,0 +1,126 @@
+# Pipeline Configuration
+# Cấu hình chung cho toàn bộ SME Pulse Data Pipeline
+
+minio:
+  endpoint: "minio:9000"  # Service name trong Docker network
+  access_key: "minioadmin"
+  secret_key: "minioadmin123"
+  bucket: "sme-lake"
+  secure: false
+  
+  # Bronze paths
+  bronze_paths:
+    bank_transactions: "bronze/raw/bank_transactions/"
+    shipments_payments: "bronze/raw/shipments_payments/"
+    sales_snapshot: "bronze/raw/sales_snapshot/"
+
+trino:
+  host: "trino"  # Service name trong Docker network
+  port: 8080
+  catalog: "sme_lake"
+  schema: "gold"
+  user: "admin"
+  
+dbt:
+  profiles_dir: "/opt/dbt"
+  project_dir: "/opt/dbt"
+  target: "dev"
+  threads: 4
+  
+  # dbt commands (executed from project_dir)
+  seed_command: "dbt seed --profiles-dir /opt/dbt"
+  silver_command: "dbt run --select silver.* --exclude silver.external.* --profiles-dir /opt/dbt"
+  test_silver_command: "dbt test --select silver.* --profiles-dir /opt/dbt"
+  gold_dims_command: "dbt run --select gold.dims.* gold.external.dim_* --profiles-dir /opt/dbt"
+  test_gold_dims_command: "dbt test --select gold.dims.* --profiles-dir /opt/dbt"
+  gold_facts_command: "dbt run --select gold.facts.* --profiles-dir /opt/dbt"
+  test_gold_facts_command: "dbt test --select gold.facts.* --profiles-dir /opt/dbt"
+  gold_links_command: "dbt run --select gold.links.* --profiles-dir /opt/dbt"
+  test_gold_links_command: "dbt test --select gold.links.* --profiles-dir /opt/dbt"
+
+metabase:
+  url: "http://metabase:3000"
+  database_id: 1
+  # API key sẽ được lấy từ Airflow Variable: METABASE_API_KEY
+
+redis:
+  host: "redis"
+  port: 6379
+  db: 0
+  cache_patterns:
+    - "sme:gold:fact_*"
+    - "sme:gold:dim_*"
+    - "sme:aggregates:*"
+
+# Source data paths (inside Docker container)
+source_data:
+  base_path: "/opt/data/source"
+  files:
+    bank_transactions: "Bank-Transactions.csv"
+    shipments_payments: "shipments_payments.csv"
+    sales_snapshot: "sales_snapshot.xlsx"
+
+# Python scripts paths (inside Docker container)
+scripts:
+  base_path: "/opt/ops"
+  ingest:
+    bank_transactions: "ingest_bank_transactions.py"
+    shipments_payments: "ingest_shipments_payments.py"
+    sales_snapshot: "ingest_batch_snapshot.py"
+
+# Notifications
+notifications:
+  slack:
+    enabled: true
+    channel: "#data-engineering"
+    # Webhook URL sẽ được lấy từ Airflow Variable: SLACK_WEBHOOK_URL
+  email:
+    enabled: false
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    from_email: "alerts@company.com"
+    to_emails:
+      - "team@company.com"
+
+# Data quality thresholds
+data_quality:
+  row_count_variance:
+    warning: 0.05   # 5%
+    critical: 0.10  # 10%
+  
+  data_freshness:
+    warning_days: 1
+    critical_days: 2
+  
+  null_percentage:
+    warning: 0.05
+    critical: 0.10
+
+# Expected row counts (for validation)
+expected_row_counts:
+  bronze:
+    bank_txn_raw: 105000
+    shipments_payments_raw: 302000
+    sales_snapshot_raw: 1663000
+  
+  silver:
+    stg_orders_vn: 1663000
+    stg_payments_vn: 375000
+    stg_shipments_vn: 302000
+    stg_bank_txn_vn: 206000
+  
+  gold_dims:
+    dim_date: 1826
+    dim_customer: 87939
+    dim_product: 30685
+    dim_channel: 5
+    dim_payment_method: 4
+    dim_carrier: 4
+    dim_location: 691
+    dim_macro_indicators: 10
+  
+  gold_facts:
+    fact_orders: 1663000
+    fact_payments: 375000
+    fact_shipments: 302000
+    fact_bank_txn: 206000
