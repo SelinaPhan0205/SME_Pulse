@@ -495,7 +495,26 @@ with DAG(
         
         run_gold_links >> test_gold_links
     
-    # Tasks 15: Serve Layer (Metabase + Redis)
+    # Tasks 15-16: Gold KPI (Business metrics and aggregations)
+    # KPI tables: kpi_daily_revenue, kpi_payment_success_rate, kpi_ar_dso_analysis, kpi_reconciliation_daily
+    with TaskGroup('gold_kpi', tooltip='Build Gold KPI tables') as gold_kpi_group:
+        run_gold_kpi = BashOperator(
+            task_id='run_gold_kpi',
+            bash_command=PIPELINE_CONFIG['dbt']['gold_kpi_command'],
+            cwd='/opt/dbt',
+            execution_timeout=timedelta(minutes=10)
+        )
+        
+        test_gold_kpi = BashOperator(
+            task_id='test_gold_kpi',
+            bash_command=PIPELINE_CONFIG['dbt']['test_gold_kpi_command'],
+            cwd='/opt/dbt',
+            execution_timeout=timedelta(minutes=5)
+        )
+        
+        run_gold_kpi >> test_gold_kpi
+    
+    # Tasks 17: Serve Layer (Metabase + Redis)
     with TaskGroup('serve_layer', tooltip='Update serving layer') as serve_group:
         refresh_metabase_task = PythonOperator(
             task_id='refresh_metabase',
@@ -510,13 +529,13 @@ with DAG(
         # Parallel execution
         [refresh_metabase_task, invalidate_redis_task]
     
-    # Task 16: Generate Report
+    # Task 18: Generate Report
     generate_report_task = PythonOperator(
         task_id='generate_report',
         python_callable=generate_report
     )
     
-    # Task 17: Send Notification
+    # Task 19: Send Notification
     send_notification_task = PythonOperator(
         task_id='send_notification',
         python_callable=send_notification
@@ -529,5 +548,6 @@ with DAG(
     # Linear flow with TaskGroups (seeds skipped - already loaded)
     verify_infra_task >> validate_bronze_task >> silver_group
     silver_group >> gold_dims_group >> gold_facts_group
-    gold_facts_group >> gold_links_group >> serve_group
+    gold_facts_group >> gold_links_group >> gold_kpi_group
+    gold_kpi_group >> serve_group
     serve_group >> generate_report_task >> send_notification_task

@@ -13,6 +13,7 @@ minio:
     bank_transactions: "bronze/raw/bank_transactions/"
     shipments_payments: "bronze/raw/shipments_payments/"
     sales_snapshot: "bronze/raw/sales_snapshot/"
+    ar_invoices: "bronze/raw/invoices_AR/"
 
 trino:
   host: "trino"  # Service name trong Docker network
@@ -37,6 +38,8 @@ dbt:
   test_gold_facts_command: "dbt test --select gold.facts.* --profiles-dir /opt/dbt"
   gold_links_command: "dbt run --select gold.links.* --profiles-dir /opt/dbt"
   test_gold_links_command: "dbt test --select gold.links.* --profiles-dir /opt/dbt"
+  gold_kpi_command: "dbt run --select gold.KPI.* --profiles-dir /opt/dbt"
+  test_gold_kpi_command: "dbt test --select gold.KPI.* --profiles-dir /opt/dbt"
 
 metabase:
   url: "http://metabase:3000"
@@ -59,6 +62,7 @@ source_data:
     bank_transactions: "Bank-Transactions.csv"
     shipments_payments: "shipments_payments.csv"
     sales_snapshot: "sales_snapshot.xlsx"
+    ar_invoices: "invoices_AR.csv"
 
 # Python scripts paths (inside Docker container)
 scripts:
@@ -67,6 +71,7 @@ scripts:
     bank_transactions: "ingest_bank_transactions.py"
     shipments_payments: "ingest_shipments_payments.py"
     sales_snapshot: "ingest_batch_snapshot.py"
+    ar_invoices: "ingest_invoices_ar.py"
 
 # Notifications
 notifications:
@@ -102,12 +107,14 @@ expected_row_counts:
     bank_txn_raw: 105000
     shipments_payments_raw: 302000
     sales_snapshot_raw: 1663000
+    ar_invoices_raw: 50000
   
   silver:
     stg_orders_vn: 1663000
     stg_payments_vn: 375000
     stg_shipments_vn: 302000
     stg_bank_txn_vn: 206000
+    stg_ar_invoices_vn: 50000
   
   gold_dims:
     dim_date: 1826
@@ -118,9 +125,17 @@ expected_row_counts:
     dim_carrier: 4
     dim_location: 691
     dim_macro_indicators: 10
+    dim_ar_customer: 1425
   
   gold_facts:
     fact_orders: 1663000
     fact_payments: 375000
     fact_shipments: 302000
     fact_bank_txn: 206000
+    fact_ar_invoices: 50000
+  
+  gold_kpi:
+    kpi_daily_revenue: 500
+    kpi_payment_success_rate: 500
+    kpi_ar_dso_analysis: 500
+    kpi_reconciliation_daily: 500

@@ -208,12 +208,44 @@ services:
     networks:
       - sme-network
 
+  # ===== METABASE (Business Intelligence & Analytics) =====
+  metabase:
+    image: metabase/metabase:latest
+    container_name: sme-metabase
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase
+      MB_DB_PORT: 5432
+      MB_DB_USER: sme
+      MB_DB_PASS: sme123
+      MB_DB_HOST: postgres
+    ports:
+      - "3000:3000"
+    volumes:
+      - metabase-data:/metabase-data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      trino:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - sme-network
+
 volumes:
   pgdata:
     driver: local
   minio-data:
     driver: local
   airflow-db-init:
+    driver: local
+  metabase-data:
     driver: local
 
 networks:

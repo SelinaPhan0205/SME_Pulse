@@ -61,6 +61,7 @@ def main():
     parser = argparse.ArgumentParser(description="Master Ingest Orchestrator")
     parser.add_argument("--skip-bank", action="store_true", help="Skip bank transactions ingest")
     parser.add_argument("--skip-shipments", action="store_true", help="Skip shipments/payments ingest")
+    parser.add_argument("--skip-ar-invoices", action="store_true", help="Skip AR invoices ingest")
     args = parser.parse_args()
     
     logger.info("")
@@ -92,6 +93,16 @@ def main():
     else:
         logger.info("⏭️  Skipping shipments & payments (--skip-shipments)")
         results["shipments_payments"] = None
+
+    # 3. AR Invoices
+    if not args.skip_ar_invoices:
+        results["ar_invoices"] = run_script(
+            "ingest_invoices_ar.py",
+            "📄 INGEST: AR Invoices"
+        )
+    else:
+        logger.info("⏭️  Skipping AR invoices (--skip-ar-invoices)")
+        results["ar_invoices"] = None
     
     # Summary
     logger.info("")

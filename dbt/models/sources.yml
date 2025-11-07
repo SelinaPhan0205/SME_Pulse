@@ -147,3 +147,46 @@ sources:
             description: "Ingestion timestamp"
           - name: ingested_year_month
             description: "Ingestion year-month"
+      - name: ar_invoices_raw
+        description: "Raw AR Invoices data from CSV – used for DSO, overdue analysis, and payment prediction"
+        meta:
+          external_location: "s3a://sme-lake/bronze/raw/invoices_AR/"
+          file_format: "PARQUET"
+          table_type: "EXTERNAL"
+        columns:
+          - name: invoice_id
+            description: "Unique identifier of the invoice"
+          - name: doc_id
+            description: "Document ID – redundant with invoice_id"
+          - name: business_code
+            description: "Business unit code"
+          - name: cust_number
+            description: "Customer number"
+          - name: name_customer
+            description: "Customer name (optional – free text)"
+          - name: invoice_currency
+            description: "Currency of the invoice"
+          - name: cust_payment_terms
+            description: "Customer payment terms code"
+          - name: total_open_amount
+            description: "Open amount on the invoice (original amount)"
+          - name: isOpen
+            description: "Whether invoice is still open (1) or paid (0)"
+          - name: posting_id
+            description: "Posting identifier (internal)"
+          - name: posting_date
+            description: "Date of invoice posting"
+          - name: baseline_create_date
+            description: "Date from which payment terms are applied"
+          - name: due_in_date
+            description: "Due date of the invoice"
+          - name: clear_date
+            description: "Date when invoice was cleared (paid)"
+          - name: document_create_date
+            description: "Date when document was created"
+          - name: document_create_date.1
+            description: "Alternative document create date (duplicate)"
+          - name: document type
+            description: "Type of financial document (e.g., RV)"
+          - name: area_business
+            description: "Business area (mostly NULL in dataset)"

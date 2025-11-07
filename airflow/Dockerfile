@@ -13,13 +13,21 @@ RUN pip install --no-cache-dir \
     pyarrow \
     minio \
     requests \
-    pandas
+    pandas \
+    mlflow \
+    prophet \
+    scikit-learn \
+    trino
 
 # Copy dbt project vào image từ build context (parent directory)
 COPY --chown=airflow:airflow ./dbt /opt/dbt
 
-# Thêm dbt vào PATH để bash tìm thấy
+# Copy ops folder (ML scripts) vào image
+COPY --chown=airflow:airflow ./ops /opt/ops
+
+# Thêm dbt và ops vào PATH để bash tìm thấy
 ENV PATH="/home/airflow/.local/bin:${PATH}"
+ENV PYTHONPATH="/opt:${PYTHONPATH}"
 
 # Verify installation
 RUN dbt --version
