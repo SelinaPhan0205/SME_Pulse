@@ -18,7 +18,7 @@
 -- ===================================================================
 
 with src as (
-    select * from {{ source('bronze', 'ar_invoices_raw') }}
+    select * from {{ source('bronze', 'invoices_ar_raw') }}
 ),
 
 -- Bước 1: Chuẩn hóa dữ liệu đầu vào

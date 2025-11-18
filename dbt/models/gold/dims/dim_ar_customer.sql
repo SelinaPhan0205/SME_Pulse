@@ -1,7 +1,5 @@
 {{ config(
-    materialized='incremental',
-    unique_key=['customer_key', 'effective_from'],
-    on_schema_change='sync_all_columns',
+    materialized='table',
     tags=['gold', 'dimension', 'ar_dimension', 'production']
 ) }}
 
@@ -140,3 +138,5 @@ FROM scd_logic
 {% if is_incremental() %}
   WHERE effective_from > (SELECT COALESCE(MAX(effective_from), CAST('1900-01-01' AS TIMESTAMP)) FROM {{ this }} WHERE is_current = true)
 {% endif %}
+
+

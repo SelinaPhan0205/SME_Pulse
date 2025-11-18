@@ -11,7 +11,7 @@ sme_pulse:
       type: trino
       method: none              # No authentication for local dev
       user: tuan_dev            # Tên user kết nối
-      host: trino               # Tên service trong docker-compose
+      host: trino               # Trino service name in Docker network
       port: 8080                # Trino HTTP port
       database: sme_lake         # Unified Medallion catalog
       schema: bronze            # Default schema for raw sources (bronze)

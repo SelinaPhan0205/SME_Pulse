@@ -83,6 +83,7 @@ services:
       - ./data:/opt/data
       - ./dbt:/opt/dbt
       - airflow-db-init:/opt/airflow
+      - mlflow_data:/tmp/mlflow  # ← MLflow persistent storage
     depends_on:
       postgres:
         condition: service_healthy
@@ -123,6 +124,7 @@ services:
       - ./data:/opt/data
       - ./dbt:/opt/dbt
       - airflow-db-init:/opt/airflow
+      - mlflow_data:/tmp/mlflow  # ← MLflow persistent storage
     depends_on:
       postgres:
         condition: service_healthy
@@ -246,6 +248,8 @@ volumes:
   airflow-db-init:
     driver: local
   metabase-data:
+    driver: local
+  mlflow_data:  # ← MLflow persistent volume
     driver: local
 
 networks:

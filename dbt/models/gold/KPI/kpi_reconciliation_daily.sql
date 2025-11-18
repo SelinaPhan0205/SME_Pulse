@@ -1,5 +1,5 @@
 {{ config(
-    materialized='incremental',
+    materialized='table',
     unique_key='date_key',
     on_schema_change='fail',
     tags=['gold', 'kpi', 'reconciliation_kpi', 'production']
@@ -89,3 +89,5 @@ WITH daily_reconciliation_metrics AS (
 )
     
 SELECT * FROM daily_reconciliation_metrics
+
+

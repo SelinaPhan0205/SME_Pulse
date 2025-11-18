@@ -23,12 +23,12 @@ customers as (
 seasonality as (
     -- 3. Đặc trưng về mùa vụ, thời gian
     select * from {{ ref('ftr_seasonality') }}
-),
-
-macro_econ as (
-    -- 4. Đặc trưng về kinh tế vĩ mô
-    select * from {{ ref('ftr_macroeconomic') }}
 )
+
+-- macro_econ as (
+--     -- 4. Đặc trưng về kinh tế vĩ mô
+--     -- DISABLED: World Bank data not available
+-- )
 
 -- 5. Lắp ráp bảng
 select 
@@ -59,13 +59,13 @@ select
     s.is_weekend as invoice_is_weekend,
     s.is_holiday_vn as invoice_is_holiday,
     s.is_beginning_of_month as invoice_is_bof,
-    s.is_end_of_month as invoice_is_eof,
+    s.is_end_of_month as invoice_is_eof
     
-    -- E. Features từ ftr_macroeconomic (của năm phát hành hóa đơn)
-    coalesce(m.gdp_growth_annual_pct, 0) as macro_gdp_growth,
-    coalesce(m.inflation_annual_pct, 0) as macro_inflation,
+    -- E. Features từ ftr_macroeconomic (DISABLED - World Bank data not available)
+    -- coalesce(m.gdp_growth_annual_pct, 0) as macro_gdp_growth,
+    -- coalesce(m.inflation_annual_pct, 0) as macro_inflation,
     
-    current_timestamp as scoring_prepared_at
+    -- current_timestamp as scoring_prepared_at
 
 from invoices i
 
@@ -77,6 +77,6 @@ left join customers c
 left join seasonality s
     on i.invoice_date = s.date_actual
 
--- JOIN yếu tố vĩ mô
-left join macro_econ m
-    on year(i.invoice_date) = m.indicator_year
+-- JOIN yếu tố vĩ mô (DISABLED)
+-- left join macro_econ m
+--     on year(i.invoice_date) = m.indicator_year

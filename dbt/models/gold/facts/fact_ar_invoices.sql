@@ -1,12 +1,5 @@
 {{ config(
-    materialized='incremental',
-    unique_key='invoice_key',
-    on_schema_change='sync_all_columns',
-    indexes=[
-        {'columns': ['date_key_invoice'], 'type': 'btree'},
-        {'columns': ['customer_key'], 'type': 'btree'},
-        {'columns': ['is_high_risk'], 'type': 'btree'},
-    ],
+    materialized='table',
     tags=['gold', 'fact', 'ar_invoices', 'finance', 'production']
 ) }}
 
@@ -145,3 +138,5 @@ WITH ar_invoices_enriched AS (
 )
 
 SELECT * FROM ar_invoices_enriched
+
+

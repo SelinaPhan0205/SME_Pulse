@@ -106,3 +106,5 @@ SELECT
 FROM date_attributes da
 LEFT JOIN {{ ref('seed_vn_holidays') }} h
   ON da.date_actual = h.date
+
+

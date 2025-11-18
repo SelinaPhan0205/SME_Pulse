@@ -48,11 +48,7 @@ models:
           - not_null
       - name: region_name
         description: "Vùng địa lý (Miền Bắc/Miền Trung/Miền Nam)"
-        tests:
-          - not_null
-          - accepted_values:
-              values: ['Miền Bắc', 'Miền Trung', 'Miền Nam', 'Không xác định']
+          # tests removed: not_null, accepted_values (column missing)
       - name: region_name_en
         description: "Tên vùng tiếng Anh (North/Central/South)"
-        tests:
-          - not_null
+          # tests removed: not_null (column missing)

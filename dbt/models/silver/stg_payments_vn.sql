@@ -1,6 +1,6 @@
 {{ config(
-    materialized = 'table',
-    tags = ['silver', 'payments', 'feature_store']
+    materialized='table',
+    tags=['silver', 'payments', 'feature_store']
 ) }}
 
 -- ===================================================================
@@ -15,39 +15,39 @@ with src as (
 -- Bước 1: Chuẩn hóa dữ liệu gốc
 norm as (
   select
-    transaction_id,  -- Giữ lại để dùng cho random location
-    {{ dbt_utils.generate_surrogate_key(['transaction_id']) }} as payment_id_nat,
+    order_id,  -- Giữ lại để dùng cho random location
+    {{ dbt_utils.generate_surrogate_key(['order_id']) }} as payment_id_nat,
     
-    -- Timestamp processing (combine date + time)
-    cast(date as date) as transaction_date,
-    time as transaction_time,
+    -- Timestamp processing
+    cast(order_date as date) as transaction_date,
+    order_time as transaction_time,
     
     -- Amount fields (ngoại tệ gốc - sẽ convert sang VND sau)
-    cast(amount as decimal(18,2)) as amount_foreign,
+    cast(order_amount as decimal(18,2)) as amount_foreign,
     cast(total_amount as decimal(18,2)) as total_amount_foreign,
     
     -- Customer info
     customer_id,
-    lower(trim(email)) as email_norm,
+    lower(trim(customer_email)) as email_norm,
     
     -- Original location (for reference only - will be replaced with VN location)
-    coalesce(nullif(trim(country), ''), 'USA') as country_src,
+    coalesce(nullif(trim(shipping_country), ''), 'USA') as country_src,
     
     -- Payment info
     coalesce(nullif(trim(payment_method), ''), 'Unknown') as payment_method_src,
     coalesce(nullif(trim(order_status), ''), 'Unknown') as order_status_src,
     
     -- Shipping
-    shipping_method as shipping_method_src,
+    carrier as shipping_method_src,
     
     -- Product info
     product_category,
     product_brand,
     product_type,
-    products,
+    product_name as products,
     
     -- Other
-    ratings,
+    rating as ratings,
     feedback
     
   from src
@@ -58,8 +58,9 @@ norm as (
 with_vn_location as (
   select
     n.*,
-    -- Random location based on transaction_id hash (691 total locations)
-    cast(transaction_id as bigint) % 691 + 1 as location_row_num
+    -- Random location based on order_id (691 total locations)
+    -- Parse order_id string to integer, handle decimal format like '8691788.0'
+    cast(split_part(order_id, '.', 1) as bigint) % 691 + 1 as location_row_num
   from norm n
 ),
 
@@ -163,3 +164,4 @@ vn as (
 )
 
 select * from vn
+

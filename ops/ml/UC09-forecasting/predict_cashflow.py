@@ -1,9 +1,14 @@
 import pandas as pd
 import mlflow
 import mlflow.prophet
-from ops.ml.utils import get_trino_connector
-import logging
+import sys
 import os
+
+# Add parent directory to path for imports
+sys.path.insert(0, '/opt/ops/ml/UC09-forecasting')
+from utils import get_trino_connector
+
+import logging
 from datetime import datetime, timedelta
 
 # Cấu hình logging
@@ -11,7 +16,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Cấu hình MLflow
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "file:///tmp/mlflow")
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "file:///tmp/airflow_mlflow")
 MODEL_NAME = "prophet_cashflow_v1"
 MODEL_VERSION = os.getenv("MODEL_VERSION", "1")  # Có thể override từ env
 
@@ -46,19 +51,9 @@ def load_latest_features():
     
     seasonality_df = pd.read_sql(seasonality_query, conn)
     
-    # Load macro features
-    macro_query = """
-    SELECT 
-        indicator_year,
-        gdp_growth_annual_pct,
-        inflation_annual_pct,
-        unemployment_rate_pct
-    FROM sme_lake.silver.ftr_macroeconomic
-    ORDER BY indicator_year DESC
-    LIMIT 1
-    """
+    # Macro features are optional (skipped if ftr_macroeconomic doesn't exist)
+    macro_df = pd.DataFrame()  # Empty dataframe
     
-    macro_df = pd.read_sql(macro_query, conn)
     conn.close()
     
     return seasonality_df, macro_df
@@ -75,34 +70,37 @@ def predict_cashflow(forecast_days: int = 30):
     """
     logger.info(f"Starting cashflow prediction for next {forecast_days} days...")
     
-    # Load model từ MLflow
+    # Load model từ MLflow Model Registry (best practice)
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-    model_uri = f"models:/{MODEL_NAME}/{MODEL_VERSION}"
     
     try:
-        logger.info(f"Loading model from {model_uri}...")
+        # Try to load from Model Registry (production)
+        logger.info(f"Loading model from registry: {MODEL_NAME} version {MODEL_VERSION}...")
+        model_uri = f"models:/{MODEL_NAME}/{MODEL_VERSION}"
         model = mlflow.prophet.load_model(model_uri)
+        logger.info(f"✅ Model loaded from registry successfully!")
     except Exception as e:
-        logger.error(f"Failed to load model: {e}")
-        logger.info("Attempting to load from latest run...")
-        # Fallback: load từ run gần nhất
+        logger.warning(f"Failed to load from registry: {e}")
+        logger.info("Falling back to latest run...")
+        
+        # Fallback: load từ run gần nhất (for development)
         client = mlflow.tracking.MlflowClient()
         experiment = client.get_experiment_by_name("sme_pulse_cashflow_forecast")
-        if experiment:
-            runs = client.search_runs(
-                experiment_ids=[experiment.experiment_id],
-                order_by=["start_time DESC"],
-                max_results=1
-            )
-            if runs:
-                run_id = runs[0].info.run_id
-                model_uri = f"runs:/{run_id}/prophet_model"
-                logger.info(f"Loading from run: {model_uri}")
-                model = mlflow.prophet.load_model(model_uri)
-            else:
-                raise Exception("No trained model found!")
-        else:
-            raise Exception("Experiment not found!")
+        if not experiment:
+            raise Exception("Experiment 'sme_pulse_cashflow_forecast' not found! Please train the model first.")
+        
+        runs = client.search_runs(
+            experiment_ids=[experiment.experiment_id],
+            order_by=["start_time DESC"],
+            max_results=1
+        )
+        if not runs:
+            raise Exception("No trained runs found in experiment! Please train the model first.")
+        
+        run_id = runs[0].info.run_id
+        model_uri = f"runs:/{run_id}/prophet_model"
+        logger.info(f"Loading model from run: {model_uri}")
+        model = mlflow.prophet.load_model(model_uri)
     
     # Tạo future dataframe
     future = model.make_future_dataframe(periods=forecast_days, freq='D')

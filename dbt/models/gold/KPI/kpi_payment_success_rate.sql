@@ -1,5 +1,5 @@
 {{ config(
-    materialized='incremental',
+    materialized='table',
     unique_key='date_key',
     on_schema_change='sync_all_columns',
     tags=['gold', 'kpi', 'payment_kpi', 'production']
@@ -82,3 +82,5 @@ WITH payment_success_metrics AS (
 )
 
 SELECT * FROM payment_success_metrics
+
+

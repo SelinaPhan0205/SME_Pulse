@@ -53,42 +53,19 @@ sources:
             description: "Timestamp khi ingest data"
       
       - name: vietnam_provinces_raw
-        description: "Danh sách tỉnh/thành Việt Nam (63 tỉnh)"
+        description: "Danh sách tỉnh/thành Việt Nam (63 tỉnh) - DEPRECATED: Use seed_vietnam_locations instead"
         columns:
-          - name: province_code
-            description: "Mã tỉnh/thành (số)"
-            tests:
-              - unique
-              - not_null
-          - name: province_name
-            description: "Tên tỉnh/thành phố"
-            tests:
-              - not_null
-          - name: phone_code
-            description: "Mã điện thoại vùng"
-          - name: division_type
-            description: "Loại đơn vị hành chính (Tỉnh/Thành phố)"
-          - name: codename
-            description: "Tên không dấu (slug)"
+          - name: code
+          - name: name
+          - name: code_name
       
       - name: vietnam_districts_raw
-        description: "Danh sách quận/huyện Việt Nam (691 quận/huyện)"
+        description: "Danh sách quận/huyện Việt Nam (691 quận/huyện) - DEPRECATED: Use seed_vietnam_locations instead"
         columns:
-          - name: district_code
-            description: "Mã quận/huyện"
-            tests:
-              - unique
-              - not_null
-          - name: district_name
-            description: "Tên quận/huyện"
+          - name: code
+          - name: name
           - name: province_code
-            description: "Mã tỉnh/thành cha"
-            tests:
-              - not_null
-          - name: division_type
-            description: "Loại đơn vị (Quận/Huyện/Thị xã/Thành phố)"
-          - name: codename
-            description: "Tên không dấu (slug)"
+          - name: code_name
       
       # ===== Transaction Data Sources =====
       - name: bank_txn_raw
@@ -121,33 +98,13 @@ sources:
             description: "Ingestion year-month (VARCHAR)"
       
       - name: shipments_payments_raw
-        description: "Shipments & Payments from CSV (302,010 rows)"
+        description: "Shipments & Payments from CSV (302,010 rows) - DEPRECATED: Use stg_orders_vn instead (from sales_snapshot)"
         columns:
           - name: Transaction_ID
-            description: "Transaction ID (DOUBLE type from CSV)"
           - name: Customer_ID
-            description: "Customer ID"
-          - name: Name
-            description: "Customer name"
-          - name: Email
-            description: "Customer email"
           - name: Date
-            description: "Transaction date (TIMESTAMP)"
           - name: Amount
-            description: "Transaction amount"
-          - name: Payment_Method
-            description: "Payment method used"
-          - name: Order_Status
-            description: "Order status"
-          - name: Shipping_Method
-            description: "Shipping method"
-          - name: Product_Category
-            description: "Product category"
-          - name: ingested_at
-            description: "Ingestion timestamp"
-          - name: ingested_year_month
-            description: "Ingestion year-month"
-      - name: ar_invoices_raw
+      - name: invoices_ar_raw
         description: "Raw AR Invoices data from CSV – used for DSO, overdue analysis, and payment prediction"
         meta:
           external_location: "s3a://sme-lake/bronze/raw/invoices_AR/"

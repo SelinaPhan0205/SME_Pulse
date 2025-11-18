@@ -1,5 +1,5 @@
 {{ config(
-    materialized='incremental',
+    materialized='table',
     unique_key='date_key',
     on_schema_change='sync_all_columns',
     tags=['gold', 'kpi', 'revenue_kpi', 'production']
@@ -85,3 +85,5 @@ WITH daily_revenue_metrics AS (
 )
 
 SELECT * FROM daily_revenue_metrics
+
+

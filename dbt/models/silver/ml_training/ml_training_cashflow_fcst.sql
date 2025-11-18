@@ -51,12 +51,12 @@ daily_cashflow as (
 seasonality as (
     -- 4. Đặc trưng mùa vụ (Regressors)
     select * from {{ ref('ftr_seasonality') }}
-),
-
-macro_econ as (
-    -- 5. Đặc trưng vĩ mô (Regressors)
-    select * from {{ ref('ftr_macroeconomic') }}
 )
+
+-- macro_econ as (
+--     -- 5. Đặc trưng vĩ mô (regressor)
+--     -- DISABLED: World Bank data not available
+-- )
 
 -- 6. Lắp ráp bảng huấn luyện Prophet
 select 
@@ -73,19 +73,19 @@ select
     s.sin_month,
     s.cos_month,
     s.sin_day_of_week,
-    s.cos_day_of_week,
+    s.cos_day_of_week
     
-    -- Regressors từ Macro (Join lùi 1 năm vì dữ liệu vĩ mô có độ trễ)
-    coalesce(m.gdp_growth_annual_pct, 0) as macro_gdp_growth,
-    coalesce(m.inflation_annual_pct, 0) as macro_inflation
+    -- Regressors từ Macro (DISABLED - World Bank data not available)
+    -- coalesce(m.gdp_growth_annual_pct, 0) as macro_gdp_growth,
+    -- coalesce(m.inflation_annual_pct, 0) as macro_inflation
     
 from daily_cashflow d
 
 left join seasonality s 
     on d.ds = s.date_actual
 
-left join macro_econ m
-    on year(d.ds) = m.indicator_year + 1 -- Giả định dữ liệu vĩ mô 2023 ảnh hưởng 2024
+-- left join macro_econ m
+--     on year(d.ds) = m.indicator_year + 1 -- Giả định dữ liệu vĩ mô 2023 ảnh hưởng 2024
     
 where d.ds is not null
 order by d.ds asc

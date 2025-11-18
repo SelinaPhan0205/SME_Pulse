@@ -39,11 +39,22 @@ models:
       +materialized: table
       +schema: silver                 # silver schema
       +database: sme_lake             # unified catalog
+      # Disable external models with missing source data
+      external:
+        stg_wb_indicators:
+          +enabled: false  # World Bank data not ingested yet
+      # Disable feature models that depend on disabled staging models
+      features:
+        ftr_macroeconomic:
+          +enabled: false  # Depends on stg_wb_indicators
     # Gold models
     gold:
       +materialized: table
       +schema: gold                   # gold schema
       +database: sme_lake             # unified catalog
+      external:
+        dim_macro_indicators:
+          +enabled: false  # Depends on stg_wb_indicators
 
 # ===== VARIABLES =====
 vars:

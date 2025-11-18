@@ -74,3 +74,5 @@ WITH payments_enriched AS (
 )
 
 SELECT * FROM payments_enriched
+
+

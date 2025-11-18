@@ -72,3 +72,5 @@ customer_enriched AS (
 )
 
 SELECT * FROM customer_enriched
+
+

@@ -49,3 +49,5 @@ WITH orders_enriched AS (
 )
 
 SELECT * FROM orders_enriched
+
+

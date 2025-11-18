@@ -3,16 +3,21 @@ import mlflow
 import mlflow.prophet
 from prophet import Prophet
 from prophet.diagnostics import cross_validation, performance_metrics
-from ops.ml.utils import get_trino_connector # Import hàm helper
-import logging
+import sys
 import os
+
+# Add current directory to path for imports
+sys.path.insert(0, '/opt/ops/ml/UC09-forecasting')
+from utils import get_trino_connector
+
+import logging
 
 # Cấu hình logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Cấu hình MLflow (Dùng local filesystem nếu không có MLflow server)
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "file:///tmp/mlflow")
+# Cấu hình MLflow (Dùng local filesystem với quyền write)
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "file:///tmp/airflow_mlflow")
 MLFLOW_EXPERIMENT_NAME = "sme_pulse_cashflow_forecast"
 
 def train_cashflow_forecast():
@@ -40,10 +45,10 @@ def train_cashflow_forecast():
         # 2. Chuẩn bị Regressors (Các biến ngoại sinh)
         # Prophet tự động hiểu 'ds' và 'y'.
         # Chúng ta cần đăng ký các cột feature khác làm "regressors".
+        # NOTE: macro_gdp_growth and macro_inflation removed - World Bank data not available
         regressors = [
             'is_weekend', 'is_holiday_vn', 'is_beginning_of_month', 'is_end_of_month',
-            'sin_month', 'cos_month', 'sin_day_of_week', 'cos_day_of_week',
-            'macro_gdp_growth', 'macro_inflation'
+            'sin_month', 'cos_month', 'sin_day_of_week', 'cos_day_of_week'
         ]
         
         # Bắt đầu 1 "Run" trong MLflow
@@ -83,9 +88,12 @@ def train_cashflow_forecast():
             
             # 6. Log Model (Quan trọng nhất: lưu lại model đã train)
             logger.info("Logging model to MLflow...")
-            mlflow.prophet.log_model(model, 
-                                     artifact_path="prophet_model",
-                                     registered_model_name="prophet_cashflow_v1") # Đăng ký tên model
+            model_info = mlflow.prophet.log_model(
+                model, 
+                artifact_path="prophet_model",
+                registered_model_name="prophet_cashflow_v1"  # Register to Model Registry
+            )
+            logger.info(f"Model registered to Model Registry: prophet_cashflow_v1")
             
             # 7. Log Artifacts (Plots)
             future = model.make_future_dataframe(periods=30)

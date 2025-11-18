@@ -32,3 +32,5 @@ SELECT DISTINCT
   CURRENT_TIMESTAMP AS created_at
   
 FROM {{ ref('seed_channel_map') }}
+
+

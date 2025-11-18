@@ -189,6 +189,80 @@ def normalize_shipments_payments(df: pd.DataFrame) -> pd.DataFrame:
     df["ingested_at"] = datetime.utcnow()
     df["ingested_year_month"] = datetime.utcnow().strftime("%Y%m")
     
+    # Rename columns để match external table schema (lowercase, semantic names)
+    df = df.rename(columns={
+        "Transaction_ID": "order_id",
+        "Customer_ID": "customer_id",
+        "Name": "customer_name",
+        "Email": "customer_email",
+        "Phone": "customer_phone",
+        "Address": "shipping_address",
+        "City": "shipping_city",
+        "State": "shipping_state",
+        "Zipcode": "shipping_zipcode",
+        "Country": "shipping_country",
+        "Date": "order_date",
+        "Time": "order_time",
+        "Amount": "order_amount",
+        "Total_Amount": "total_amount",
+        "Product_Category": "product_category",
+        "Product_Brand": "product_brand",
+        "Product_Type": "product_type",
+        "Shipping_Method": "carrier",  # Carrier đã được map sang GHN/GHTK/VTP
+        "Payment_Method": "payment_method",
+        "Order_Status": "order_status",
+        "Ratings": "rating",
+        "products": "product_name",
+        "Feedback": "feedback",
+        "Age": "customer_age",
+        "Gender": "customer_gender",
+        "Income": "customer_income",
+        "Customer_Segment": "customer_segment",
+        "Total_Purchases": "total_purchases",
+        "Year": "order_year",
+        "Month": "order_month"
+    })
+    
+    # Select columns needed for stg_payments_vn and stg_shipments_vn models
+    final_columns = [
+        "order_id",
+        "customer_id",
+        "customer_name",
+        "customer_email",
+        "customer_phone",
+        "customer_age",
+        "customer_gender",
+        "customer_income",
+        "customer_segment",
+        "total_purchases",
+        "order_date",
+        "order_time",
+        "order_amount",
+        "total_amount",
+        "order_status",
+        "payment_method",
+        "carrier",
+        "shipping_address",
+        "shipping_city",
+        "shipping_state",
+        "shipping_zipcode",
+        "shipping_country",
+        "product_category",
+        "product_brand",
+        "product_type",
+        "product_name",
+        "rating",
+        "feedback",
+        "order_year",
+        "order_month",
+        "ingested_at",
+        "ingested_year_month"
+    ]
+    
+    # Keep only defined columns (if exist)
+    available_cols = [c for c in final_columns if c in df.columns]
+    df = df[available_cols]
+    
     return df
 
 

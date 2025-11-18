@@ -2,9 +2,9 @@
 Test script để kiểm tra kết nối Trino và đọc data
 """
 import sys
-sys.path.insert(0, '/opt')
+sys.path.insert(0, '/opt/ops/ml/UC09-forecasting')
 
-from ops.ml.utils import get_trino_connector
+from utils import get_trino_connector
 import pandas as pd
 
 def test_connection():

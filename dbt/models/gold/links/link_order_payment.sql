@@ -135,3 +135,4 @@ SELECT
 FROM scored_matches
 WHERE total_match_score >= 50  -- Minimum threshold: customer + product must match
 ORDER BY order_id, total_match_score DESC
+

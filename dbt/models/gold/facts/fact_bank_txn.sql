@@ -60,3 +60,5 @@ WITH bank_txn_enriched AS (
 )
 
 SELECT * FROM bank_txn_enriched
+
+

@@ -10,6 +10,7 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator, ShortCircuitOperator
 from airflow.operators.bash import BashOperator
 from airflow.providers.docker.operators.docker import DockerOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.utils.task_group import TaskGroup
 import yaml
 import logging
@@ -403,18 +404,49 @@ with DAG(
     # docker compose exec dbt dbt seed --profiles-dir /opt/dbt
     # Không cần reload trong DAG vì seeds ít thay đổi
     
-    # Tasks 7-8: Silver Layer
-    with TaskGroup('silver_layer', tooltip='Process Silver staging tables') as silver_group:
-        run_silver = BashOperator(
-            task_id='run_silver',
-            bash_command=PIPELINE_CONFIG['dbt']['silver_command'],
+    # Tasks 7-8: Silver Layer (Staging + Features + ML Training)
+    with TaskGroup('silver_layer', tooltip='Process Silver layer: staging, features, ML training data') as silver_group:
+        # 7a: Silver Staging (stg_* models)
+        run_staging = BashOperator(
+            task_id='run_staging',
+            bash_command=PIPELINE_CONFIG['dbt']['silver_staging_command'],
             cwd='/opt/dbt',
             execution_timeout=timedelta(minutes=10)
         )
         
-        test_silver = BashOperator(
-            task_id='test_silver',
-            bash_command=PIPELINE_CONFIG['dbt']['test_silver_command'],
+        test_staging = BashOperator(
+            task_id='test_staging',
+            bash_command=PIPELINE_CONFIG['dbt']['test_silver_staging_command'],
+            cwd='/opt/dbt',
+            execution_timeout=timedelta(minutes=5)
+        )
+        
+        # 7b: Silver Features (ftr_* models - depends on staging)
+        run_features = BashOperator(
+            task_id='run_features',
+            bash_command=PIPELINE_CONFIG['dbt']['silver_feature_command'],
+            cwd='/opt/dbt',
+            execution_timeout=timedelta(minutes=10)
+        )
+        
+        test_features = BashOperator(
+            task_id='test_features',
+            bash_command=PIPELINE_CONFIG['dbt']['test_silver_feature_command'],
+            cwd='/opt/dbt',
+            execution_timeout=timedelta(minutes=5)
+        )
+        
+        # 7c: Silver ML Training (ml_training_* models - depends on features)
+        run_ml_training = BashOperator(
+            task_id='run_ml_training',
+            bash_command=PIPELINE_CONFIG['dbt']['silver_ml_training_command'],
+            cwd='/opt/dbt',
+            execution_timeout=timedelta(minutes=10)
+        )
+        
+        test_ml_training = BashOperator(
+            task_id='test_ml_training',
+            bash_command=PIPELINE_CONFIG['dbt']['test_silver_ml_training_command'],
             cwd='/opt/dbt',
             execution_timeout=timedelta(minutes=5)
         )
@@ -425,7 +457,9 @@ with DAG(
             execution_timeout=timedelta(minutes=3)
         )
         
-        run_silver >> test_silver >> validate_silver_task
+        # Dependency: staging -> features -> ml_training -> validation
+        run_staging >> test_staging >> run_features >> test_features
+        test_features >> run_ml_training >> test_ml_training >> validate_silver_task
     
     # Tasks 9-10: Gold Dimensions
     with TaskGroup('gold_dimensions', tooltip='Build Gold dimension tables') as gold_dims_group:
@@ -514,28 +548,42 @@ with DAG(
         
         run_gold_kpi >> test_gold_kpi
     
-    # Tasks 17: Serve Layer (Metabase + Redis)
-    with TaskGroup('serve_layer', tooltip='Update serving layer') as serve_group:
-        refresh_metabase_task = PythonOperator(
-            task_id='refresh_metabase',
-            python_callable=refresh_metabase_cache
+    # Tasks 17-18: Gold ML Scores (UC05 - AR Priority Heuristic Scoring)
+    # This is SQL-based scoring logic, so it runs as part of dbt Gold layer
+    with TaskGroup('gold_ml_scores', tooltip='Build ML Scoring tables (UC05 - AR Priority)') as gold_ml_scores_group:
+        run_ml_scores = BashOperator(
+            task_id='run_ml_ar_scores',
+            bash_command=PIPELINE_CONFIG['dbt']['gold_ml_scores_command'],
+            cwd='/opt/dbt',
+            execution_timeout=timedelta(minutes=10)
         )
         
-        invalidate_redis_task = PythonOperator(
-            task_id='invalidate_redis',
-            python_callable=invalidate_redis_cache
+        test_ml_scores = BashOperator(
+            task_id='test_ml_ar_scores',
+            bash_command=PIPELINE_CONFIG['dbt']['test_gold_ml_scores_command'],
+            cwd='/opt/dbt',
+            execution_timeout=timedelta(minutes=5)
         )
         
-        # Parallel execution
-        [refresh_metabase_task, invalidate_redis_task]
+        run_ml_scores >> test_ml_scores
     
-    # Task 18: Generate Report
+    # Task 19: Trigger ML Predict DAG
+    # After ETL completes, trigger ML inference pipeline (UC09, UC10)
+    trigger_ml_predict = TriggerDagRunOperator(
+        task_id='trigger_ml_predict',
+        trigger_dag_id='sme_pulse_ml_predict',
+        wait_for_completion=False,  # Async trigger
+        execution_date='{{ ds }}',
+        reset_dag_run=True
+    )
+    
+    # Task 20: Generate Report
     generate_report_task = PythonOperator(
         task_id='generate_report',
         python_callable=generate_report
     )
     
-    # Task 19: Send Notification
+    # Task 21: Send Notification
     send_notification_task = PythonOperator(
         task_id='send_notification',
         python_callable=send_notification
@@ -549,5 +597,12 @@ with DAG(
     verify_infra_task >> validate_bronze_task >> silver_group
     silver_group >> gold_dims_group >> gold_facts_group
     gold_facts_group >> gold_links_group >> gold_kpi_group
-    gold_kpi_group >> serve_group
-    serve_group >> generate_report_task >> send_notification_task
+    
+    # UC05 ML Scoring runs after KPI
+    gold_kpi_group >> gold_ml_scores_group
+    
+    # Trigger ML Predict DAG after all Gold layers complete
+    gold_ml_scores_group >> trigger_ml_predict
+    
+    # Report and notification run in parallel with ML trigger
+    gold_ml_scores_group >> generate_report_task >> send_notification_task

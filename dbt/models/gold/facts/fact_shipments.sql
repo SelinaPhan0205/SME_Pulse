@@ -13,7 +13,7 @@ WITH shipments_enriched AS (
   SELECT
     -- Natural Key
     s.shipment_id_nat AS shipment_id,
-    s.transaction_id,  -- Link to payment
+    s.order_id,  -- Link to payment
     
     -- Date dimension FK
     CAST(date_format(s.order_date, '%Y%m%d') AS BIGINT) AS date_key,
@@ -67,3 +67,5 @@ WITH shipments_enriched AS (
 )
 
 SELECT * FROM shipments_enriched
+
+

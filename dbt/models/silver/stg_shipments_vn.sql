@@ -1,6 +1,6 @@
 {{ config(
-    materialized = 'table',
-    tags = ['silver', 'shipments', 'feature_store']
+    materialized='table',
+    tags=['silver', 'shipments', 'feature_store']
 ) }}
 
 -- ===================================================================
@@ -18,33 +18,33 @@ with src as (
 -- Bước 1: Chuẩn hóa dữ liệu shipment
 norm as (
   select
-    transaction_id,  -- Link to payments
-    {{ dbt_utils.generate_surrogate_key(['transaction_id']) }} as shipment_id_nat,
+    order_id,  -- Link to payments
+    {{ dbt_utils.generate_surrogate_key(['order_id']) }} as shipment_id_nat,
     
     -- Timing
-    cast(date as date) as order_date,
-    time as order_time,
+    cast(order_date as date) as order_date,
+    order_time as order_time,
     
     -- Customer info (for linking)
     customer_id,
-    lower(trim(email)) as email_norm,
+    lower(trim(customer_email)) as email_norm,
     
     -- Shipping details
-    coalesce(nullif(trim(shipping_method), ''), 'Unknown') as shipping_method_src,
+    coalesce(nullif(trim(carrier), ''), 'Unknown') as shipping_method_src,
     coalesce(nullif(trim(order_status), ''), 'Unknown') as order_status_src,
     
     -- Product info (what's being shipped)
     product_category,
     product_brand,
     product_type,
-    products,
+    product_name as products,
     
     -- Order value (for shipping cost analysis)
     cast(total_amount as decimal(18,2)) as order_value_foreign,
-    coalesce(nullif(trim(country), ''), 'USA') as country_src,
+    coalesce(nullif(trim(shipping_country), ''), 'USA') as country_src,
     
     -- Customer satisfaction
-    ratings,
+    rating as ratings,
     feedback
     
   from src
@@ -54,7 +54,8 @@ norm as (
 with_vn_location as (
   select
     n.*,
-    cast(transaction_id as bigint) % 691 + 1 as location_row_num
+    -- Parse order_id string to integer, handle decimal format like '8691788.0'
+    cast(split_part(order_id, '.', 1) as bigint) % 691 + 1 as location_row_num
   from norm n
 ),
 
@@ -62,7 +63,7 @@ with_vn_location as (
 vn as (
   select
     wl.shipment_id_nat,
-    wl.transaction_id,
+    wl.order_id,
     wl.order_date,
     wl.order_time,
     
@@ -157,3 +158,4 @@ vn as (
 )
 
 select * from vn
+

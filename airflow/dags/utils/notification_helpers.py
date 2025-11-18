@@ -327,3 +327,91 @@ def notify_pipeline_completion(
                 html=False
             )
             logger.info("Sent email notification")
+
+
+def refresh_metabase_cache(**context):
+    """
+    Refresh Metabase database schema cache
+    """
+    import os
+    logger.info("Refreshing Metabase cache...")
+    
+    try:
+        # Get config from environment or defaults
+        metabase_enabled = os.getenv('METABASE_ENABLED', 'false').lower() == 'true'
+        if not metabase_enabled:
+            logger.info("Metabase integration disabled, skipping...")
+            return
+        
+        # Check if requests library available
+        try:
+            import requests
+        except ImportError:
+            logger.warning("⚠️ requests library not available, skipping Metabase refresh")
+            return
+        
+        # Call Metabase API to refresh specific database
+        metabase_url = os.getenv('METABASE_URL', 'http://metabase:3000')
+        database_id = os.getenv('METABASE_DATABASE_ID', '1')
+        api_key = os.getenv('METABASE_API_KEY', '')
+        
+        url = f"{metabase_url}/api/database/{database_id}/sync_schema"
+        
+        response = requests.post(
+            url,
+            headers={'X-Metabase-Session': api_key},
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            logger.info("✅ Metabase cache refreshed successfully")
+        else:
+            logger.warning(f"⚠️ Metabase refresh returned status {response.status_code}")
+    
+    except Exception as e:
+        logger.warning(f"⚠️ Error refreshing Metabase cache: {e}")
+        # Don't fail pipeline for cache refresh errors
+        pass
+
+
+def invalidate_redis_cache(**context):
+    """
+    Invalidate Redis cache keys
+    """
+    import os
+    logger.info("Invalidating Redis cache...")
+    
+    try:
+        redis_enabled = os.getenv('REDIS_ENABLED', 'false').lower() == 'true'
+        if not redis_enabled:
+            logger.info("Redis integration disabled, skipping...")
+            return
+        
+        # Check if redis library available
+        try:
+            import redis
+        except ImportError:
+            logger.warning("⚠️ redis library not available, skipping cache invalidation")
+            return
+        
+        # Connect to Redis
+        redis_host = os.getenv('REDIS_HOST', 'redis')
+        redis_port = int(os.getenv('REDIS_PORT', '6379'))
+        redis_db = int(os.getenv('REDIS_DB', '0'))
+        
+        r = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
+        
+        # Delete cache keys matching pattern
+        pattern = os.getenv('REDIS_CACHE_PATTERN', 'sme_pulse:*')
+        keys = r.keys(pattern)
+        
+        if keys:
+            r.delete(*keys)
+            logger.info(f"✅ Invalidated {len(keys)} Redis cache keys")
+        else:
+            logger.info("No Redis cache keys found to invalidate")
+    
+    except Exception as e:
+        logger.warning(f"⚠️ Error invalidating Redis cache: {e}")
+        # Don't fail pipeline for cache invalidation errors
+        pass

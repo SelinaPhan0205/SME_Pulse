@@ -81,3 +81,5 @@ product_enriched AS (
 )
 
 SELECT * FROM product_enriched
+
+

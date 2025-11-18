@@ -1,5 +1,5 @@
 {{ config(
-    materialized='incremental',
+    materialized='table',
     unique_key='date_key',
     on_schema_change='fail',
     tags=['gold', 'kpi', 'ar_kpi', 'production']
@@ -100,3 +100,5 @@ WITH daily_ar_metrics AS (
 )
 
 SELECT * FROM daily_ar_metrics
+
+
