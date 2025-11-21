@@ -240,8 +240,71 @@ services:
     networks:
       - sme-network
 
+  # ===== POSTGRES APPLICATION DB (OLTP for Backend) =====
+  postgres_application_db:
+    image: postgres:15-alpine
+    container_name: sme-postgres-app
+    environment:
+      POSTGRES_USER: ${BACKEND_DB_USER}
+      POSTGRES_PASSWORD: ${BACKEND_DB_PASSWORD}
+      POSTGRES_DB: ${BACKEND_DB_NAME}
+    ports:
+      - "5433:5432"  # Different port to avoid conflict
+    volumes:
+      - postgres-app-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${BACKEND_DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sme-network
+
+  # ===== FASTAPI BACKEND (OLTP Stream) =====
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: sme-backend
+    environment:
+      # Database
+      BACKEND_DB_HOST: postgres_application_db
+      BACKEND_DB_PORT: 5432
+      BACKEND_DB_NAME: ${BACKEND_DB_NAME}
+      BACKEND_DB_USER: ${BACKEND_DB_USER}
+      BACKEND_DB_PASSWORD: ${BACKEND_DB_PASSWORD}
+      BACKEND_POOL_SIZE: ${BACKEND_POOL_SIZE}
+      BACKEND_MAX_OVERFLOW: ${BACKEND_MAX_OVERFLOW}
+      # API
+      BACKEND_SECRET_KEY: ${BACKEND_SECRET_KEY}
+      BACKEND_ALGORITHM: ${BACKEND_ALGORITHM}
+      BACKEND_ACCESS_TOKEN_EXPIRE_MINUTES: ${BACKEND_ACCESS_TOKEN_EXPIRE_MINUTES}
+      BACKEND_ALLOWED_ORIGINS: ${BACKEND_ALLOWED_ORIGINS}
+      # Environment
+      BACKEND_ENVIRONMENT: ${BACKEND_ENVIRONMENT}
+      BACKEND_DEBUG: ${BACKEND_DEBUG}
+      BACKEND_LOG_LEVEL: ${BACKEND_LOG_LEVEL}
+    ports:
+      - "${BACKEND_PORT}:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres_application_db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - sme-network
+
 volumes:
   pgdata:
+    driver: local
+  postgres-app-data:  # Backend application database
     driver: local
   minio-data:
     driver: local
@@ -254,4 +317,4 @@ volumes:
 
 networks:
   sme-network:
-    driver: bridge
+    driver: bridge  
