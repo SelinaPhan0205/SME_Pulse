@@ -1,6 +1,7 @@
 """Payment Service - Business logic for payment and allocation management."""
 
-from typing import Sequence
+from datetime import date
+from typing import Optional, Sequence
 
 from fastapi import HTTPException, status
 from sqlalchemy import select, func
@@ -9,7 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.finance import Payment, PaymentAllocation, ARInvoice, APBill
 from app.models.core import Account
-from app.schema.finance import PaymentCreate
+from app.schema.finance import PaymentCreate, PaymentUpdate
 from app.modules.finance.services.invoice_service import get_invoice
 
 
@@ -18,22 +19,42 @@ async def get_payments(
     org_id: int,
     skip: int = 0,
     limit: int = 100,
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    account_id: Optional[int] = None,
+    payment_method: Optional[str] = None,
 ) -> tuple[Sequence[Payment], int]:
-    """Get list of payments with pagination.
+    """Get list of payments with pagination and filtering.
     
     Args:
         db: Database session
         org_id: Organization ID from JWT
         skip: Offset for pagination
         limit: Max records to return
+        date_from: Filter by transaction_date >= date_from
+        date_to: Filter by transaction_date <= date_to
+        account_id: Filter by account ID
+        payment_method: Filter by payment method (cash, transfer, vietqr, card)
     
     Returns:
         Tuple of (payment list, total count)
     """
+    # Build base query conditions
+    conditions = [Payment.org_id == org_id]
+    
+    if date_from:
+        conditions.append(Payment.transaction_date >= date_from)
+    if date_to:
+        conditions.append(Payment.transaction_date <= date_to)
+    if account_id:
+        conditions.append(Payment.account_id == account_id)
+    if payment_method:
+        conditions.append(Payment.payment_method == payment_method)
+    
     # Build query with allocations eager loading
     query = (
         select(Payment)
-        .where(Payment.org_id == org_id)
+        .where(*conditions)
         .options(selectinload(Payment.allocations))
         .offset(skip)
         .limit(limit)
@@ -43,7 +64,7 @@ async def get_payments(
     count_query = (
         select(func.count())
         .select_from(Payment)
-        .where(Payment.org_id == org_id)
+        .where(*conditions)
     )
     
     # Execute queries
@@ -260,3 +281,76 @@ async def create_payment_with_allocations(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create payment: {str(e)}",
         )
+
+
+async def update_payment(
+    db: AsyncSession,
+    payment_id: int,
+    org_id: int,
+    schema: PaymentUpdate,
+) -> Payment:
+    """Update payment metadata (notes, reference_code only).
+    
+    IMMUTABLE FIELDS - Cannot be updated after creation:
+    - amount (audit compliance)
+    - transaction_date
+    - account_id
+    - allocations (must unallocate/reallocate if needed)
+    
+    Business Rules:
+    - Only notes and reference_code can be modified
+    - All other fields are audit-locked (immutable)
+    - Useful for adding bank transaction details after creation
+    
+    Args:
+        db: Database session
+        payment_id: Payment ID to update
+        org_id: Organization ID from JWT
+        schema: Update data (notes, reference_code)
+    
+    Returns:
+        Updated Payment instance with allocations loaded
+    
+    Raises:
+        404: If payment not found
+        400: If attempting to update immutable fields
+    """
+    try:
+        # Query payment with allocations
+        query = (
+            select(Payment)
+            .where(Payment.id == payment_id, Payment.org_id == org_id)
+            .options(selectinload(Payment.allocations))
+        )
+        result = await db.execute(query)
+        payment = result.scalar_one_or_none()
+        
+        if not payment:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Payment {payment_id} not found in your organization",
+            )
+        
+        # Update only allowed fields
+        if schema.notes is not None:
+            payment.notes = schema.notes
+        
+        if schema.reference_code is not None:
+            payment.reference_code = schema.reference_code
+        
+        # Commit changes
+        await db.commit()
+        await db.refresh(payment, attribute_names=['allocations'])
+        
+        return payment
+    
+    except HTTPException:
+        await db.rollback()
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update payment: {str(e)}",
+        )
+

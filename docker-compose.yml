@@ -285,6 +285,15 @@ services:
       BACKEND_ENVIRONMENT: ${BACKEND_ENVIRONMENT}
       BACKEND_DEBUG: ${BACKEND_DEBUG}
       BACKEND_LOG_LEVEL: ${BACKEND_LOG_LEVEL}
+      # Redis & Celery
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # MinIO
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      MINIO_BUCKET_NAME: sme-lake
+      MINIO_SECURE: "false"
     ports:
       - "${BACKEND_PORT}:8000"
     volumes:
@@ -292,11 +301,52 @@ services:
     depends_on:
       postgres_application_db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 5
+    restart: unless-stopped
+    networks:
+      - sme-network
+
+  # ===== CELERY WORKER (Background Tasks for Excel Export) =====
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: sme-celery-worker
+    command: celery -A app.core.celery_config:celery_app worker --loglevel=info --concurrency=2
+    environment:
+      # Database
+      BACKEND_DB_HOST: postgres_application_db
+      BACKEND_DB_PORT: 5432
+      BACKEND_DB_NAME: ${BACKEND_DB_NAME}
+      BACKEND_DB_USER: ${BACKEND_DB_USER}
+      BACKEND_DB_PASSWORD: ${BACKEND_DB_PASSWORD}
+      # Redis & Celery
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # MinIO
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      MINIO_BUCKET_NAME: sme-lake
+      MINIO_SECURE: "false"
+      # Environment
+      BACKEND_ENVIRONMENT: ${BACKEND_ENVIRONMENT}
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres_application_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - sme-network

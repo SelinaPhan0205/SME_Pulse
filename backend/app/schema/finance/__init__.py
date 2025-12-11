@@ -7,6 +7,10 @@ from app.schema.finance.invoice import (
     InvoicePost,
     InvoiceResponse,
     PaginatedInvoicesResponse,
+    InvoiceBulkImportItem,
+    InvoiceBulkImportRequest,
+    InvoiceBulkImportResultItem,
+    InvoiceBulkImportResponse,
 )
 from app.schema.finance.payment import (
     PaymentBase,
@@ -17,6 +21,22 @@ from app.schema.finance.payment import (
     AllocationResponse,
     PaginatedPaymentsResponse,
 )
+from app.schema.finance.account import (
+    AccountCreate,
+    AccountUpdate,
+    AccountResponse,
+    PaginatedAccountsResponse,
+)
+from app.schema.finance.bill import (
+    BillCreate,
+    BillUpdate,
+    BillResponse,
+    PaginatedBillsResponse,
+    BillBulkImportItem,
+    BillBulkImportRequest,
+    BillBulkImportResultItem,
+    BillBulkImportResponse,
+)
 
 __all__ = [
     # Invoice
@@ -26,6 +46,10 @@ __all__ = [
     "InvoicePost",
     "InvoiceResponse",
     "PaginatedInvoicesResponse",
+    "InvoiceBulkImportItem",
+    "InvoiceBulkImportRequest",
+    "InvoiceBulkImportResultItem",
+    "InvoiceBulkImportResponse",
     # Payment
     "PaymentBase",
     "PaymentCreate",
@@ -34,4 +58,18 @@ __all__ = [
     "AllocationItem",
     "AllocationResponse",
     "PaginatedPaymentsResponse",
+    # Bill
+    "BillCreate",
+    "BillUpdate",
+    "BillResponse",
+    "PaginatedBillsResponse",
+    "BillBulkImportItem",
+    "BillBulkImportRequest",
+    "BillBulkImportResultItem",
+    "BillBulkImportResponse",
+    # Account
+    "AccountCreate",
+    "AccountUpdate",
+    "AccountResponse",
+    "PaginatedAccountsResponse",
 ]

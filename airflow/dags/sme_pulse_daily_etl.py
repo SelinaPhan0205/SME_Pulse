@@ -29,6 +29,12 @@ from utils.notification_helpers import (
     generate_pipeline_report,
     notify_pipeline_completion
 )
+from utils.postgres_helpers import (
+    extract_incremental_data,
+    save_to_minio_bronze,
+    validate_app_db_connection,
+    get_table_row_count
+)
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +62,7 @@ default_args = {
 
 def verify_infrastructure(**context):
     """
-    Task 1: Kiểm tra MinIO và Trino services đang chạy
+    Task 1: Kiểm tra MinIO, Trino, và App DB services đang chạy
     """
     logger.info("Verifying infrastructure health...")
     
@@ -74,13 +80,157 @@ def verify_infrastructure(**context):
     if trino_health['status'] != 'healthy':
         raise Exception(f"Trino unhealthy: {trino_health['message']}")
     
+    # Check App DB (NEW - Phase 4 Integration)
+    app_db_health = validate_app_db_connection()
+    logger.info(f"App DB Status: {app_db_health}")
+    
+    if app_db_health['status'] != 'healthy':
+        raise Exception(f"App DB unhealthy: {app_db_health['message']}")
+    
     # Push to XCom
     context['ti'].xcom_push(key='infrastructure_health', value={
         'minio': minio_health,
-        'trino': trino_health
+        'trino': trino_health,
+        'app_db': app_db_health
     })
     
-    logger.info("✅ Infrastructure verification passed")
+    logger.info("✅ Infrastructure verification passed (MinIO, Trino, App DB)")
+
+
+def extract_transactional_data(**context):
+    """
+    Task 2 (NEW): Extract incremental data from App DB to MinIO Bronze
+    
+    This is the BRIDGE between OLTP (Application DB) and OLAP (Data Lakehouse)
+    
+    Extracts:
+    - finance.ar_invoices (AR invoices from Phase 3)
+    - finance.payments (Payments from Phase 3)
+    
+    Incremental logic: Extract records where updated_at >= prev_execution_date
+    """
+    logger.info("=" * 80)
+    logger.info("TASK A: EXTRACTING TRANSACTIONAL DATA FROM APP DB")
+    logger.info("=" * 80)
+    
+    from datetime import datetime
+    
+    # Get execution context
+    execution_date = context['ds']  # YYYY-MM-DD string
+    prev_execution_date = context.get('prev_execution_date')
+    
+    # Determine time window for incremental extraction
+    if prev_execution_date:
+        # Convert Airflow Proxy/pendulum to Python datetime
+        # prev_execution_date might be: datetime, pendulum, or Proxy object
+        if hasattr(prev_execution_date, 'strftime'):
+            # It's a datetime-like object
+            start_date = prev_execution_date.replace(tzinfo=None)  # Remove timezone
+        else:
+            # Parse as string
+            start_date = datetime.strptime(str(prev_execution_date).split('+')[0].split('.')[0], '%Y-%m-%d %H:%M:%S')
+    else:
+        # First run - extract last 7 days
+        start_date = datetime.strptime(execution_date, '%Y-%m-%d') - timedelta(days=7)
+    
+    end_date = datetime.strptime(execution_date, '%Y-%m-%d')
+    
+    logger.info(f"Extraction window: {start_date} to {end_date}")
+    
+    minio_config = PIPELINE_CONFIG['minio']
+    extraction_results = {}
+    
+    # Extract AR Invoices
+    try:
+        logger.info("\n[1/2] Extracting finance.ar_invoices...")
+        df_invoices = extract_incremental_data(
+            table_name='ar_invoices',
+            schema='finance',
+            incremental_column='updated_at',
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        if not df_invoices.empty:
+            s3_path = save_to_minio_bronze(
+                df=df_invoices,
+                table_name='ar_invoices',
+                execution_date=execution_date,
+                minio_config=minio_config
+            )
+            extraction_results['ar_invoices'] = {
+                'status': 'success',
+                'rows': len(df_invoices),
+                's3_path': s3_path
+            }
+            logger.info(f"✅ AR Invoices: {len(df_invoices)} rows → {s3_path}")
+        else:
+            extraction_results['ar_invoices'] = {
+                'status': 'no_data',
+                'rows': 0
+            }
+            logger.info("⚠️ AR Invoices: No new data in time window")
+    
+    except Exception as e:
+        logger.error(f"❌ Failed to extract ar_invoices: {e}")
+        extraction_results['ar_invoices'] = {
+            'status': 'error',
+            'error': str(e)
+        }
+    
+    # Extract Payments
+    try:
+        logger.info("\n[2/2] Extracting finance.payments...")
+        df_payments = extract_incremental_data(
+            table_name='payments',
+            schema='finance',
+            incremental_column='updated_at',
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        if not df_payments.empty:
+            s3_path = save_to_minio_bronze(
+                df=df_payments,
+                table_name='payments',
+                execution_date=execution_date,
+                minio_config=minio_config
+            )
+            extraction_results['payments'] = {
+                'status': 'success',
+                'rows': len(df_payments),
+                's3_path': s3_path
+            }
+            logger.info(f"✅ Payments: {len(df_payments)} rows → {s3_path}")
+        else:
+            extraction_results['payments'] = {
+                'status': 'no_data',
+                'rows': 0
+            }
+            logger.info("⚠️ Payments: No new data in time window")
+    
+    except Exception as e:
+        logger.error(f"❌ Failed to extract payments: {e}")
+        extraction_results['payments'] = {
+            'status': 'error',
+            'error': str(e)
+        }
+    
+    # Push results to XCom
+    context['ti'].xcom_push(key='extraction_results', value=extraction_results)
+    
+    # Summary
+    total_rows = sum(r.get('rows', 0) for r in extraction_results.values())
+    logger.info("\n" + "=" * 80)
+    logger.info(f"EXTRACTION COMPLETE: {total_rows} total rows extracted")
+    logger.info(f"Results: {extraction_results}")
+    logger.info("=" * 80)
+    
+    # Note: We don't fail the task if no data found (this is expected for incremental)
+    # Only fail if there were actual errors
+    errors = [t for t, r in extraction_results.items() if r.get('status') == 'error']
+    if errors:
+        raise Exception(f"Extraction failed for: {errors}")
 
 
 def validate_bronze_data(**context):
@@ -390,7 +540,14 @@ with DAG(
         python_callable=verify_infrastructure
     )
     
-    # Tasks 2-4: Bronze ingestion (giả sử đã có data trong MinIO)
+    # Task 2 (NEW - Phase 4): Extract App DB transactional data to Bronze
+    extract_app_db_task = PythonOperator(
+        task_id='extract_app_db_to_bronze',
+        python_callable=extract_transactional_data,
+        execution_timeout=timedelta(minutes=15)
+    )
+    
+    # Tasks 3-4: Bronze ingestion (giả sử đã có data trong MinIO)
     # Trong production, cần thêm tasks để ingest từ source systems
     
     # Task 5: Bronze validation
@@ -593,8 +750,11 @@ with DAG(
     # TASK DEPENDENCIES
     # ============================================================================
     
+    # Phase 4: NEW extraction from App DB (OLTP → Bronze)
+    verify_infra_task >> extract_app_db_task >> validate_bronze_task
+    
     # Linear flow with TaskGroups (seeds skipped - already loaded)
-    verify_infra_task >> validate_bronze_task >> silver_group
+    validate_bronze_task >> silver_group
     silver_group >> gold_dims_group >> gold_facts_group
     gold_facts_group >> gold_links_group >> gold_kpi_group
     

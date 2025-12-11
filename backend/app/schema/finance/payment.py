@@ -40,7 +40,7 @@ class PaymentBase(BaseModel):
 
 class PaymentCreate(PaymentBase):
     """Schema for creating Payment WITH allocations (ATOMIC)."""
-    allocations: list[AllocationItem] = Field(..., min_length=1, description="List of invoice/bill allocations")
+    allocations: list[AllocationItem] = Field(default=[], description="List of invoice/bill allocations (optional)")
     
     @field_validator('allocations')
     @classmethod

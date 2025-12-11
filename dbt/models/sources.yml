@@ -147,3 +147,75 @@ sources:
             description: "Type of financial document (e.g., RV)"
           - name: area_business
             description: "Business area (mostly NULL in dataset)"
+
+  # =====================================================================
+  # NEW (Phase 4): App DB Bronze Source
+  # Data extracted from postgres_application_db by Airflow
+  # =====================================================================
+  - name: bronze_app_db
+    database: minio
+    schema: default
+    description: "Bronze layer - App DB transactional data (OLTP → OLAP bridge)"
+    
+    tables:
+      - name: ar_invoices_app
+        description: "AR Invoices from finance.ar_invoices (Phase 3 Backend)"
+        meta:
+          external_location: "s3a://sme-lake/bronze/app_db/ar_invoices/"
+          file_format: parquet
+        columns:
+          - name: id
+            description: "Primary key (auto-increment)"
+          - name: org_id
+            description: "Organization ID (multi-tenancy)"
+            tests:
+              - not_null
+          - name: invoice_no
+            description: "Invoice number (unique per org)"
+          - name: customer_id
+            description: "Foreign key to core.customers"
+          - name: issue_date
+            description: "Invoice issue date"
+          - name: due_date
+            description: "Payment due date"
+          - name: total_amount
+            description: "Total invoice amount (VND)"
+          - name: paid_amount
+            description: "Amount paid (VND)"
+          - name: status
+            description: "Invoice status (draft/posted/paid/overdue/cancelled)"
+          - name: notes
+            description: "Optional notes"
+          - name: created_at
+            description: "Record creation timestamp"
+          - name: updated_at
+            description: "Record update timestamp (for incremental loading)"
+      
+      - name: payments_app
+        description: "Payments from finance.payments (Phase 3 Backend)"
+        meta:
+          external_location: "s3a://sme-lake/bronze/app_db/payments/"
+          file_format: parquet
+        columns:
+          - name: id
+            description: "Primary key (auto-increment)"
+          - name: org_id
+            description: "Organization ID (multi-tenancy)"
+            tests:
+              - not_null
+          - name: account_id
+            description: "Foreign key to core.accounts"
+          - name: transaction_date
+            description: "Payment transaction date"
+          - name: amount
+            description: "Payment amount (VND)"
+          - name: payment_method
+            description: "Payment method (cash/transfer/vietqr)"
+          - name: reference_code
+            description: "Bank transaction reference code"
+          - name: notes
+            description: "Optional notes"
+          - name: created_at
+            description: "Record creation timestamp"
+          - name: updated_at
+            description: "Record update timestamp (for incremental loading)"

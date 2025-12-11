@@ -16,7 +16,10 @@ from app.middleware.security import (
 )
 from app.modules.auth.router import router as auth_router
 from app.modules.partners.router import customers_router, suppliers_router
-from app.modules.finance import finance_router
+from app.modules.finance import finance_router, accounts_router, bills_router
+from app.modules.analytics.router import router as analytics_router
+from app.modules.users.router import router as users_router
+from app.modules.settings.router import router as settings_router
 
 # Setup logging
 setup_logging()
@@ -86,9 +89,14 @@ async def general_exception_handler(request: Request, exc: Exception):
 
 # Include Routers
 app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
+app.include_router(users_router, prefix="/api/v1", tags=["User Management"])
 app.include_router(customers_router, prefix="/api/v1", tags=["Customers"])
 app.include_router(suppliers_router, prefix="/api/v1", tags=["Suppliers"])
+app.include_router(accounts_router, prefix="/api/v1", tags=["Accounts"])
 app.include_router(finance_router, prefix="/api/v1", tags=["Finance"])
+app.include_router(bills_router, prefix="/api/v1", tags=["AP Bills"])
+app.include_router(analytics_router, prefix="/api/v1/analytics", tags=["Analytics"])
+app.include_router(settings_router, prefix="/api/v1", tags=["Settings"])
 
 
 @app.get("/")

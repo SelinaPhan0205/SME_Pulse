@@ -279,3 +279,90 @@ async def delete_invoice(
     
     await db.delete(invoice)
     await db.commit()
+
+
+async def bulk_import_invoices(
+    db: AsyncSession,
+    invoices_data: list,
+    org_id: int,
+    auto_post: bool = False,
+) -> dict:
+    """Bulk import multiple invoices from Excel/CSV.
+    
+    Args:
+        db: Database session
+        invoices_data: List of invoice data dicts
+        org_id: Organization ID from JWT
+        auto_post: If True, automatically post invoices after creation
+    
+    Returns:
+        dict with import results: total_submitted, total_success, total_failed, results
+    """
+    results = []
+    success_count = 0
+    failed_count = 0
+    
+    for inv_data in invoices_data:
+        try:
+            # Check for duplicate invoice_no
+            existing_query = select(ARInvoice).where(
+                ARInvoice.org_id == org_id,
+                ARInvoice.invoice_no == inv_data.invoice_no,
+            )
+            existing_result = await db.execute(existing_query)
+            if existing_result.scalar_one_or_none():
+                results.append({
+                    "invoice_no": inv_data.invoice_no,
+                    "success": False,
+                    "id": None,
+                    "error": f"Invoice number {inv_data.invoice_no} already exists"
+                })
+                failed_count += 1
+                continue
+            
+            # Create invoice
+            invoice = ARInvoice(
+                org_id=org_id,
+                invoice_no=inv_data.invoice_no,
+                customer_id=inv_data.customer_id,
+                issue_date=inv_data.issue_date,
+                due_date=inv_data.due_date,
+                total_amount=inv_data.total_amount,
+                notes=inv_data.notes,
+                status="draft",
+                paid_amount=0,
+            )
+            db.add(invoice)
+            await db.flush()  # Get ID without committing
+            
+            # Auto-post if requested
+            if auto_post:
+                invoice.status = "posted"
+            
+            results.append({
+                "invoice_no": inv_data.invoice_no,
+                "success": True,
+                "id": invoice.id,
+                "error": None
+            })
+            success_count += 1
+            
+        except Exception as e:
+            results.append({
+                "invoice_no": inv_data.invoice_no,
+                "success": False,
+                "id": None,
+                "error": str(e)
+            })
+            failed_count += 1
+    
+    # Commit all successful imports
+    if success_count > 0:
+        await db.commit()
+    
+    return {
+        "total_submitted": len(invoices_data),
+        "total_success": success_count,
+        "total_failed": failed_count,
+        "results": results
+    }

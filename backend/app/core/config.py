@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     BACKEND_ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30)
     
     # CORS (will be parsed from comma-separated string)
-    BACKEND_ALLOWED_ORIGINS: str = Field(default="http://localhost:3000")
+    BACKEND_ALLOWED_ORIGINS: str = Field(default="http://localhost:3000,http://localhost:3001")
     
     # Environment
     BACKEND_ENVIRONMENT: str = Field(default="development")
@@ -42,6 +42,27 @@ class Settings(BaseSettings):
     BACKEND_RATE_LIMIT_ENABLED: bool = Field(default=True)
     BACKEND_RATE_LIMIT_REQUESTS: int = Field(default=5)
     BACKEND_RATE_LIMIT_WINDOW: int = Field(default=60)
+    
+    # Redis & Celery
+    REDIS_HOST: str = Field(default="redis")
+    REDIS_PORT: int = Field(default=6379)
+    CELERY_BROKER_URL: str = Field(default="redis://redis:6379/0")
+    CELERY_RESULT_BACKEND: str = Field(default="redis://redis:6379/0")
+    
+    # MinIO
+    MINIO_ENDPOINT: str = Field(default="minio:9000")
+    MINIO_ACCESS_KEY: str = Field(default="minioadmin")
+    MINIO_SECRET_KEY: str = Field(default="minioadmin")
+    MINIO_BUCKET_NAME: str = Field(default="sme-lake")
+    MINIO_SECURE: bool = Field(default=False)
+    
+    # Metabase Embedding
+    METABASE_SITE_URL: str = Field(default="http://localhost:3000")
+    METABASE_EMBEDDING_SECRET_KEY: str = Field(default="change-me-metabase-secret")
+    METABASE_TOKEN_EXPIRE_SECONDS: int = Field(default=600)
+    
+    # Excel Export
+    EXPORT_TEMP_DIR: str = Field(default="/tmp/exports")
     
     def get_cors_origins(self) -> List[str]:
         """Parse CORS origins from comma-separated string"""
