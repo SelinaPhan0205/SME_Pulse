@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../services';
 import { getErrorMessage } from '../client';
 import type { LoginRequest } from '../types';
+import { setUserRoles, clearUserRoles, getUserRoles } from '../../permissions';
 
 /**
  * Hook để login
@@ -32,8 +33,11 @@ export function useLogin() {
       // Lưu token vào localStorage
       localStorage.setItem('token', data.access_token);
       
-      // Cache user data vào React Query
-      queryClient.setQueryData(['currentUser'], data.user);
+      // Lưu roles vào localStorage cho RBAC
+      setUserRoles(data.roles || []);
+      
+      // Cache user data vào React Query (include roles)
+      queryClient.setQueryData(['currentUser'], { ...data.user, roles: data.roles });
       
       // Navigate to dashboard
       navigate('/dashboard');
@@ -103,8 +107,19 @@ export function useLogout() {
       // Clear tất cả cache
       queryClient.clear();
       
+      // Clear user roles
+      clearUserRoles();
+      
       // Navigate về landing page
       navigate('/');
     },
   });
+}
+
+/**
+ * Hook để get user roles
+ * Returns the current user's roles from localStorage
+ */
+export function useUserRoles(): string[] {
+  return getUserRoles();
 }

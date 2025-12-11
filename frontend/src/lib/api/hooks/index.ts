@@ -4,7 +4,7 @@
  */
 
 // Auth hooks
-export { useLogin, useLogout, useCurrentUser, useChangePassword } from './useAuth';
+export { useLogin, useLogout, useCurrentUser, useChangePassword, useUserRoles } from './useAuth';
 
 // Users hooks
 export {

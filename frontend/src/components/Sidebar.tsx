@@ -1,7 +1,7 @@
-import { X, Home, FileText, CreditCard, TrendingUp, AlertCircle, BarChart3, Settings, ChevronDown, ChevronRight, Users } from 'lucide-react';
+import { Home, FileText, CreditCard, TrendingUp, AlertCircle, BarChart3, Settings, ChevronDown, ChevronRight, Users } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Button } from './ui/button';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { hasMenuAccess, getUserRoles } from '../lib/permissions';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -12,13 +12,17 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [isDebtOpen, setIsDebtOpen] = useState(false);
+  
+  // Get user roles for permission-based menu filtering
+  const userRoles = getUserRoles();
 
   const handleNavigate = (path: string) => {
     navigate(path);
     onClose();
   };
 
-  const menuItems = [
+  // Define all menu items with their permission IDs
+  const allMenuItems = [
     {
       id: 'dashboard',
       label: 'Dashboard',
@@ -61,17 +65,48 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     },
     {
       id: 'user',
-      label: 'Tài khoản',
+      label: 'Quản lý người dùng',
       icon: Users,
       path: '/dashboard/users',
     },
     {
       id: 'settings',
-      label: 'Cấu hình',
+      label: 'Cài đặt hệ thống',
       icon: Settings,
       path: '/dashboard/settings',
     },
   ];
+
+  // Filter menu items based on user permissions
+  const menuItems = useMemo(() => {
+    return allMenuItems
+      .filter(item => {
+        // Dashboard is always visible (accessible to all roles)
+        if (item.id === 'dashboard') {
+          return true;
+        }
+        // Check if user has access to this menu item
+        if (!hasMenuAccess(userRoles, item.id)) {
+          return false;
+        }
+        return true;
+      })
+      .map(item => {
+        // If item has submenu, filter submenu items too
+        if (item.submenu) {
+          const filteredSubmenu = item.submenu.filter(subItem => 
+            hasMenuAccess(userRoles, subItem.id)
+          );
+          // Only include parent if at least one submenu item is accessible
+          if (filteredSubmenu.length === 0) {
+            return null;
+          }
+          return { ...item, submenu: filteredSubmenu };
+        }
+        return item;
+      })
+      .filter(Boolean) as typeof allMenuItems;
+  }, [userRoles]);
 
   return (
     <>

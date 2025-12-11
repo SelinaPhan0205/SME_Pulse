@@ -12,6 +12,7 @@ import { APITestPage } from './components/APITestPage';
 import LandingPage from './components/LandingPage';
 import Login from './components/Login';
 import DashboardLayout from './pages/DashboardLayout';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import { QueryProvider } from './providers/QueryProvider';
 import { Toaster } from './components/ui/sonner';
 import { DevAPIMonitor } from './components/DevAPIMonitor';
@@ -28,17 +29,70 @@ export default function App() {
           {/* API Test Route (Development only) */}
           <Route path="/api-test" element={<APITestPage />} />
           
-          {/* Protected dashboard routes */}
+          {/* Protected dashboard routes with role-based access control */}
           <Route path="/dashboard" element={<DashboardLayout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="forecast" element={<Forecast />} />
-            <Route path="anomaly" element={<AnomalyDetection />} />
-            <Route path="reports" element={<Reports />} />
-            <Route path="payments" element={<Payments />} />
-            <Route path="ar" element={<AccountsReceivable />} />
-            <Route path="ap" element={<AccountsPayable />} />
-            <Route path="users" element={<UserManagement />} />
-            <Route path="settings" element={<Settings />} />
+            {/* Dashboard - Owner, Accountant only */}
+            <Route index element={
+              <ProtectedRoute requiredPermission="dashboard">
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            
+            {/* Forecast - Owner, Accountant only */}
+            <Route path="forecast" element={
+              <ProtectedRoute requiredPermission="forecast">
+                <Forecast />
+              </ProtectedRoute>
+            } />
+            
+            {/* Anomaly Detection - Owner, Accountant only */}
+            <Route path="anomaly" element={
+              <ProtectedRoute requiredPermission="anomaly">
+                <AnomalyDetection />
+              </ProtectedRoute>
+            } />
+            
+            {/* Reports - Owner, Accountant only */}
+            <Route path="reports" element={
+              <ProtectedRoute requiredPermission="report">
+                <Reports />
+              </ProtectedRoute>
+            } />
+            
+            {/* Payments - Owner, Accountant, Cashier */}
+            <Route path="payments" element={
+              <ProtectedRoute requiredPermission="payment">
+                <Payments />
+              </ProtectedRoute>
+            } />
+            
+            {/* AR - Owner, Accountant, Cashier */}
+            <Route path="ar" element={
+              <ProtectedRoute requiredPermission="ar">
+                <AccountsReceivable />
+              </ProtectedRoute>
+            } />
+            
+            {/* AP - Owner, Accountant only */}
+            <Route path="ap" element={
+              <ProtectedRoute requiredPermission="ap">
+                <AccountsPayable />
+              </ProtectedRoute>
+            } />
+            
+            {/* User Management - Admin only */}
+            <Route path="users" element={
+              <ProtectedRoute requiredPermission="user">
+                <UserManagement />
+              </ProtectedRoute>
+            } />
+            
+            {/* Settings - Admin only */}
+            <Route path="settings" element={
+              <ProtectedRoute requiredPermission="settings">
+                <Settings />
+              </ProtectedRoute>
+            } />
           </Route>
 
           {/* Redirect unknown routes to landing */}
