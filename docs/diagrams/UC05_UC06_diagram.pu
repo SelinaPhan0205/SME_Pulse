@@ -1,0 +1,401 @@
+@startuml
+title UC05/UC06 - Công nợ AR/AP & Đối soát Thanh toán
+autonumber
+actor User
+participant React as "AccountsReceivable.tsx\nor AccountsPayable.tsx"
+participant Hook as "useARInvoices /\nuseAPBills Hook"
+participant Axios as "Axios Client"
+participant Router as "AnalyticsRouter"
+participant Auth as "AuthCheck"
+participant Service as "AnalyticsService"
+participant DB as "PostgreSQL DB"
+participant Cache as "Redis Cache"
+participant Chart as "AgingChart"
+
+User -> React: Click "Công nợ phải thu (AR)"
+activate React
+
+React -> Hook: useARInvoices(page, filters)
+activate Hook
+note right of Hook
+  React Query cache check
+  staleTime: 60 seconds
+  (user edits frequently)
+end note
+
+Hook -> Axios: GET /api/v1/analytics/aging/ar?page=1&status=overdue
+activate Axios
+note right of Axios
+  Attach JWT token
+  Authorization: Bearer token
+end note
+
+Axios -> Router: GET /api/v1/analytics/aging/ar
+activate Router
+
+Router -> Auth: Validate JWT
+activate Auth
+note right of Auth
+  decode_access_token()
+  Verify org_id
+  Check RBAC: accountant+ role
+  (UC05: owner, accountant, cashier)
+end note
+Auth --> Router: Current User (org_id=1)
+deactivate Auth
+
+Router -> Service: get_ar_aging(db, org_id)
+activate Service
+
+Service -> Cache: Check "ar_aging:org_1"
+activate Cache
+
+alt Cache HIT (within 60s)
+  Cache --> Service: Cached AR data
+  note right of Service
+    Buckets: 0-30, 31-60, 61-90, >90 days
+    Time: ~2ms
+  end note
+else Cache MISS
+  Cache --> Service: Expired/not found
+  deactivate Cache
+  
+  Service -> DB: Query AR aging data
+  activate DB
+  
+  note right of DB
+    SQL Query:
+    SELECT 
+      customer_id, customer_name,
+      COUNT(*) as count,
+      SUM(amount) as total_amount,
+      SUM(paid_amount) as total_paid,
+      CASE WHEN (CURRENT_DATE - due_date)
+        BETWEEN 0 AND 30 THEN '0-30'
+        WHEN (CURRENT_DATE - due_date)
+        BETWEEN 31 AND 60 THEN '31-60'
+        WHEN (CURRENT_DATE - due_date)
+        BETWEEN 61 AND 90 THEN '61-90'
+        ELSE '>90'
+      END as bucket_days
+    FROM core.ar_invoices
+    WHERE org_id = 1 
+      AND status IN ('posted', 'overdue')
+    GROUP BY bucket_days
+    ORDER BY bucket_days
+  end note
+  
+  DB --> Service: Return 4 rows (one per bucket)
+  deactivate DB
+  
+  Service -> Service: Transform to Response
+  note right of Service
+    {
+      total_ar: sum(amount),
+      total_invoices: count(*),
+      buckets: [
+        {bucket_days: '0-30', count: 5, 
+         total_amount: 100M},
+        {bucket_days: '31-60', count: 3, 
+         total_amount: 50M},
+        {bucket_days: '61-90', count: 2, 
+         total_amount: 30M},
+        {bucket_days: '>90', count: 8, 
+         total_amount: 200M} <- OVERDUE
+      ]
+    }
+  end note
+  
+  Service -> Cache: Store in Redis (TTL=60s)
+  activate Cache
+  Cache --> Service: OK
+  deactivate Cache
+end
+
+Service --> Router: ARAgingResponse JSON
+deactivate Service
+
+Router --> Axios: HTTP 200 OK
+deactivate Router
+
+Axios --> Hook: Response data
+deactivate Axios
+
+Hook -> Hook: React Query updates cache
+note right of Hook
+  Cache in memory for 60s
+  Auto-refetch when stale
+end note
+Hook --> React: {data, isLoading: false}
+deactivate Hook
+
+React -> Chart: Render AR Aging Chart
+activate Chart
+
+Chart -> Chart: Prepare chart data
+note right of Chart
+  Stacked Bar Chart:
+  X-axis: Bucket Days (0-30, 31-60, 61-90, >90)
+  Y-axis: Amount (VND)
+  Color: Green->Yellow->Orange->Red
+  
+  Table below:
+  - Customer names
+  - Invoice count
+  - Total amount
+  - Days overdue
+  - Click to view invoices
+end note
+
+Chart -> Chart: Add interactivity
+note right of Chart
+  On hover: Show exact amounts
+  Click on bucket: Filter customers
+  Export to Excel button
+end note
+
+Chart --> User: Display AR aging report
+deactivate Chart
+deactivate React
+
+par AP Aging Process
+  User -> React: Click "Công nợ phải trả (AP)"
+  activate React
+  
+  React -> Hook: useAPBills(page, filters)
+  activate Hook
+  
+  Hook -> Axios: GET /api/v1/analytics/aging/ap
+  activate Axios
+  
+  Axios -> Router: GET /api/v1/analytics/aging/ap
+  activate Router
+  
+  Router -> Service: get_ap_aging(db, org_id)
+  activate Service
+  
+  Service -> DB: Query AP aging (similar to AR)
+  activate DB
+  
+  note right of DB
+    Same logic as AR but:
+    - Table: core.ap_bills
+    - Supplier instead of customer
+    - Status: draft, posted, paid, overdue
+  end note
+  
+  DB --> Service: Return 4 buckets
+  deactivate DB
+  
+  Service --> Router: APAgingResponse JSON
+  deactivate Service
+  
+  Router --> Axios: HTTP 200 OK
+  deactivate Router
+  
+  Axios --> Hook: Response data
+  deactivate Axios
+  
+  Hook --> React: {data, isLoading: false}
+  deactivate Hook
+  
+  React -> Chart: Render AP aging chart
+  activate Chart
+  Chart --> User: Display AP aging
+  deactivate Chart
+  deactivate React
+end
+
+alt Switch to Reconciliation Tab
+  User -> React: Click "Đối soát" tab
+  activate React
+  
+  React -> Hook: useReconciliation(date)
+  activate Hook
+  
+  Hook -> Axios: GET /api/v1/analytics/kpi/reconciliation?date=2025-12-16
+  activate Axios
+  
+  Axios -> Router: GET /api/v1/analytics/kpi/reconciliation
+  activate Router
+  
+  Router -> Service: get_reconciliation_kpi(db, org_id, date)
+  activate Service
+  
+  Service -> DB: Get payment reconciliation status
+  activate DB
+  
+  note right of DB
+    Query bank transactions vs system payments
+    Match algorithm:
+    1. Get bank txn amount X from bank feed
+    2. Find system payment ~X from payments table
+    3. If amount match (tolerance ±1000 VND) = matched
+    4. Else = unmatched/discrepancy
+  end note
+  
+  DB --> Service: Return reconciliation data
+  deactivate DB
+  
+  Service -> Service: Calculate metrics
+  note right of Service
+    total_transactions: count
+    reconciled: matched count
+    pending: unmatched count
+    reconciliation_rate: reconciled/total%
+    discrepancies: [{txn_id, amount, reason}]
+  end note
+  
+  Service --> Router: ReconciliationResponse
+  deactivate Service
+  
+  Router --> Axios: HTTP 200 OK
+  deactivate Router
+  
+  Axios --> Hook: Response data
+  deactivate Axios
+  
+  Hook --> React: {status, rate, pending_txns}
+  deactivate Hook
+  
+  React -> React: Display reconciliation status
+  note right of React
+    Show:
+    - Reconciliation rate %
+    - Matched: X transactions
+    - Pending: Y transactions
+    - Discrepancies: [list]
+    - Action buttons:
+      1. Auto-match
+      2. Manual confirm
+      3. Reject
+  end note
+end
+
+alt Auto-Match Reconciliation
+  User -> React: Click "Tự động đối soát"
+  activate React
+  
+  React -> Axios: POST /api/v1/analytics/reconciliation/auto-match
+  activate Axios
+  
+  Axios -> Router: POST auto-match (tolerance=1000 VND)
+  activate Router
+  
+  Router -> Service: auto_match_reconciliation()
+  activate Service
+  
+  Service -> DB: Get unmatched bank txns
+  activate DB
+  
+  note right of DB
+    For each bank_txn B with amount X:
+    Find payment P where:
+      |B.amount - P.amount| <= 1000
+      AND B.date = P.date
+      AND B.status = 'unmatched'
+    If found:
+      Mark as "suggested_match"
+    Else:
+      Mark as "unmatched"
+  end note
+  
+  DB --> Service: Matched pairs list
+  deactivate DB
+  
+  Service --> Router: ReconciliationAutoMatchResponse
+  deactivate Service
+  
+  Router --> Axios: HTTP 200 OK (202 Accepted for async)
+  deactivate Router
+  
+  Axios --> React: {total_matched, unmatched}
+  deactivate Axios
+  
+  React -> React: Display matches for confirmation
+  note right of React
+    Show suggested matches:
+    - Bank Txn: 500,000 VND on 12/16
+    - System Payment: 500,000 VND on 12/16
+    - Match confidence: HIGH (exact match)
+    
+    User can:
+    - Click "Confirm" -> Call confirm endpoint
+    - Click "Reject" -> Call reject endpoint
+  end note
+end
+
+alt Manual Confirm Match
+  User -> React: Click "Xác nhận" on match
+  activate React
+  
+  React -> Axios: POST /api/v1/analytics/reconciliation/{txn_id}/confirm
+  activate Axios
+  
+  Axios -> Router: POST confirm
+  activate Router
+  
+  Router -> Service: confirm_reconciliation(txn_id, payment_id)
+  activate Service
+  
+  Service -> DB: Update bank transaction status
+  activate DB
+  
+  note right of DB
+    UPDATE bank_transactions
+    SET matched_payment_id = {payment_id},
+        status = 'reconciled',
+        reconciled_date = NOW(),
+        reconciled_by_user_id = {current_user_id}
+    WHERE id = {txn_id}
+    
+    Audit trail: Create reconciliation_audit record
+  end note
+  
+  DB --> Service: OK
+  deactivate DB
+  
+  Service --> Router: ReconciliationActionResponse
+  deactivate Service
+  
+  Router --> Axios: HTTP 200 OK
+  deactivate Router
+  
+  Axios --> React: {status: "reconciled"}
+  deactivate Axios
+  
+  React -> React: Update UI
+  note right of React
+    Mark row as "Reconciled"
+    Decrease pending count
+    Update reconciliation rate
+  end note
+end
+
+note over User,DB
+  UC05/UC06 - Công nợ Management:
+  
+  UC05 - Accounts Receivable (AR):
+  - View aging report
+  - Customer prioritization
+  - Payment status tracking
+  - Invoice detail view
+  
+  UC06 - Accounts Payable (AP):
+  - View AP aging
+  - Supplier payment schedule
+  - Bill status tracking
+  
+  Reconciliation:
+  - Bank feed matching (auto + manual)
+  - Discrepancy detection
+  - Audit trail
+  - Tolerance: ±1000 VND
+  
+  RBAC:
+  - UC05: owner, accountant, cashier
+  - UC06: owner, accountant
+  - Reconciliation: accountant+ only
+end note
+
+@enduml

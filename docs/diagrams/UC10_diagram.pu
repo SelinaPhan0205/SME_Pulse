@@ -1,0 +1,180 @@
+@startuml
+title UC10 - Anomaly Detection (Isolation Forest)
+autonumber
+actor User
+participant Dashboard as "AnomalyDetection.tsx"
+participant Hook as "useAnomalies Hook"
+participant Axios as "Axios Client"
+participant Router as "AnalyticsRouter"
+participant Auth as "AuthCheck"
+participant Service as "AnalyticsService"
+participant Cache as "Redis Cache"
+participant Trino as "Trino Engine"
+participant Iceberg as "Iceberg (MinIO)"
+participant Chart as "AnomalyChart"
+
+User -> Dashboard: Click "Cảnh báo bất thường"
+activate Dashboard
+
+Dashboard -> Hook: useAnomalies(severity, date_range)
+activate Hook
+note right of Hook
+  React Query cache check
+  staleTime: 5 minutes
+  (real-time alerts)
+end note
+
+Hook -> Axios: GET /api/v1/analytics/anomalies?severity=CRITICAL
+activate Axios
+note right of Axios
+  JWT token attach
+  Authorization: Bearer token
+end note
+
+Axios -> Router: GET /api/v1/analytics/anomalies
+activate Router
+
+Router -> Auth: Validate JWT
+activate Auth
+note right of Auth
+  decode_access_token()
+  Check org_id, roles
+  Verify user is "owner"
+  (RBAC restriction)
+end note
+Auth --> Router: Current User (org_id=1, role=owner)
+deactivate Auth
+
+Router -> Service: get_revenue_anomalies(db, org_id, severity)
+activate Service
+
+Service -> Cache: Check key "anomalies:org_1:CRITICAL:date_range"
+activate Cache
+
+alt Cache HIT
+  Cache --> Service: Cached anomaly data
+  note right of Service
+    Return from Redis
+    Time: ~3ms
+  end note
+else Cache MISS
+  Cache --> Service: Cache expired
+  deactivate Cache
+  
+  Service -> Trino: Connect to Trino catalog=sme_lake
+  activate Trino
+  
+  Service -> Trino: Execute SQL Query
+  note right of Trino
+    SELECT txn_date, amount_vnd,
+    anomaly_score, severity,
+    transaction_category, counterparty_name
+    FROM gold.ml_anomaly_alerts
+    WHERE severity IN (CRITICAL, HIGH, MEDIUM)
+    AND txn_date >= DATE_TRUNC('day', CURRENT_DATE - 7)
+    ORDER BY anomaly_score DESC
+    LIMIT 1000
+  end note
+  
+  Trino -> Iceberg: Read Parquet files from MinIO
+  activate Iceberg
+  note right of Iceberg
+    Access: sme_lake/gold/
+    ml_anomaly_alerts/*
+    Parquet format
+  end note
+  Iceberg --> Trino: Return anomaly rows
+  deactivate Iceberg
+  
+  Trino --> Service: Return up to 1000 rows
+  deactivate Trino
+  
+  Service -> Service: Transform results
+  note right of Service
+    Convert to AnomalyResponse:
+    {
+      total_anomalies: count,
+      severity_breakdown: {},
+      data: [{
+        date, amount, score,
+        severity, category, party
+      }]
+    }
+  end note
+  
+  Service -> Cache: Store in Redis (TTL=5 min)
+  activate Cache
+  Cache --> Service: OK
+  deactivate Cache
+  
+  note right of Service
+    anomaly_score scale:
+    0.0-0.3 = Normal
+    0.3-0.6 = Medium
+    0.6-0.8 = High
+    0.8-1.0 = Critical
+  end note
+end
+
+Service --> Router: AnomalyResponse JSON
+deactivate Service
+
+Router --> Axios: HTTP 200 OK
+deactivate Router
+
+Axios --> Hook: Response data
+deactivate Axios
+
+Hook -> Hook: React Query updates cache
+note right of Hook
+  staleTime: 5 min
+  refetchInterval: 30s
+  (periodically check)
+end note
+Hook --> Dashboard: {data, isLoading: false}
+deactivate Hook
+
+Dashboard -> Chart: Render AnomalyChart
+activate Chart
+
+Chart -> Chart: Process anomaly data
+note right of Chart
+  Group by severity
+  Color code:
+  - Red: CRITICAL (>0.8)
+  - Orange: HIGH (0.6-0.8)
+  - Yellow: MEDIUM (0.3-0.6)
+  Scatter plot: Amount vs Score
+end note
+
+Chart -> Chart: Sort by score descending
+note right of Chart
+  Top 20 anomalies
+  Show in table below chart
+  Allow filter by category
+  (RECEIVABLE, PAYABLE, PAYROLL)
+end note
+
+Chart --> User: Display anomaly chart + table
+deactivate Chart
+deactivate Dashboard
+
+note over User,Chart
+  Total: ~350ms (cache miss)
+  Total: ~10ms (cache hit)
+  Severity filter applied on Trino side
+  (reduces network traffic)
+end note
+
+note over Service,Iceberg
+  Model Details:
+  Algorithm: Isolation Forest (scikit-learn)
+  Training Window: 180 days historical data
+  Features: amount, direction, category,
+  day_of_week, is_weekend, month_of_year
+  Contamination: 5% (5% assumed anomalies)
+  Retraining: Weekly (Sunday 1:00 AM)
+  MLflow: /tmp/airflow_mlflow/models
+end note
+
+@enduml

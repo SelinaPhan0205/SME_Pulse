@@ -1,0 +1,126 @@
+@startuml
+autonumber
+actor User
+participant React
+participant Hook as "useRevenueForecast"
+participant Axios
+participant Router as "AnalyticsRouter"
+participant Auth as "AuthCheck"
+participant Service as "AnalyticsService"
+participant Cache as "Redis"
+participant Trino
+participant Iceberg
+participant Chart
+
+User -> React: Click "Xem dự báo dòng tiền"
+activate React
+
+React -> Hook: useRevenueForecast(start_date, end_date)
+activate Hook
+note right of Hook
+  React Query checks cache
+  staleTime: 30 min
+end note
+
+Hook -> Axios: GET /api/v1/analytics/forecast/revenue
+activate Axios
+note right of Axios
+  Attach JWT token
+  Authorization: Bearer ...
+end note
+
+Axios -> Router: GET /api/v1/analytics/forecast/revenue
+activate Router
+
+Router -> Auth: Validate JWT
+activate Auth
+note right of Auth
+  decode_access_token()
+  Verify org_id, roles, expiry
+end note
+Auth --> Router: Current User (org_id=1)
+deactivate Auth
+
+Router -> Service: get_revenue_forecast(db, org_id, ...)
+activate Service
+
+Service -> Cache: Check key "forecast:org_1:..."
+activate Cache
+
+alt Cache HIT
+  Cache --> Service: Cached data (JSON)
+  note right of Service
+    Return from cache
+    Time: ~5ms
+  end note
+else Cache MISS
+  Cache --> Service: No cache
+  deactivate Cache
+  
+  Service -> Trino: Connect to Trino (catalog=sme_lake)
+  activate Trino
+  
+  Service -> Trino: Execute SQL SELECT
+  note right of Trino
+    SELECT forecast_date, predicted_cashflow,
+    lower_bound, upper_bound
+    FROM gold.ml_cashflow_forecast
+    WHERE forecast_date BETWEEN '2025-01-01'
+    AND '2025-01-31'
+  end note
+  
+  Trino -> Iceberg: Read Parquet files from MinIO
+  activate Iceberg
+  Iceberg --> Trino: Return forecast rows (31 rows)
+  deactivate Iceberg
+  
+  Trino --> Service: Result data
+  deactivate Trino
+  
+  Service -> Service: Transform to JSON
+  note right of Service
+    {data: [{date, forecast, lower, upper}]}
+  end note
+  
+  Service -> Cache: Store in Redis (TTL=30 min)
+  activate Cache
+  Cache --> Service: OK
+  deactivate Cache
+end
+
+Service --> Router: ForecastResponse JSON
+deactivate Service
+
+Router --> Axios: HTTP 200 OK
+deactivate Router
+
+Axios --> Hook: Response data
+deactivate Axios
+
+Hook -> Hook: React Query caches response
+note right of Hook
+  staleTime: 30 min
+end note
+Hook --> React: {data, isLoading: false}
+deactivate Hook
+
+React -> Chart: Render ForecastChart
+activate Chart
+
+Chart -> Chart: Transform for Recharts
+note right of Chart
+  Confidence interval (shaded)
+  Forecast line (dashed)
+  Actual line (solid)
+end note
+
+Chart --> User: Display forecast chart
+deactivate Chart
+deactivate React
+
+note over User,Chart
+  Total: ~400ms (cache miss)
+  Total: ~50ms (cache hit)
+end note
+
+@enduml
