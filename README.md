@@ -635,9 +635,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 | Member | Backend | Frontend | Data Pipeline | ML/AI | Analytics |
 |--------|---------|----------|---------------|-------|-----------|
-| **Nguyễn Anh Tuấn** | ✅ FastAPI, SQLAlchemy | | ✅ Airflow, dbt | ✅ Prophet | |
-| **Phan Thị Xuân Tiên** | | ✅ React, TanStack Query | ✅ ETL, dbt models | | |
-| **Nguyễn Văn Thanh Sơn** | | | ✅ Trino, Iceberg | | ✅ KPI, Reports | ✅Isolation Forest|
+| **Nguyễn Anh Tuấn** | ✅ FastAPI, SQLAlchemy, Auth JWT | | ✅ Airflow, dbt, Trino, Iceberg | ✅ Prophet | |
+| **Phan Thị Xuân Tiên** | | ✅ React, TanStack Query | ✅ ETL, dbt models, Trino, Iceberg | | ✅ AR/AP scoring |
+| **Nguyễn Văn Thanh Sơn** | | | ✅ Trino, Iceberg, dbt | ✅Isolation Forest | ✅ KPI, Reports Metabase | 
 
 ### Contact
 
