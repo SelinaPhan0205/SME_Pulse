@@ -1,0 +1,103 @@
+@startuml
+title Security & Authentication Flow - JWT + RBAC
+autonumber
+actor User
+participant Client as "Client\n(Browser)"
+participant Router as "Router\n(API)"
+participant Auth as "Auth\nValidator"
+participant Service as "Service"
+participant DB as "PostgreSQL"
+
+== LOGIN ==
+
+User -> Client: Email + Password
+activate Client
+Client -> Router: POST /auth/login
+activate Router
+Router -> Auth: Verify credentials
+activate Auth
+Auth -> DB: Query user
+DB --> Auth: User record
+deactivate DB
+Auth -> Auth: bcrypt.verify()
+alt Invalid
+  Auth --> Router: 401
+  Router --> Client: Error
+  deactivate Auth
+  deactivate Router
+  deactivate Client
+else Valid
+  Auth -> DB: Get roles
+  DB --> Auth: Roles list
+  deactivate DB
+  Auth -> Auth: Generate JWT
+  Auth --> Router: access_token
+  Router --> Client: {token, user}
+  deactivate Auth
+  deactivate Router
+  Client -> Client: Store token
+  deactivate Client
+end
+
+== PROTECTED REQUEST ==
+
+User -> Client: Access endpoint
+activate Client
+Client -> Router: GET /api/v1/aging/ar\nAuthorization: Bearer {token}
+activate Router
+Router -> Auth: Validate JWT
+activate Auth
+Auth -> Auth: Decode & verify token
+alt Expired/Invalid
+  Auth --> Router: 401
+  Router --> Client: 401
+  deactivate Auth
+  deactivate Router
+  Client --> User: Redirect to login
+  deactivate Client
+else Valid
+  Auth -> DB: Get user roles
+  DB --> Auth: [owner, accountant]
+  deactivate DB
+  Auth -> Auth: Check RBAC
+  alt No permission
+    Auth --> Router: 403
+    Router --> Client: 403
+    deactivate Auth
+    deactivate Router
+    deactivate Client
+  else Allowed
+    Auth --> Router: CurrentUser
+    deactivate Auth
+    Router -> Service: get_ar_aging(org_id)
+    activate Service
+    Service -> DB: SELECT... WHERE org_id=?
+    DB --> Service: Data
+    deactivate DB
+    Service --> Router: ARAgingResponse
+    deactivate Service
+    Router --> Client: HTTP 200
+    deactivate Router
+    Client -> Client: Render
+    Client --> User: Display data
+    deactivate Client
+  end
+end
+
+note over Router,DB
+  Clean Architecture:
+  Router → Auth → Service → DB
+  
+  RBAC:
+  Owner: All 
+  Accountant: Dashboard, AR, AP
+  Cashier: Payments
+  
+  Security:
+  ✓ JWT (HS256)
+  ✓ bcrypt password
+  ✓ Multi-tenancy (org_id)
+  ✓ Audit logging
+end note
+
+@enduml
