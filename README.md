@@ -2,11 +2,14 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
-[![React](https://img.shields.io/badge/React-18.2+-61DAFB.svg)](https://reactjs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-18.3+-61DAFB.svg)](https://reactjs.org/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](https://docs.docker.com/compose/)
+[![UIT](https://img.shields.io/badge/UIT-VNUHCM-blue.svg)](https://www.uit.edu.vn/)
 
 > **A modern, production-ready Financial Analytics Platform for SMEs, powered by Lakehouse Architecture (Trino + Iceberg + MinIO), AI/ML forecasting (Prophet, Isolation Forest), and Real-time Analytics.**
+> 
+> 🎓 **Academic Project** | University of Information Technology - Vietnam National University Ho Chi Minh City
 
 ---
 
@@ -300,28 +303,36 @@ cd sme-pulse
 # Copy environment template
 cp .env.example .env
 
-# Edit .env with your secrets
-nano .env
+# Edit .env with your settings (required)
+nano .env  # or use any text editor
 ```
 
-**Required variables:**
+**Key configurations to update in `.env`:**
+- `POSTGRES_PASSWORD` - Secure password for PostgreSQL
+- `BACKEND_DB_PASSWORD` - OLTP database password
+- `MINIO_ROOT_PASSWORD` - MinIO admin password
+- `BACKEND_SECRET_KEY` - JWT secret (generate: `openssl rand -hex 32`)
+- `AIRFLOW__WEBSERVER__SECRET_KEY` - Airflow secret key
+- `AIRFLOW__CORE__FERNET_KEY` - Airflow encryption key
+
+### 3️⃣ Install Python Dependencies (Optional - for local dev)
+
 ```bash
-# Backend
-BACKEND_SECRET_KEY=your-secret-key-here
-BACKEND_DB_PASSWORD=secure-password
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# OR
+venv\Scripts\activate     # Windows
 
-# MinIO
-MINIO_ROOT_USER=admin
-MINIO_ROOT_PASSWORD=secure-password
+# Install dependencies
+pip install -r requirements.txt
 
-# PostgreSQL
-POSTGRES_PASSWORD=secure-password
-
-# Trino
-TRINO_TIMEOUT=40  # seconds
+# For specific components
+pip install -r backend/requirements.txt
+pip install -r ops/requirements_ingest.txt
 ```
 
-### 3️⃣ Start Services
+### 4️⃣ Start Services
 
 ```bash
 # Start all 12 services
@@ -344,7 +355,7 @@ docker-compose logs -f backend
 | MinIO Console | 9001 | http://localhost:9001 |
 | Trino | 8081 | http://localhost:8081 |
 
-### 4️⃣ Bootstrap Lakehouse
+### 5️⃣ Bootstrap Lakehouse
 
 ```bash
 # Initialize schemas and tables
@@ -579,19 +590,69 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👥 Team
 
-- **Technical Lead**: [Your Name]
-- **Backend Developer**: [Your Name]
-- **Frontend Developer**: [Your Name]
-- **Data Engineer**: [Your Name]
-- **ML Engineer**: [Your Name]
+### Development Team | UIT - VNUHCM (University of Information Technology)
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/NATuan1208">
+        <img src="https://github.com/NATuan1208.png" width="100px;" alt="Nguyễn Anh Tuấn"/>
+        <br />
+        <sub><b>Nguyễn Anh Tuấn</b></sub>
+      </a>
+      <br />
+      <sub>Backend Engineer & Data/MLOps Engineer</sub>
+      <br />
+      <a href="mailto:Tuancuoi2703@gmail.com">📧</a>
+      <a href="https://github.com/NATuan1208">💻</a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/SelinaPhan0205">
+        <img src="https://github.com/SelinaPhan0205.png" width="100px;" alt="Phan Thị Xuân Tiên"/>
+        <br />
+        <sub><b>Phan Thị Xuân Tiên</b></sub>
+      </a>
+      <br />
+      <sub>Frontend Engineer & Data Engineer</sub>
+      <br />
+      <a href="https://github.com/SelinaPhan0205">💻</a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/ThSown22">
+        <img src="https://github.com/ThSown22.png" width="100px;" alt="Nguyễn Văn Thanh Sơn"/>
+        <br />
+        <sub><b>Nguyễn Văn Thanh Sơn</b></sub>
+      </a>
+      <br />
+      <sub>Data Analytics Engineer</sub>
+      <br />
+      <a href="https://github.com/ThSown22">💻</a>
+    </td>
+  </tr>
+</table>
+
+### Responsibilities
+
+| Member | Backend | Frontend | Data Pipeline | ML/AI | Analytics |
+|--------|---------|----------|---------------|-------|-----------|
+| **Nguyễn Anh Tuấn** | ✅ FastAPI, SQLAlchemy | | ✅ Airflow, dbt | ✅ Prophet | |
+| **Phan Thị Xuân Tiên** | | ✅ React, TanStack Query | ✅ ETL, dbt models | | |
+| **Nguyễn Văn Thanh Sơn** | | | ✅ Trino, Iceberg | | ✅ KPI, Reports | ✅Isolation Forest|
+
+### Contact
+
+- 📧 **Project Email**: Tuancuoi2703@gmail.com
+- 🏫 **Institution**: University of Information Technology - VNUHCM
+- 📍 **Location**: Ho Chi Minh City, Vietnam
 
 ---
 
 ## 📞 Support
 
-- 📧 Email: support@smepulse.com
-- 🐛 Issues: [GitHub Issues](https://github.com/your-org/sme-pulse/issues)
-- 📚 Documentation: [Wiki](https://github.com/your-org/sme-pulse/wiki)
+- 📧 **Email**: Tuancuoi2703@gmail.com
+- 🐛 **Issues**: [GitHub Issues](https://github.com/NATuan1208/sme-pulse/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/NATuan1208/sme-pulse/discussions)
+- 📚 **Documentation**: See [docs/](docs/) folder
 
 ---
 
