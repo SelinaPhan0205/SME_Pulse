@@ -1,4 +1,4 @@
-import { Bell, Menu, X, Download, Filter, Calendar as CalendarIcon, TrendingUp, CreditCard, Users, CheckCircle, DollarSign, Activity, Clock, AlertCircle, ArrowUpRight, ArrowDownRight, Loader2 } from 'lucide-react';
+import { Bell, Menu, X, Download, Filter, Calendar as CalendarIcon, TrendingUp, CreditCard, Users, CheckCircle, DollarSign, Activity, Clock, AlertCircle, ArrowUpRight, ArrowDownRight, Loader2, FileText, FileSpreadsheet } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { UserMenu } from './UserMenu';
@@ -9,6 +9,12 @@ import { useState, useEffect } from 'react';
 import { useSidebar } from '../contexts/SidebarContext';
 import { useCreateExportJob, useExportJobStatus } from '../lib/api/hooks/useReports';
 import type { ExportJobCreateRequest } from '../lib/api/services/reports';
+import { 
+  exportRevenueXLSX, exportRevenuePDF,
+  exportPaymentXLSX, exportPaymentPDF,
+  exportARAgingXLSX, exportARAgingPDF,
+  exportReconciliationXLSX, exportReconciliationPDF 
+} from '../lib/exportUtils';
 
 // Map frontend report types to backend report_type
 // Backend only supports: ar_aging, ap_aging, cashflow
@@ -137,53 +143,42 @@ export function Reports() {
   };
 
   /**
-   * Handle report download - triggers async export job
-   * Backend only supports XLSX format and specific report types
+   * Handle report download - Client-side export using exportUtils
+   * Supports both PDF and XLSX formats instantly without backend
    */
-  const handleDownload = async (type: 'pdf' | 'xlsx', reportType: string) => {
-    // Backend currently only supports xlsx
-    if (type === 'pdf') {
-      alert('Định dạng PDF đang được phát triển. Vui lòng sử dụng XLSX.');
-      return;
-    }
-    
-    const backendReportType = reportTypeMapping[reportType];
-    if (!backendReportType) {
-      alert(`Loại báo cáo "${reportType}" không được hỗ trợ`);
-      return;
-    }
-    
-    // Prevent multiple exports at once
-    if (currentJobId) {
-      alert('Đang xử lý xuất báo cáo khác. Vui lòng đợi.');
-      return;
-    }
-    
-    setExportingType(reportType);
+  const handleDownload = (type: 'pdf' | 'xlsx', reportType: string) => {
+    const period = selectedMonth;
     
     try {
-      console.log(`📊 Exporting report: ${reportType} → backend type: ${backendReportType}`);
-      
-      const result = await createExportMutation.mutateAsync({
-        report_type: backendReportType as any, // Cast to expected type
-        format: 'xlsx',
-      });
-      
-      console.log(`✅ Export job created: ${result.job_id}`);
-      
-      // Store job_id to poll status
-      setCurrentJobId(result.job_id);
-    } catch (error: any) {
+      if (reportType === 'Doanh thu') {
+        if (type === 'xlsx') {
+          exportRevenueXLSX(revenueData, period);
+        } else {
+          exportRevenuePDF(revenueData, period);
+        }
+      } else if (reportType === 'Thanh toán') {
+        if (type === 'xlsx') {
+          exportPaymentXLSX(paymentData, period);
+        } else {
+          exportPaymentPDF(paymentData, period);
+        }
+      } else if (reportType === 'Công nợ') {
+        if (type === 'xlsx') {
+          exportARAgingXLSX(arAgingData, period);
+        } else {
+          exportARAgingPDF(arAgingData, period);
+        }
+      } else if (reportType === 'Đối soát') {
+        if (type === 'xlsx') {
+          exportReconciliationXLSX(reconciliationData, period);
+        } else {
+          exportReconciliationPDF(reconciliationData, period);
+        }
+      }
+    } catch (error) {
       console.error('Export error:', error);
-      const errorMsg = error?.response?.data?.detail || error?.message || 'Lỗi không xác định';
-      alert(`Không thể tạo báo cáo: ${errorMsg}`);
-      setExportingType(null);
+      alert('Không thể xuất báo cáo. Vui lòng thử lại.');
     }
-  };
-  
-  // Check if currently exporting a specific report type
-  const isExporting = (reportType: string) => {
-    return exportingType === reportType && (currentJobId !== null || createExportMutation.isPending);
   };
 
   return (
