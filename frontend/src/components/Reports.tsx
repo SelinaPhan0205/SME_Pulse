@@ -1,14 +1,12 @@
-import { Bell, Menu, X, Download, Filter, Calendar as CalendarIcon, TrendingUp, CreditCard, Users, CheckCircle, DollarSign, Activity, Clock, AlertCircle, ArrowUpRight, ArrowDownRight, Loader2, FileText, FileSpreadsheet } from 'lucide-react';
+import { Bell, Menu, X, Download, Calendar as CalendarIcon, TrendingUp, CreditCard, Users, CheckCircle, DollarSign, Activity, Clock, AlertCircle, ArrowUpRight } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { UserMenu } from './UserMenu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, AreaChart } from 'recharts';
-import { useState, useEffect } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Area, AreaChart } from 'recharts';
+import { useState } from 'react';
 import { useSidebar } from '../contexts/SidebarContext';
-import { useCreateExportJob, useExportJobStatus } from '../lib/api/hooks/useReports';
-import type { ExportJobCreateRequest } from '../lib/api/services/reports';
 import { 
   exportRevenueXLSX, exportRevenuePDF,
   exportPaymentXLSX, exportPaymentPDF,
@@ -16,53 +14,10 @@ import {
   exportReconciliationXLSX, exportReconciliationPDF 
 } from '../lib/exportUtils';
 
-// Map frontend report types to backend report_type
-// Backend only supports: ar_aging, ap_aging, cashflow
-// For unsupported types, we map to the closest available type
-type BackendReportType = 'ar_aging' | 'ap_aging' | 'cashflow';
-
-const reportTypeMapping: Record<string, BackendReportType | null> = {
-  'Doanh thu': 'cashflow',       // Revenue → Cashflow report
-  'Thanh toán': 'cashflow',      // Payment → Cashflow report
-  'Công nợ': 'ar_aging',         // AR Aging report
-  'Đối soát': 'ar_aging',        // Reconciliation → AR Aging (closest match)
-};
-
-// Map backend type to display name for notifications
-const reportTypeDisplayName: Record<string, string> = {
-  'ar_aging': 'Công nợ phải thu (AR Aging)',
-  'ap_aging': 'Công nợ phải trả (AP Aging)',
-  'cashflow': 'Dòng tiền (Cashflow)',
-};
-
 export function Reports() {
   const { isSidebarOpen, toggleSidebar } = useSidebar();
-  const [periodType, setPeriodType] = useState<'month' | 'range'>('month');
   const [selectedMonth, setSelectedMonth] = useState('2024-11');
   const [showDateRangeDialog, setShowDateRangeDialog] = useState(false);
-  
-  // Export job state
-  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
-  const [exportingType, setExportingType] = useState<string | null>(null);
-  
-  // Export job mutation and status polling
-  const createExportMutation = useCreateExportJob();
-  const { data: jobStatus } = useExportJobStatus(currentJobId);
-  
-  // Handle job completion
-  useEffect(() => {
-    if (jobStatus?.status === 'completed' && jobStatus.file_url) {
-      // Download the file
-      window.open(jobStatus.file_url, '_blank');
-      // Reset state
-      setCurrentJobId(null);
-      setExportingType(null);
-    } else if (jobStatus?.status === 'failed') {
-      alert(`Xuất báo cáo thất bại: ${jobStatus.error_message || 'Lỗi không xác định'}`);
-      setCurrentJobId(null);
-      setExportingType(null);
-    }
-  }, [jobStatus]);
 
   // Data for Revenue Chart
   const revenueData = [
@@ -450,15 +405,10 @@ export function Reports() {
                     size="sm" 
                     variant="outline"
                     onClick={() => handleDownload('xlsx', 'Doanh thu')}
-                    disabled={isExporting('Doanh thu')}
                     className="font-darker-grotesque border-blue-300 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
                     style={{ fontSize: '16px' }}
                   >
-                    {isExporting('Doanh thu') ? (
-                      <Loader2 className="size-4 mr-2 animate-spin" />
-                    ) : (
-                      <Download className="size-4 mr-2" />
-                    )}
+                    <Download className="size-4 mr-2" />
                     XLSX
                   </Button>
                 </div>
@@ -649,15 +599,10 @@ export function Reports() {
                     size="sm" 
                     variant="outline"
                     onClick={() => handleDownload('xlsx', 'Thanh toán')}
-                    disabled={isExporting('Thanh toán')}
                     className="font-darker-grotesque border-green-300 text-green-600 hover:bg-green-50 hover:text-green-700"
                     style={{ fontSize: '16px' }}
                   >
-                    {isExporting('Thanh toán') ? (
-                      <Loader2 className="size-4 mr-2 animate-spin" />
-                    ) : (
-                      <Download className="size-4 mr-2" />
-                    )}
+                    <Download className="size-4 mr-2" />
                     XLSX
                   </Button>
                 </div>
@@ -845,15 +790,10 @@ export function Reports() {
                     size="sm" 
                     variant="outline"
                     onClick={() => handleDownload('xlsx', 'Công nợ')}
-                    disabled={isExporting('Công nợ')}
                     className="font-darker-grotesque border-orange-300 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
                     style={{ fontSize: '16px' }}
                   >
-                    {isExporting('Công nợ') ? (
-                      <Loader2 className="size-4 mr-2 animate-spin" />
-                    ) : (
-                      <Download className="size-4 mr-2" />
-                    )}
+                    <Download className="size-4 mr-2" />
                     XLSX
                   </Button>
                 </div>
@@ -1033,15 +973,10 @@ export function Reports() {
                     size="sm" 
                     variant="outline"
                     onClick={() => handleDownload('xlsx', 'Đối soát')}
-                    disabled={isExporting('Đối soát')}
                     className="font-darker-grotesque border-purple-300 text-purple-600 hover:bg-purple-50 hover:text-purple-700"
                     style={{ fontSize: '16px' }}
                   >
-                    {isExporting('Đối soát') ? (
-                      <Loader2 className="size-4 mr-2 animate-spin" />
-                    ) : (
-                      <Download className="size-4 mr-2" />
-                    )}
+                    <Download className="size-4 mr-2" />
                     XLSX
                   </Button>
                 </div>
