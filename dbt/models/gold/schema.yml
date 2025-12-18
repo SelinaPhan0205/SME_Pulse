@@ -1,0 +1,13 @@
+version: 2
+
+models:
+  - name: fact_sales
+    description: "Data mart conformed; grain = 1 dòng / month_key × site × product_id."
+    tests:
+      # [Test 1] Grain duy nhất
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [month_key, site, product_id]
+      # [Test 2] Công thức nghiệp vụ
+      - dbt_utils.expression_is_true:
+          name: fact_sales_gross_profit_check
+          expression: "gross_profit = revenue - cost"

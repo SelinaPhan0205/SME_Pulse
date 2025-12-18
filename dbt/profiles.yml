@@ -1,7 +1,7 @@
 # ===================================================
 # dbt Profile Configuration
 # ===================================================
-# Mục đích: Định nghĩa cách dbt kết nối tới Postgres
+# Mục đích: Định nghĩa cách dbt kết nối tới Trino
 # ===================================================
 
 sme_pulse:
@@ -13,9 +13,9 @@ sme_pulse:
       user: admin
       host: trino
       port: 8080
-      catalog: silver
-      schema: core
+      database: sme_pulse        # Unified catalog
+      schema: silver            # default schema (bronze/silver/gold)
       threads: 4
       http_scheme: http
-      session_properties:
-        query_max_run_time: "5m"
+  target-path: /tmp/dbt_cache
+  log-path: /tmp/dbt_logs

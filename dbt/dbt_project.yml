@@ -25,17 +25,21 @@ clean-targets:
   - "target"
   - "dbt_packages"
 
+
 # ===== CẤU HÌNH MODELS =====
 models:
   sme_pulse:
-    staging:
+    # Silver models (staging/core)
+    silver:
       +materialized: table
-      +table_format: iceberg
-      +schema: core
-    marts:
+      +schema: silver                 # silver schema
+      +database: sme_pulse             # unified catalog
+    # Gold models
+    gold:
       +materialized: table
-      +table_format: iceberg
-      +schema: core
+      +schema: gold                   # gold schema
+      +database: sme_pulse             # unified catalog
+
 
 # ===== VARIABLES =====
 vars:

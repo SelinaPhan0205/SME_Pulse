@@ -1,0 +1,163 @@
+# Pipeline Configuration
+# Cấu hình chung cho toàn bộ SME Pulse Data Pipeline
+
+minio:
+  endpoint: "sme-minio:9000"  # Docker container name
+  access_key: "minio"
+  secret_key: "minio123"
+  bucket: "sme-pulse"  # Bucket name
+  secure: false
+  
+  # Bronze paths
+  bronze_paths:
+    bank_transactions: "bronze/raw/bank_txn/"
+    shipments_payments: "bronze/raw/retail_data/"
+    sales_snapshot: "bronze/raw/sales_snapshot/"
+
+postgres:
+  host: "sme-postgres-app"  # Docker container name (Airflow runs in Docker)
+  port: 5432  # Internal Docker network port (not 5433 - that's host port)
+  database: "sme_pulse_oltp"  # Actual database name
+  user: "postgres"
+  password: "postgres"  # sme-postgres-app uses 'postgres' password
+  # Queries to extract from App DB
+  queries:
+    ar_invoices: |
+      SELECT 
+        id, org_id, invoice_no, customer_id,
+        issue_date, due_date, total_amount, paid_amount,
+        status, notes, created_at, updated_at
+      FROM finance.ar_invoices
+      ORDER BY updated_at DESC
+    payments: |
+      SELECT 
+        id, org_id, transaction_date as payment_date, payment_method,
+        amount, reference_code, notes,
+        created_at, updated_at
+      FROM finance.payments
+      ORDER BY updated_at DESC
+    payment_allocations: |
+      SELECT 
+        id, org_id, payment_id, ar_invoice_id,
+        allocated_amount as amount, created_at as allocation_date, notes,
+        created_at, updated_at
+      FROM finance.payment_allocations
+      ORDER BY updated_at DESC
+
+trino:
+  host: "sme-trino"  # Container name: sme-trino
+  port: 8080
+  catalog: "sme_pulse"  # Fixed: Catalog name in Trino
+  schema: "gold"
+  user: "python_script"  # User that can access sme_pulse catalog
+  
+dbt:
+  profiles_dir: "/opt/dbt"
+  project_dir: "/opt/dbt"
+  target: "dev"
+  threads: 4
+  
+  # dbt commands (executed from project_dir)
+  seed_command: "dbt seed --profiles-dir /opt/dbt"
+  silver_command: "dbt run --select silver.* --exclude silver.external.* --profiles-dir /opt/dbt"
+  test_silver_command: "dbt test --select silver.* --profiles-dir /opt/dbt"
+  gold_dims_command: "dbt run --select gold.dims.* gold.external.dim_* --profiles-dir /opt/dbt"
+  test_gold_dims_command: "dbt test --select gold.dims.* --profiles-dir /opt/dbt"
+  gold_facts_command: "dbt run --select gold.facts.* --profiles-dir /opt/dbt"
+  test_gold_facts_command: "dbt test --select gold.facts.* --profiles-dir /opt/dbt"
+  gold_links_command: "dbt run --select gold.links.* --profiles-dir /opt/dbt"
+  test_gold_links_command: "dbt test --select gold.links.* --profiles-dir /opt/dbt"
+  
+  # App DB Analytics models (PHASE 4 STEP 2)
+  silver_app_db_command: "dbt run --select tag:app_db --profiles-dir /opt/dbt"
+  test_silver_app_db_command: "dbt test --select tag:app_db --profiles-dir /opt/dbt"
+  gold_app_db_command: "dbt run --select tag:app_db and gold --profiles-dir /opt/dbt"
+  test_gold_app_db_command: "dbt test --select tag:app_db and gold --profiles-dir /opt/dbt"
+
+metabase:
+  url: "http://sme-metabase:3000"  # Container name: sme-metabase
+  database_id: 1
+  enabled: false  # Set to true when Metabase is running
+  # API key sẽ được lấy từ Airflow Variable: METABASE_API_KEY
+
+redis:
+  host: "sme-redis"  # Container name: sme-redis (not just 'redis')
+  port: 6379
+  db: 0
+  enabled: true
+  cache_patterns:
+    - "sme:gold:fact_*"
+    - "sme:gold:dim_*"
+    - "sme:aggregates:*"
+
+# Source data paths (inside Docker container)
+source_data:
+  base_path: "/opt/data/source"
+  files:
+    bank_transactions: "Bank-Transactions.csv"
+    shipments_payments: "shipments_payments.csv"
+    sales_snapshot: "sales_snapshot.xlsx"
+
+# Python scripts paths (inside Docker container)
+scripts:
+  base_path: "/opt/ops"
+  ingest:
+    bank_transactions: "ingest_bank_transactions.py"
+    shipments_payments: "ingest_shipments_payments.py"
+    sales_snapshot: "ingest_batch_snapshot.py"
+
+# Notifications
+notifications:
+  slack:
+    enabled: true
+    channel: "#data-engineering"
+    # Webhook URL sẽ được lấy từ Airflow Variable: SLACK_WEBHOOK_URL
+  email:
+    enabled: false
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    from_email: "alerts@company.com"
+    to_emails:
+      - "team@company.com"
+
+# Data quality thresholds
+data_quality:
+  row_count_variance_warning: 0.05   # 5%
+  row_count_variance_critical: 0.10  # 10%
+  
+  data_freshness:
+    warning_days: 1
+    critical_days: 2
+  
+  null_percentage:
+    warning: 0.05
+    critical: 0.10
+
+# Expected row counts (for validation)
+expected_row_counts:
+  bronze:
+    bank_txn_raw: 105000
+    shipments_payments_raw: 302000
+    sales_snapshot_raw: 1663000
+  
+  silver:
+    stg_orders_vn: 1663000
+    stg_payments_vn: 375000
+    stg_shipments_vn: 302000
+    stg_bank_txn_vn: 206000
+  
+  gold_dims:
+    dim_date: 1826
+    dim_customer: 87939
+    dim_product: 30685
+    dim_channel: 5
+    dim_payment_method: 4
+    dim_carrier: 4
+    dim_location: 691
+    dim_macro_indicators: 10
+  
+  gold_facts:
+    fact_orders: 1663000
+    fact_payments: 375000
+    fact_shipments: 302000
+    fact_bank_txn: 206000

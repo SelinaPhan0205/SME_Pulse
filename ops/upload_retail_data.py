@@ -1,0 +1,142 @@
+"""
+Upload Retail Data CSV file to MinIO
+---------------------------------------------
+Single-file ingestion for Bronze/raw/retail_data layer.
+
+Usage:
+    python ops/upload_retail_data.py
+
+Environment Variables:
+    MINIO_ENDPOINT      MinIO endpoint (default: http://sme-minio:9000 for Docker, http://localhost:9000 for local)
+    MINIO_ACCESS_KEY    Access key (default: minio)
+    MINIO_SECRET_KEY    Secret key (default: minio123)
+    BRONZE_BUCKET       Bronze bucket name (default: sme-pulse)
+"""
+
+import os
+import sys
+import boto3
+import pandas as pd
+from io import BytesIO
+from datetime import datetime
+from pathlib import Path
+
+
+class RetailDataIngestionMinIO:
+    """Upload single CSV file (convert → Parquet) to Bronze/raw/retail_data"""
+
+    def __init__(self):
+        """Initialize MinIO connection"""
+        self.endpoint = os.getenv('MINIO_ENDPOINT', 'http://sme-minio:9000')
+        self.access_key = os.getenv('MINIO_ACCESS_KEY', 'minio')
+        self.secret_key = os.getenv('MINIO_SECRET_KEY', 'minio123')
+        self.bronze_bucket = os.getenv('BRONZE_BUCKET', 'sme-pulse')
+        self.s3_client = None
+
+    def connect(self):
+        """Establish MinIO connection"""
+        try:
+            self.s3_client = boto3.client(
+                's3',
+                endpoint_url=self.endpoint,
+                aws_access_key_id=self.access_key,
+                aws_secret_access_key=self.secret_key,
+                region_name='us-east-1'
+            )
+            self.s3_client.list_buckets()
+            print(f"✅ Connected to MinIO: {self.endpoint}")
+            return True
+        except Exception as e:
+            print(f"❌ Failed to connect to MinIO: {e}")
+            return False
+
+    def create_bucket(self):
+        """Create bucket if not exists"""
+        try:
+            self.s3_client.head_bucket(Bucket=self.bronze_bucket)
+            print(f"✅ Bucket '{self.bronze_bucket}' exists")
+        except:
+            try:
+                self.s3_client.create_bucket(Bucket=self.bronze_bucket)
+                print(f"✅ Created bucket: {self.bronze_bucket}")
+            except Exception as e:
+                print(f"❌ Failed to create bucket: {e}")
+                return False
+        return True
+
+    def upload_csv_as_parquet(self, file_path, prefix="retail_data"):
+        """
+        Upload CSV file → convert to Parquet → MinIO bronze/raw/retail_data/
+        """
+        file_path = Path(file_path)
+        if not file_path.exists():
+            print(f"❌ File not found: {file_path}")
+            return False
+
+        file_name = file_path.stem + ".parquet"
+        s3_key = f"bronze/raw/{prefix}/{file_name}"
+
+        print(f"\n{'='*70}")
+        print("🚀 UPLOADING RETAIL CSV TO MINIO")
+        print(f"{'='*70}")
+        print(f"📄 Local file : {file_path}")
+        print(f"🎯 Target path: s3://{self.bronze_bucket}/{s3_key}")
+        print(f"{'='*70}\n")
+
+        try:
+            # Step 1: Read CSV → DataFrame
+            df = pd.read_csv(file_path)
+            print(f"✅ Loaded CSV: {len(df):,} rows × {len(df.columns)} cols")
+
+            # Step 2: Convert to Parquet in memory
+            buffer = BytesIO()
+            df.to_parquet(buffer, engine='pyarrow', compression='snappy', index=False)
+            buffer.seek(0)
+            size_mb = len(buffer.getvalue()) / (1024 * 1024)
+
+            # Step 3: Upload to MinIO
+            self.s3_client.put_object(
+                Bucket=self.bronze_bucket,
+                Key=s3_key,
+                Body=buffer.getvalue(),
+                ContentType='application/x-parquet',
+                Metadata={
+                    'source_file': file_path.name,
+                    'ingested_at': datetime.utcnow().isoformat(),
+                    'rows': str(len(df)),
+                    'columns': str(len(df.columns)),
+                    'size_mb': f"{size_mb:.2f}"
+                }
+            )
+            print(f"✅ Uploaded successfully: {size_mb:.2f} MB → {s3_key}")
+            print(f"🔗 View in MinIO Console:")
+            print(f"   http://localhost:9001/browser/{self.bronze_bucket}/bronze/raw/{prefix}")
+            print(f"{'='*70}")
+            print("✅ INGESTION COMPLETE!")
+            print(f"{'='*70}\n")
+            return True
+        except Exception as e:
+            print(f"❌ Upload failed: {e}")
+            import traceback; traceback.print_exc()
+            return False
+
+
+def main():
+    # ✅ Local CSV file path (adjust if needed)
+    file_path = "/opt/data/Retail_data/new_retail_data.csv"
+
+    ingestion = RetailDataIngestionMinIO()
+
+    if not ingestion.connect():
+        sys.exit(1)
+
+    if not ingestion.create_bucket():
+        sys.exit(1)
+
+    success = ingestion.upload_csv_as_parquet(file_path)
+    sys.exit(0 if success else 1)
+
+
+if __name__ == "__main__":
+    main()
+

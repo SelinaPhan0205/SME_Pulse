@@ -4,11 +4,333 @@ sources:
   - name: bronze
     database: minio
     schema: default
-    description: "Bronze layer on MinIO via Hive catalog"
+    description: "Bronze layer - Raw Parquet files in MinIO"
+    
     tables:
       - name: sales_snapshot_raw
-        description: "External Parquet combined from 19 Excel files"
-        external:
-          location: 's3://bronze/raw/sales_snapshot/'
-          options:
-            format: PARQUET
+        description: "Raw sales transactions converted to Parquet from CSV"
+        meta:
+          external_location: "s3a://sme-lake/bronze/raw/sales_snapshot/"
+          file_format: "PARQUET"
+          table_type: "EXTERNAL"
+        columns:
+          - name: month
+            description: "Month identifier (YYYYMM format)"
+          - name: week
+            description: "Week identifier"
+          - name: site
+            description: "Site/Store identifier"
+          - name: branch_id
+            description: "Branch ID"
+          - name: channel_id
+            description: "Channel ID (Online/Offline)"
+          - name: distribution_channel
+            description: "Distribution channel name"
+          - name: distribution_channel_code
+            description: "Distribution channel code"
+          - name: sold_quantity
+            description: "Quantity sold"
+          - name: cost_price
+            description: "Cost price per unit"
+          - name: net_price
+            description: "Net selling price per unit"
+          - name: customer_id
+            description: "Customer ID"
+          - name: product_id
+            description: "Product ID"
+      
+      - name: retail_data_raw
+        description: "Raw retail orders with customer, payment, and shipping details"
+        meta:
+          external_location: "s3a://sme-lake/bronze/raw/retail_orders/"
+          file_format: "PARQUET"
+          table_type: "EXTERNAL"
+        columns:
+          - name: transaction_id
+            description: "Unique transaction identifier"
+          - name: customer_id
+            description: "Customer ID"
+          - name: date
+            description: "Transaction date (timestamp)"
+          - name: time
+            description: "Transaction time"
+          - name: amount
+            description: "Item unit amount in foreign currency"
+          - name: total_amount
+            description: "Total order amount in foreign currency"
+          - name: payment_method
+            description: "Payment method (Cash, Credit Card, Debit Card, PayPal)"
+          - name: order_status
+            description: "Order status (Shipped, Delivered, Processing, etc.)"
+          - name: country
+            description: "Customer country for currency mapping"
+          - name: email
+            description: "Customer email"
+          - name: shipping_method
+            description: "Shipping method"
+          - name: product_category
+            description: "Product category"
+          - name: product_brand
+            description: "Product brand"
+      - name: bank_txn
+        description: "Bank transactions from CSV (105,557 rows)"
+        columns:
+          - name: csvbase_row_id
+            description: "Original CSV row ID"
+          - name: booking_id
+            description: "Unique booking/transaction ID"
+            tests:
+              - unique
+              - not_null
+          - name: bookg_dt_tm_gmt
+            description: "Booking datetime (GMT timestamp)"
+          - name: acct_id
+            description: "Account ID"
+          - name: bookg_amt
+            description: "Booking amount"
+          - name: acct_ccy
+            description: "Account currency (USD, EUR, VND...)"
+          - name: bookg_cdt_dbt_ind
+            description: "Credit/Debit indicator"
+          - name: ctpty_nm
+            description: "Counterparty name"
+          - name: year_month
+            description: "Year-month partition (BIGINT)"
+          - name: ingested_at
+            description: "Ingestion timestamp"
+          - name: ingested_year_month
+            description: "Ingestion year-month (VARCHAR)"
+# ===== External Data Sources =====
+      - name: world_bank_indicators_raw
+        description: "World Bank macro indicators (lạm phát, GDP, thất nghiệp...)"
+        columns:
+          - name: indicator_code
+            description: "Mã chỉ số World Bank (ví dụ: FP.CPI.TOTL.ZG)"
+            tests:
+              - not_null
+          - name: country_code
+            description: "Mã quốc gia ISO (VNM = Vietnam)"
+          - name: year
+            description: "Năm của chỉ số"
+          - name: value
+            description: "Giá trị chỉ số (NULL nếu không có dữ liệu)"
+          - name: ingested_at
+            description: "Timestamp khi ingest data"
+      
+      - name: vietnam_provinces_raw
+        description: "Danh sách tỉnh/thành Việt Nam (63 tỉnh)"
+        columns:
+          - name: province_code
+            description: "Mã tỉnh/thành (số)"
+            tests:
+              - unique
+              - not_null
+          - name: province_name
+            description: "Tên tỉnh/thành phố"
+            tests:
+              - not_null
+          - name: phone_code
+            description: "Mã điện thoại vùng"
+          - name: division_type
+            description: "Loại đơn vị hành chính (Tỉnh/Thành phố)"
+          - name: codename
+            description: "Tên không dấu (slug)"
+      
+      - name: vietnam_districts_raw
+        description: "Danh sách quận/huyện Việt Nam (691 quận/huyện)"
+        columns:
+          - name: district_code
+            description: "Mã quận/huyện"
+            tests:
+              - unique
+              - not_null
+          - name: district_name
+            description: "Tên quận/huyện"
+          - name: province_code
+            description: "Mã tỉnh/thành cha"
+            tests:
+              - not_null
+          - name: division_type
+            description: "Loại đơn vị (Quận/Huyện/Thị xã/Thành phố)"
+          - name: codename
+            description: "Tên không dấu (slug)"
+
+        
+      - name: ar_invoices_raw
+        description: "Raw AR Invoices data from CSV – used for DSO, overdue analysis, and payment prediction"
+        meta:
+          external_location: "s3a://sme-lake/bronze/raw/ar_invoices/"
+          file_format: "PARQUET"
+          table_type: "EXTERNAL"
+        columns:
+          - name: invoice_id
+            description: "Unique identifier of the invoice"
+          - name: doc_id
+            description: "Document ID – redundant with invoice_id"
+          - name: business_code
+            description: "Business unit code"
+          - name: cust_number
+            description: "Customer number"
+          - name: name_customer
+            description: "Customer name (optional – free text)"
+          - name: invoice_currency
+            description: "Currency of the invoice"
+          - name: cust_payment_terms
+            description: "Customer payment terms code"
+          - name: total_open_amount
+            description: "Open amount on the invoice (original amount)"
+          - name: isOpen
+            description: "Whether invoice is still open (1) or paid (0)"
+          - name: isLate
+            description: "Whether invoice is late or not (1/0)"
+          - name: posting_id
+            description: "Posting identifier (internal)"
+          - name: posting_date
+            description: "Date of invoice posting"
+          - name: baseline_create_date
+            description: "Date from which payment terms are applied"
+          - name: due_in_date
+            description: "Due date of the invoice"
+          - name: clear_date
+            description: "Date when invoice was cleared (paid)"
+          - name: document_create_date
+            description: "Date when document was created"
+          - name: document_create_date.1
+            description: "Alternative document create date (duplicate)"
+          - name: document type
+            description: "Type of financial document (e.g., RV)"
+          - name: area_business
+            description: "Business area (mostly NULL in dataset)"
+
+# ===== APP DATABASE SOURCES (OLTP) =====
+  - name: app_db
+    database: minio
+    schema: default
+    description: "App Database - OLTP transactional tables from PostgreSQL (extracted to MinIO Parquet)"
+    
+    tables:
+      - name: ar_invoices_app_db_raw
+        description: "Accounts Receivable Invoices from App DB (extracted to Parquet)"
+        columns:
+          - name: id
+            description: "Invoice primary key"
+            tests:
+              - unique
+              - not_null
+          - name: org_id
+            description: "Organization/Tenant ID"
+            tests:
+              - not_null
+          - name: invoice_no
+            description: "Invoice number (business key)"
+            tests:
+              - not_null
+          - name: customer_id
+            description: "Foreign key to customers"
+            tests:
+              - not_null
+          - name: issue_date
+            description: "Invoice issue date"
+            tests:
+              - not_null
+          - name: due_date
+            description: "Payment due date"
+            tests:
+              - not_null
+          - name: total_amount
+            description: "Invoice total amount (VND)"
+            tests:
+              - not_null
+          - name: paid_amount
+            description: "Amount already paid"
+          - name: status
+            description: "Invoice status (draft, posted, partial, paid, overdue, cancelled)"
+            tests:
+              - not_null
+          - name: notes
+            description: "Additional notes"
+          - name: created_at
+            description: "Record creation timestamp"
+            tests:
+              - not_null
+          - name: updated_at
+            description: "Record last update timestamp"
+            tests:
+              - not_null
+      
+      - name: payments_app_db_raw
+        description: "Payment transactions from App DB (extracted to Parquet)"
+        columns:
+          - name: id
+            description: "Payment primary key"
+            tests:
+              - unique
+              - not_null
+          - name: org_id
+            description: "Organization/Tenant ID"
+            tests:
+              - not_null
+          - name: account_id
+            description: "Bank/Cash account ID"
+            tests:
+              - not_null
+          - name: transaction_date
+            description: "Payment transaction date"
+            tests:
+              - not_null
+          - name: amount
+            description: "Payment amount (VND)"
+            tests:
+              - not_null
+          - name: payment_method
+            description: "Payment method (cash, bank_transfer, check, card)"
+          - name: reference_code
+            description: "External reference code (bank transaction code, etc.)"
+          - name: notes
+            description: "Additional notes"
+          - name: created_at
+            description: "Record creation timestamp"
+            tests:
+              - not_null
+          - name: updated_at
+            description: "Record last update timestamp"
+            tests:
+              - not_null
+      
+      - name: payment_allocations_app_db_raw
+        description: "Payment-to-invoice allocations from App DB (extracted to Parquet)"
+        columns:
+          - name: id
+            description: "Allocation primary key"
+            tests:
+              - unique
+              - not_null
+          - name: org_id
+            description: "Organization/Tenant ID"
+            tests:
+              - not_null
+          - name: payment_id
+            description: "Foreign key to payments"
+            tests:
+              - not_null
+          - name: ar_invoice_id
+            description: "Foreign key to AR invoices (NULL if allocating to AP bill)"
+          - name: ap_bill_id
+            description: "Foreign key to AP bills (NULL if allocating to AR invoice)"
+          - name: allocated_amount
+            description: "Amount allocated to invoice/bill"
+            tests:
+              - not_null
+          - name: notes
+            description: "Additional notes"
+          - name: created_at
+            description: "Record creation timestamp"
+            tests:
+              - not_null
+          - name: updated_at
+            description: "Record last update timestamp"
+            tests:
+              - not_null
+
+      
+

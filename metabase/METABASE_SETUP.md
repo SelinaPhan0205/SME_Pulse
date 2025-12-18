@@ -135,4 +135,3 @@ ORDER BY order_date DESC, total_revenue DESC;
 | Password | (blank) |
 | SSL | `false` |
 | JDBC Driver | `/plugins/trino-jdbc-435.jar` |
-

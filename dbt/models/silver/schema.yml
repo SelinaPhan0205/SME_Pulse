@@ -1,0 +1,13 @@
+version: 2
+
+models:
+  - name: stg_transactions
+    description: "Staging đã chuẩn hoá kiểu dữ liệu; giữ *_raw để audit."
+    tests:
+      # [Test 1] Số liệu không âm (chặn lỗi nguồn)
+      - dbt_utils.expression_is_true:
+          expression: "sold_quantity >= 0 AND cost_price >= 0 AND net_price >= 0"
+      # [Test 2] Key đủ để định danh dòng ở downstream
+      - dbt_utils.expression_is_true:
+          name: stg_transactions_keys_not_null
+          expression: "month_raw IS NOT NULL AND site IS NOT NULL AND product_id IS NOT NULL"
