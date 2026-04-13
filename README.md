@@ -360,32 +360,6 @@ docker-compose exec airflow-scheduler airflow dags trigger sme_pulse_daily_etl
 
 ---
 
-## ✅ Project Improvements (Phase 0-3)
-
-### Phase 0 - Baseline and Runtime Verification
-- Verified compose runtime health across core lakehouse and backend services.
-- Validated Airflow DAG import/runtime readiness for daily ETL and ML flows.
-- Confirmed baseline schema/table accessibility through Trino.
-
-### Phase 1 - Data Pipeline Hardening
-- Stabilized Bronze -> Silver -> Gold flow orchestration.
-- Improved dbt transformation consistency and deterministic DAG execution order.
-- Added/validated data-quality checks on critical Gold outputs.
-
-### Phase 2 - ML Pipeline and Serving Correctness
-- Hardened UC09/UC10 evaluation and serving reliability.
-- Enforced tenant-safe ML output usage (org-scoped serving behavior).
-- Improved prediction write-path behavior and runtime validation evidence.
-
-### Phase 3 - Security, Runtime, and Platform Readiness
-- Standardized RBAC dependencies on sensitive mutation endpoints.
-- Centralized backend runtime configuration for Trino/MLflow and startup safety checks.
-- Replaced ML serving cache placeholders with concrete Redis invalidation and Metabase refresh hooks.
-- Added phased standalone dbt service contract while preserving backward-compatible default runtime.
-- Completed full runtime validation (backend + airflow + redis + metabase) with passing evidence.
-
----
-
 ## 📊 Use Cases
 
 ### UC01 - Login & Authentication
