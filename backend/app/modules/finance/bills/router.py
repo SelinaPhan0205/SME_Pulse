@@ -1,4 +1,4 @@
-"""AP Bill Router - REST API endpoints for Bills (Accounts Payable)."""
+"""Router Hóa đơn AP - REST API endpoints cho Hóa đơn (Quản lý Công nợ Phải trả)."""
 
 import logging
 from typing import Optional
@@ -8,7 +8,7 @@ from datetime import date
 
 from app.db.session import get_db
 from app.models.core import User
-from app.modules.auth.dependencies import get_current_user
+from app.modules.auth.dependencies import get_current_user, requires_roles
 from app.modules.finance.bills import service
 from app.schema.finance.bill import (
     BillCreate,
@@ -34,15 +34,15 @@ async def list_bills(
     current_user: User = Depends(get_current_user),
 ):
     """
-    List AP bills with filtering and pagination.
+    Liệt kê hóa đơn AP với lọc và phân trang.
     
-    Query Parameters:
-    - skip: Offset for pagination (default: 0)
-    - limit: Max records to return (default: 100)
-    - status: Filter by bill status (draft, posted, partial, paid, cancelled)
-    - supplier_id: Filter by supplier ID
-    - date_from: Filter by issue_date >= date_from
-    - date_to: Filter by issue_date <= date_to
+    Tham số truy vấn:
+    - skip: Độ lệch phân trang (mặc định: 0)
+    - limit: Số bản ghi tối đa trả về (mặc định: 100)
+    - status: Lọc theo trạng thái hóa đơn (draft, posted, partial, paid, cancelled)
+    - supplier_id: Lọc theo ID nhà cung cấp
+    - date_from: Lọc theo issue_date >= date_from
+    - date_to: Lọc theo issue_date <= date_to
     """
     bills, total = await service.get_bills(
         db=db,
@@ -69,7 +69,7 @@ async def get_bill(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get single bill by ID."""
+    """Lấy một hóa đơn đơn lẻ theo ID."""
     bill = await service.get_bill(
         db=db,
         bill_id=bill_id,
@@ -85,9 +85,9 @@ async def create_bill(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Create new AP bill in DRAFT status.
+    Tạo hóa đơn AP mới ở trạng thái DRAFT.
     
-    New bills always start with:
+    Hóa đơn mới luôn bắt đầu với:
     - status = "draft"
     - paid_amount = 0
     """
@@ -107,10 +107,10 @@ async def update_bill(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Update bill fields (only allowed in DRAFT status).
+    Cập nhật trường hóa đơn (chỉ được phép ở trạng thái DRAFT).
     
-    Raises:
-    - 400: If bill is already posted
+    Nâng cao:
+    - 400: Nếu hóa đơn đã được ghi
     """
     bill = await service.update_bill(
         db=db,
@@ -125,18 +125,18 @@ async def update_bill(
 async def post_bill(
     bill_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(requires_roles(["accountant", "admin", "owner"])),
 ):
     """
-    Post bill (DRAFT → POSTED transition).
+    Ghi hóa đơn (chuyển DRAFT → POSTED).
     
-    After posting, bill becomes immutable:
-    - Cannot be updated
-    - Cannot be deleted
-    - Can receive payment allocations
+    Sau khi ghi, hóa đơn trở thành bất biến:
+    - Không thể cập nhật
+    - Không thể xóa
+    - Có thể nhận phân bổ thanh toán
     
-    Raises:
-    - 400: If bill is already posted or has invalid amount
+    Nâng cao:
+    - 400: Nếu hóa đơn đã được ghi hoặc có số tiền không hợp lệ
     """
     bill = await service.post_bill(
         db=db,
@@ -153,10 +153,10 @@ async def delete_bill(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Delete bill (only allowed in DRAFT status).
+    Xóa hóa đơn (chỉ được phép ở trạng thái DRAFT).
     
-    Raises:
-    - 400: If bill is already posted
+    Nâng cao:
+    - 400: Nếu hóa đơn đã được ghi
     """
     await service.delete_bill(
         db=db,

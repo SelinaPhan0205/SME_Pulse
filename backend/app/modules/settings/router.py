@@ -1,4 +1,4 @@
-"""Settings router - Organization settings API."""
+"""Router Cài đặt - API cài đặt tổ chức."""
 
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from app.db.session import get_db
 from app.models.core import User, Organization
-from app.modules.auth.dependencies import get_current_user
+from app.modules.auth.dependencies import get_current_user, requires_roles
 from app.schema.core.organization import OrganizationSettings, OrganizationSettingsUpdate
 
 logger = logging.getLogger(__name__)
@@ -21,23 +21,23 @@ async def get_organization_settings(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Get current organization settings.
+    Lấy cài đặt tổ chức hiện tại.
     
-    **Protected endpoint - requires authentication**
+    **Điểm cuối bảo vệ - yêu cầu xác thực**
     
-    Returns settings for the user's organization (multi-tenant).
+    Trả về cài đặt cho tổ chức của người dùng (multi-tenant).
     
-    Args:
-        current_user: Current authenticated user
-        db: Database session
+    Tham số:
+        current_user: Người dùng được xác thực hiện tại
+        db: Phiên cơ sở dữ liệu
     
-    Returns:
-        Organization settings
+    Trả về:
+        Cài đặt tổ chức
     
-    Raises:
-        HTTPException 404: Organization not found
+    Tăng:
+        HTTPException 404: Tổ chức không được tìm thấy
     """
-    # Get organization for current user
+    # Lấy tổ chức cho người dùng hiện tại
     stmt = select(Organization).where(Organization.id == current_user.org_id)
     result = await db.execute(stmt)
     org = result.scalar_one_or_none()
@@ -46,7 +46,7 @@ async def get_organization_settings(
         logger.error(f"Organization {current_user.org_id} not found for user {current_user.id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Organization not found"
+            detail="Tổ chức không được tìm thấy"
         )
     
     logger.info(f"Retrieved settings for organization {org.id}")
@@ -57,36 +57,27 @@ async def get_organization_settings(
 @router.put("/settings", response_model=OrganizationSettings)
 async def update_organization_settings(
     updates: OrganizationSettingsUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(requires_roles(["owner", "admin"])),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Update current organization settings.
+    Cập nhật cài đặt tổ chức hiện tại.
     
-    **Protected endpoint - requires Owner/Admin role**
+    **Điểm cuối bảo vệ - yêu cầu vai trò Chủ sở/Quản trị viên**
     
-    Args:
-        updates: Settings to update
-        current_user: Current authenticated user
-        db: Database session
+    Tham số:
+        updates: Cài đặt cần cập nhật
+        current_user: Người dùng được xác thực hiện tại
+        db: Phiên cơ sở dữ liệu
     
-    Returns:
-        Updated organization settings
+    Trả về:
+        Cài đặt tổ chức được cập nhật
     
-    Raises:
-        HTTPException 403: Insufficient permissions (not Owner/Admin)
-        HTTPException 404: Organization not found
+    Tăng:
+        HTTPException 403: Không đủ quyền (không phải Chủ sở/Quản trị viên)
+        HTTPException 404: Tổ chức không được tìm thấy
     """
-    # RBAC check: Only Owner/Admin can update settings
-    user_roles = [ur.role.code for ur in current_user.roles if ur.role]
-    if not any(role in ['owner', 'admin'] for role in user_roles):
-        logger.warning(f"User {current_user.id} attempted to update settings without permission")
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only Owner/Admin can update organization settings"
-        )
-    
-    # Get organization
+    # Lấy tổ chức
     stmt = select(Organization).where(Organization.id == current_user.org_id)
     result = await db.execute(stmt)
     org = result.scalar_one_or_none()
@@ -94,10 +85,10 @@ async def update_organization_settings(
     if not org:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Organization not found"
+            detail="Tổ chức không được tìm thấy"
         )
     
-    # Update fields
+    # Cập nhật các trường
     update_data = updates.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(org, field, value)

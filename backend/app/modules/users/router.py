@@ -1,4 +1,4 @@
-"""User Management Router - REST API endpoints for Users CRUD."""
+"""Router Quản lý Người dùng - REST API endpoints cho CRUD Người dùng."""
 
 import logging
 from typing import Optional
@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.models.core import User
-from app.modules.auth.dependencies import get_current_user
+from app.modules.auth.dependencies import requires_roles
 from app.modules.users import service
 from app.schema.users.user import (
     UserCreate,
@@ -25,34 +25,34 @@ router = APIRouter(prefix="/users", tags=["User Management"])
 @router.get(
     "/",
     response_model=PaginatedUsersResponse,
-    summary="List users",
-    description="Get paginated list of users for current organization (Owner/Admin only)"
+    summary="Liệt kê người dùng",
+    description="Lấy danh sách phân trang người dùng cho tổ chức hiện tại (Chỉ Chủ sở/Quản trị viên)"
 )
 async def list_users(
-    skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(100, ge=1, le=500, description="Max records to return"),
-    search: Optional[str] = Query(None, description="Search by email or name"),
-    role: Optional[str] = Query(None, description="Filter by role: owner, admin, accountant, cashier"),
-    status: Optional[str] = Query(None, description="Filter by status: active, inactive"),
-    current_user: User = Depends(get_current_user),
+    skip: int = Query(0, ge=0, description="Số bản ghi cần bỏ qua"),
+    limit: int = Query(100, ge=1, le=500, description="Kết quả tối đa trả về"),
+    search: Optional[str] = Query(None, description="Tìm kiếm theo email hoặc tên"),
+    role: Optional[str] = Query(None, description="Lọc theo vai trò: chủ sở, quản trị viên, kế toán, quỹ tín"),
+    status: Optional[str] = Query(None, description="Lọc theo trạng thái: hoạt động, không hoạt động"),
+    current_user: User = Depends(requires_roles(["owner", "admin"])),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    List all users for current organization.
+    Liệt kê tất cả người dùng cho tổ chức hiện tại.
     
-    **RBAC: Owner/Admin only**
+    **RBAC: Chỉ Chủ sở hữu/Quản trị viên**
     
-    **Multi-tenancy:** Automatically filters by current user's org_id.
+    **Đa thuê:** Tự động lọc theo org_id của người dùng hiện tại.
     
     Query Parameters:
-    - skip: Pagination offset (default: 0)
-    - limit: Max results (default: 100, max: 500)
-    - search: Search by email or full name
-    - role: Filter by role code
-    - status: Filter by status (active, inactive)
+    - skip: Offset phân trang (mặc định: 0)
+    - limit: Kết quả tối đa (mặc định: 100, tối đa: 500)
+    - search: Tìm kiếm theo email hoặc tên
+    - role: Lọc theo mã vai trò
+    - status: Lọc theo trạng thái (hoạt động, không hoạt động)
     
-    Returns:
-    - Paginated list of users with roles and total count
+    Trả lại:
+    - Danh sách người dùng được phân trang kèm vai trò và tổng số
     """
     users, total = await service.get_users(
         db=db,
@@ -64,7 +64,7 @@ async def list_users(
         status=status,
     )
     
-    # Map to response schema
+    # Ánh xạ sang lược đáp ứng
     user_responses = [
         UserResponse(
             id=user.id,
@@ -90,26 +90,26 @@ async def list_users(
 @router.get(
     "/{user_id}",
     response_model=UserResponse,
-    summary="Get user by ID",
-    description="Retrieve single user details (Owner/Admin only)"
+    summary="Lấy người dùng theo ID",
+    description="Truy xuất chi tiết người dùng duy nhất (Chỉ Chủ sở/Quản trị viên)"
 )
 async def get_user(
     user_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(requires_roles(["owner", "admin"])),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Get user by ID.
+    Lấy người dùng theo ID.
     
-    **RBAC: Owner/Admin only**
+    **RBAC: Chỉ Chủ sở/Quản trị viên**
     
-    **Multi-tenancy:** Only returns user if it belongs to current user's organization.
+    **Đa thuê:** Chỉ trả lại người dùng nếu nó thuộc tổ chức của người dùng hiện tại.
     
-    Path Parameters:
-    - user_id: User ID
+    Tham số đường dẫn:
+    - user_id: ID người dùng
     
-    Raises:
-    - 404: User not found or doesn't belong to current organization
+    Tăng:
+    - 404: Người dùng không được tìm thấy hoặc không thuộc tổ chức hiện tại
     """
     user = await service.get_user(
         db=db,
@@ -133,36 +133,36 @@ async def get_user(
     "/",
     response_model=UserResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Create user",
-    description="Create new user for current organization (Owner/Admin only)"
+    summary="Tạo người dùng",
+    description="Tạo người dùng mới cho tổ chức hiện tại (Chỉ Chủ sở/Quản trị viên)"
 )
 async def create_user(
     schema: UserCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(requires_roles(["owner", "admin"])),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Create new user.
+    Tạo người dùng mới.
     
-    **RBAC: Owner/Admin only**
+    **RBAC: Chỉ Chủ sở/Quản trị viên**
     
-    **Multi-tenancy:** User is automatically assigned to current user's organization.
+    **Đa thuê:** Người dùng được tự động gán cho tổ chức của người dùng hiện tại.
     
-    **Business Rules:**
-    - Email must be unique within organization
-    - Password is hashed before storage
-    - User is assigned to specified role
-    - Default status is 'active'
+    **Quy tắc kinh doanh:**
+    - Email phải duy nhất trong tổ chức
+    - Mật khẩu được băm trước khi lưu
+    - Người dùng được gán cho vai trò được chỉ định
+    - Trạng thái mặc định là 'hoạt động'
     
-    Request Body:
-    - email: User email (required, unique within org)
-    - full_name: User full name (required)
-    - password: User password (required, min 6 chars)
-    - role: User role (required, one of: owner, admin, accountant, cashier)
+    Thân yêu cầu:
+    - email: Email người dùng (bắt buộc, duy nhất trong tổ chức)
+    - full_name: Tên đầy đủ của người dùng (bắt buộc)
+    - password: Mật khẩu người dùng (bắt buộc, tối thiểu 6 ký tự)
+    - role: Vai trò người dùng (bắt buộc, một trong: chủ sở, quản trị viên, kế toán, quỹ tín)
     
-    Raises:
-    - 400: Email already exists or invalid role
-    - 403: Insufficient permissions
+    Tăng:
+    - 400: Email đã tồn tại hoặc vai trò không hợp lệ
+    - 403: Quyền không đủ
     """
     user = await service.create_user(
         db=db,
@@ -186,38 +186,38 @@ async def create_user(
 @router.put(
     "/{user_id}",
     response_model=UserResponse,
-    summary="Update user",
-    description="Update existing user (Owner/Admin only)"
+    summary="Cập nhật người dùng",
+    description="Cập nhật người dùng hiện có (Chỉ Chủ sở/Quản trị viên)"
 )
 async def update_user(
     user_id: int,
     schema: UserUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(requires_roles(["owner", "admin"])),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Update user.
+    Cập nhật người dùng.
     
-    **RBAC: Owner/Admin only**
+    **RBAC: Chỉ Chủ sở/Quản trị viên**
     
-    **Multi-tenancy:** Only allows updating user if it belongs to current user's organization.
+    **Đa thuê:** Chỉ cho phép cập nhật người dùng nếu nó thuộc tổ chức của người dùng hiện tại.
     
-    **Business Rules:**
-    - All fields are optional (partial update)
-    - Role change will replace existing roles
+    **Quy tắc kinh doanh:**
+    - Tất cả các trường là tùy chọn (cập nhật một phần)
+    - Thay đổi vai trò sẽ thay thế các vai trò hiện có
     
-    Path Parameters:
-    - user_id: User ID to update
+    Tham số đường dẫn:
+    - user_id: ID người dùng cần cập nhật
     
-    Request Body:
-    - full_name: User full name (optional)
-    - role: User role (optional)
-    - status: User status (optional: active, inactive)
+    Thân yêu cầu:
+    - full_name: Tên đầy đủ của người dùng (tùy chọn)
+    - role: Vai trò người dùng (tùy chọn)
+    - status: Trạng thái người dùng (tùy chọn: hoạt động, không hoạt động)
     
-    Raises:
-    - 404: User not found or doesn't belong to current organization
-    - 400: Invalid role
-    - 403: Insufficient permissions
+    Tăng:
+    - 404: Người dùng không được tìm thấy hoặc không thuộc tổ chức hiện tại
+    - 400: Vai trò không hợp lệ
+    - 403: Quyền không đủ
     """
     user = await service.update_user(
         db=db,
@@ -242,33 +242,33 @@ async def update_user(
 @router.delete(
     "/{user_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete user",
-    description="Soft delete user (set status to inactive) (Owner/Admin only)"
+    summary="Xóa người dùng",
+    description="Xóa mềm người dùng (đặt trạng thái thành không hoạt động) (Chỉ Chủ sở/Quản trị viên)"
 )
 async def delete_user(
     user_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(requires_roles(["owner", "admin"])),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Delete user (soft delete).
+    Xóa người dùng (xóa mềm).
     
-    **RBAC: Owner/Admin only**
+    **RBAC: Chỉ Chủ sở/Quản trị viên**
     
-    **Multi-tenancy:** Only allows deleting user if it belongs to current user's organization.
+    **Đa thuê:** Chỉ cho phép xóa người dùng nếu nó thuộc tổ chức của người dùng hiện tại.
     
-    **Note:** This is a soft delete - sets status='inactive' instead of removing from database.
+    **Ghi chú:** Đây là xóa mềm - đặt status='không hoạt động' thay vì xóa khỏi cơ sở dữ liệu.
     
-    **Business Rules:**
-    - Cannot delete yourself
+    **Quy tắc kinh doanh:**
+    - Không thể xóa chính bạn
     
-    Path Parameters:
-    - user_id: User ID to delete
+    Tham số đường dẫn:
+    - user_id: ID người dùng cần xóa
     
-    Raises:
-    - 404: User not found or doesn't belong to current organization
-    - 400: Attempt to delete yourself
-    - 403: Insufficient permissions
+    Tăng:
+    - 404: Người dùng không được tìm thấy hoặc không thuộc tổ chức hiện tại
+    - 400: Cố gắng xóa chính bạn
+    - 403: Quyền không đủ
     """
     await service.delete_user(
         db=db,
@@ -283,31 +283,31 @@ async def delete_user(
 @router.post(
     "/{user_id}/reset-password",
     status_code=status.HTTP_200_OK,
-    summary="Reset user password",
-    description="Reset user password (Owner/Admin only)"
+    summary="Đặt lại mật khẩu người dùng",
+    description="Đặt lại mật khẩu người dùng (Chỉ Chủ sở/Quản trị viên)"
 )
 async def reset_user_password(
     user_id: int,
     schema: ResetPasswordRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(requires_roles(["owner", "admin"])),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Reset user password (Admin only).
+    Đặt lại mật khẩu người dùng (Chỉ Quản trị viên).
     
-    **RBAC: Owner/Admin only**
+    **RBAC: Chỉ Chủ sở/Quản trị viên**
     
-    **Multi-tenancy:** Only allows resetting password for users in current user's organization.
+    **Đa thuê:** Chỉ cho phép đặt lại mật khẩu cho những người dùng trong tổ chức của người dùng hiện tại.
     
-    Path Parameters:
-    - user_id: User ID
+    Tham số đường dẫn:
+    - user_id: ID người dùng
     
-    Request Body:
-    - new_password: New password (min 6 chars)
+    Thân yêu cầu:
+    - new_password: Mật khẩu mới (tối thiểu 6 ký tự)
     
-    Raises:
-    - 404: User not found or doesn't belong to current organization
-    - 403: Insufficient permissions
+    Tăng:
+    - 404: Người dùng không được tìm thấy hoặc không thuộc tổ chức hiện tại
+    - 403: Quyền không đủ
     """
     await service.reset_user_password(
         db=db,
@@ -317,4 +317,4 @@ async def reset_user_password(
         current_user=current_user,
     )
     
-    return {"message": "Password reset successfully"}
+    return {"message": "Mật khẩu đã được đặt lại thành công"}

@@ -1,14 +1,14 @@
-"""Finance Router - AR/AP Invoices and Payments."""
+"""Router Tài chính - Hóa đơn AR/AP và Thanh toán."""
 
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 
 from app.db.session import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.auth.dependencies import get_current_user
+from app.modules.auth.dependencies import get_current_user, requires_roles
 from app.models.core import User
 from app.schema.finance import (
     InvoiceCreate,
@@ -42,15 +42,15 @@ async def list_invoices(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List AR invoices with filtering and pagination.
+    """Liệt kê hóa đơn AR có lọc và phân trang.
     
     Query Parameters:
-        - skip: Offset for pagination (default: 0)
-        - limit: Max records to return (default: 100)
-        - status: Filter by invoice status (draft, posted, partial, paid, overdue, cancelled)
-        - customer_id: Filter by customer ID
-        - date_from: Filter by issue_date >= date_from
-        - date_to: Filter by issue_date <= date_to
+        - skip: Offset cho phân trang (mặc định: 0)
+        - limit: Tối đa bản ghi trả về (mặc định: 100)
+        - status: Lọc theo trạng thái hóa đơn (nháp, đã đăng, trả một phần, đã trả, quá hạn, đã hủy)
+        - customer_id: Lọc theo ID khách hàng
+        - date_from: Lọc theo issue_date >= date_from
+        - date_to: Lọc theo issue_date <= date_to
     """
     invoices, total = await invoice_service.get_invoices(
         db=db,
@@ -77,7 +77,7 @@ async def get_invoice(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get single invoice by ID."""
+    """Lấy một hóa đơn theo ID."""
     invoice = await invoice_service.get_invoice(
         db=db,
         invoice_id=invoice_id,
@@ -92,10 +92,10 @@ async def create_invoice(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Create new AR invoice in DRAFT status.
+    """Tạo hóa đơn AR mới ở trạng thái NHÁP.
     
-    New invoices always start with:
-    - status = "draft"
+    Hóa đơn mới luôn bắt đầu với:
+    - status = "nháp"
     - paid_amount = 0
     """
     invoice = await invoice_service.create_invoice(
@@ -113,10 +113,10 @@ async def update_invoice(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Update invoice fields (only allowed in DRAFT status).
+    """Cập nhật các trường hóa đơn (chỉ được phép ở trạng thái NHÁP).
     
-    Raises:
-        400: If invoice is already posted
+    Tăng:
+        400: Nếu hóa đơn đã được đăng
     """
     invoice = await invoice_service.update_invoice(
         db=db,
@@ -131,30 +131,22 @@ async def update_invoice(
 async def post_invoice(
     invoice_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(requires_roles(["accountant", "admin", "owner"])),
 ):
-    """Post invoice (DRAFT → POSTED transition).
+    """Đăng hóa đơn (chuyển đổi NHÁP → ĐÃ ĐĂNG).
     
-    **RBAC:** Only Accountant, Admin, or Owner can post invoices.
-    Cashiers are restricted from posting.
+    **RBAC:** Chỉ Kế toán, Quản trị viên hoặc Chủ sở hữu mới có thể đăng hóa đơn.
+    Thu ngân bị hạn chế không được đăng.
     
-    After posting, invoice becomes immutable:
-    - Cannot be updated
-    - Cannot be deleted
-    - Can receive payment allocations
+    Sau khi đăng, hóa đơn trở thành bất biến:
+    - Không thể cập nhật
+    - Không thể xóa
+    - Có thể nhận các phân bổ thanh toán
     
-    Raises:
-        403: If user role is not authorized (e.g., Cashier)
-        400: If invoice is already posted or has invalid amount
+    Tăng:
+        403: Nếu vai trò người dùng không được phép (ví dụ: Thu ngân)
+        400: Nếu hóa đơn đã được đăng hoặc có số tiền không hợp lệ
     """
-    # RBAC Check: Only Accountant/Admin/Owner can post
-    user_roles = [ur.role.code for ur in current_user.roles if ur.role]
-    if not any(role in ['accountant', 'admin', 'owner'] for role in user_roles):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only Accountant, Admin, or Owner can post invoices. Cashiers are not authorized.",
-        )
-    
     invoice = await invoice_service.post_invoice(
         db=db,
         invoice_id=invoice_id,
@@ -169,10 +161,10 @@ async def delete_invoice(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Delete invoice (only allowed in DRAFT status).
+    """Xóa hóa đơn (chỉ được phép ở trạng thái NHÁP).
     
-    Raises:
-        400: If invoice is already posted
+    Tăng:
+        400: Nếu hóa đơn đã được đăng
     """
     await invoice_service.delete_invoice(
         db=db,
@@ -186,32 +178,24 @@ async def delete_invoice(
 async def bulk_import_invoices(
     import_request: InvoiceBulkImportRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(requires_roles(["accountant", "admin", "owner"])),
 ):
-    """Bulk import invoices from Excel/CSV data.
+    """Nhập hàng loạt hóa đơn từ dữ liệu Excel/CSV.
     
-    **RBAC:** Accountant, Admin, or Owner can import invoices.
+    **RBAC:** Kế toán, Quản trị viên hoặc Chủ sở hữu có thể nhập hóa đơn.
     
     Request Body:
-        - invoices: List of invoice objects (max 100)
-        - auto_post: If True, invoices will be posted automatically after creation
+        - invoices: Danh sách các đối tượng hóa đơn (tối đa 100)
+        - auto_post: Nếu True, hóa đơn sẽ được đăng tự động sau khi tạo
     
-    Returns:
-        Import results with success/failure for each invoice
+    Trả lại:
+        Kết quả nhập với thành công/thất bại cho mỗi hóa đơn
     
-    Notes:
-        - Duplicate invoice_no will be rejected
-        - Invalid customer_id will cause failure
-        - Partial imports are allowed (some succeed, some fail)
+    Ghi chú:
+        - Duplicate invoice_no sẽ bị từ chối
+        - Invalid customer_id sẽ gây ra lỗi
+        - Cho phép nhập một phần (một số thành công, một số thất bại)
     """
-    # RBAC Check: Only Accountant/Admin/Owner can bulk import
-    user_roles = [ur.role.code for ur in current_user.roles if ur.role]
-    if not any(role in ['accountant', 'admin', 'owner'] for role in user_roles):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only Accountant, Admin, or Owner can bulk import invoices.",
-        )
-    
     result = await invoice_service.bulk_import_invoices(
         db=db,
         invoices_data=import_request.invoices,
@@ -235,15 +219,15 @@ async def list_payments(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List payments with pagination and filtering.
+    """Liệt kê các khoản thanh toán có phân trang và lọc.
     
     Query Parameters:
-        - skip: Offset for pagination (default: 0)
-        - limit: Max records to return (default: 100)
-        - date_from: Filter by transaction_date >= date_from
-        - date_to: Filter by transaction_date <= date_to
-        - account_id: Filter by account ID
-        - payment_method: Filter by payment method (cash, transfer, vietqr, card)
+        - skip: Offset cho phân trang (mặc định: 0)
+        - limit: Tối đa bản ghi trả về (mặc định: 100)
+        - date_from: Lọc theo transaction_date >= date_from
+        - date_to: Lọc theo transaction_date <= date_to
+        - account_id: Lọc theo ID tài khoản
+        - payment_method: Lọc theo phương thức thanh toán (tiền mặt, chuyển khoản, vietqr, thẻ)
     """
     payments, total = await payment_service.get_payments(
         db=db,
@@ -270,7 +254,7 @@ async def get_payment(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Get single payment by ID with allocations."""
+    """Lấy một khoản thanh toán theo ID kèm phân bổ."""
     payment = await payment_service.get_payment(
         db=db,
         payment_id=payment_id,
@@ -285,23 +269,23 @@ async def create_payment(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Create payment with allocations to invoices/bills.
+    """Tạo thanh toán với phân bổ cho hóa đơn/phiếu.
     
-    This endpoint implements ATOMIC transaction logic:
-    - Creates payment record
-    - Creates allocation records
-    - Updates invoice/bill paid_amount
-    - Updates invoice/bill status (partial/paid)
-    - All changes commit together or rollback on error
+    Endpoint này triển khai logic giao dịch NGUYÊN TỬ:
+    - Tạo bản ghi thanh toán
+    - Tạo bản ghi phân bổ
+    - Cập nhật paid_amount của hóa đơn/phiếu
+    - Cập nhật trạng thái hóa đơn/phiếu (trả một phần/đã trả)
+    - Tất cả các thay đổi commit cùng nhau hoặc rollback khi có lỗi
     
-    Business Rules:
-    - Can only allocate to POSTED invoices/bills (not DRAFT)
-    - Allocation amount cannot exceed remaining balance
-    - Sum of allocations cannot exceed payment amount (validated by schema)
-    - Each allocation must have EITHER ar_invoice_id OR ap_bill_id (exclusive)
+    Quy tắc kinh doanh:
+    - Chỉ có thể phân bổ cho hóa đơn/phiếu ĐÃ ĐĂNG (không phải NHÁP)
+    - Số tiền phân bổ không được vượt quá số dư còn lại
+    - Tổng phân bổ không được vượt quá số tiền thanh toán (được xác thực bằng schema)
+    - Mỗi phân bổ phải có ar_invoice_id HOẶC ap_bill_id (loại trừ)
     
-    Raises:
-        400: If validation fails (account, invoice, allocation amount)
+    Tăng:
+        400: Nếu xác thực thất bại (tài khoản, hóa đơn, số tiền phân bổ)
     """
     payment = await payment_service.create_payment_with_allocations(
         db=db,
@@ -318,25 +302,25 @@ async def update_payment(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Update payment metadata (notes and reference_code only).
+    """Cập nhật siêu dữ liệu thanh toán (chỉ ghi chú và reference_code).
     
-    IMMUTABLE FIELDS (cannot be modified after creation):
-    - amount: Audit trail requires original payment amount to be locked
-    - transaction_date: Timestamp must remain immutable
-    - account_id: Source account cannot change (breaking FK chain)
-    - allocations: Cannot modify existing allocations (create new payment or unallocate separately)
+    TRƯỜNG BẤT BIẾN (không thể sửa đổi sau khi tạo):
+    - amount: Đường dò kiểm toán yêu cầu số tiền thanh toán gốc được khóa
+    - transaction_date: Dấu thời gian phải vẫn bất biến
+    - account_id: Tài khoản nguồn không thể thay đổi (phá vỡ chuỗi FK)
+    - allocations: Không thể sửa đổi phân bổ hiện có (tạo thanh toán mới hoặc bỏ phân bổ riêng)
     
-    ALLOWED UPDATES (metadata only):
-    - notes: Add/update payment notes (e.g., reasons for delayed allocation)
-    - reference_code: Add/update bank transaction code/reference
+    CÓ THỂ CẬP NHẬT (chỉ siêu dữ liệu):
+    - notes: Thêm/cập nhật ghi chú thanh toán (ví dụ: lý do phân bổ bị trễ)
+    - reference_code: Thêm/cập nhật mã giao dịch ngân hàng/tài liệu tham khảo
     
-    Use Case:
-    - Payment created but bank provides transaction code later → update reference_code
-    - Payment needs notes for auditing → update notes
+    Trường hợp sử dụng:
+    - Thanh toán được tạo nhưng ngân hàng cung cấp mã giao dịch sau → cập nhật reference_code
+    - Thanh toán cần ghi chú để kiểm toán → cập nhật notes
     
-    Raises:
-        404: If payment not found
-        400: If attempting to update immutable fields (will be rejected in service)
+    Tăng:
+        404: Nếu thanh toán không được tìm thấy
+        400: Nếu cố gắng cập nhật các trường bất biến (sẽ bị từ chối trong service)
     """
     payment = await payment_service.update_payment(
         db=db,

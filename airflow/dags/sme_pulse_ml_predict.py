@@ -11,11 +11,18 @@ Tasks:
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
-from airflow.operators.bash import BashOperator
 from airflow.utils.task_group import TaskGroup
 import logging
+import os
+from pathlib import Path
+import yaml
 
 logger = logging.getLogger(__name__)
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "file:///opt/airflow/mlflow")
+
+CONFIG_PATH = Path(__file__).parent / "config" / "pipeline_config.yml"
+with open(CONFIG_PATH, 'r') as f:
+    PIPELINE_CONFIG = yaml.safe_load(f)
 
 # Default DAG arguments
 default_args = {
@@ -38,12 +45,41 @@ def refresh_metabase_cache(**context):
     Refresh Metabase cache after ML predictions
     """
     logger.info("Refreshing Metabase cache...")
+
     try:
-        import requests
-        # Placeholder - implement actual Metabase API call
-        logger.info("✅ Metabase cache refresh skipped (not configured)")
+        metabase_config = PIPELINE_CONFIG.get('metabase', {})
+        if not metabase_config.get('enabled', True):
+            logger.info("Metabase integration disabled, skipping...")
+            return
+
+        try:
+            import requests
+        except ImportError:
+            logger.warning("requests library not available, skipping Metabase refresh")
+            return
+
+        session_token = os.getenv('METABASE_API_KEY') or metabase_config.get('api_key')
+        if not session_token:
+            logger.warning("METABASE_API_KEY not configured, skipping Metabase refresh")
+            return
+
+        database_id = metabase_config.get('ml_database_id', metabase_config.get('database_id', 1))
+        url = f"{metabase_config.get('url', 'http://metabase:3000')}/api/database/{database_id}/sync_schema"
+        response = requests.post(
+            url,
+            headers={'X-Metabase-Session': session_token},
+            timeout=30
+        )
+
+        if response.status_code == 200:
+            logger.info("✅ Metabase cache refreshed successfully after ML predictions")
+            context['ti'].xcom_push(key='metabase_cache_status', value='success')
+        else:
+            logger.warning(f"Metabase refresh returned status {response.status_code}")
+            context['ti'].xcom_push(key='metabase_cache_status', value='warning')
     except Exception as e:
         logger.warning(f"⚠️ Metabase cache refresh failed: {e}")
+        context['ti'].xcom_push(key='metabase_cache_status', value='failed')
 
 
 def invalidate_redis_cache(**context):
@@ -51,12 +87,43 @@ def invalidate_redis_cache(**context):
     Invalidate Redis cache after ML predictions
     """
     logger.info("Invalidating Redis cache...")
+
     try:
-        import redis
-        # Placeholder - implement actual Redis invalidation
-        logger.info("✅ Redis cache invalidation skipped (not configured)")
+        redis_config = PIPELINE_CONFIG.get('redis', {})
+        if not redis_config.get('enabled', True):
+            logger.info("Redis integration disabled, skipping...")
+            return
+
+        try:
+            import redis
+        except ImportError:
+            logger.warning("redis library not available, skipping cache invalidation")
+            return
+
+        client = redis.Redis(
+            host=redis_config.get('host', 'redis'),
+            port=redis_config.get('port', 6379),
+            db=redis_config.get('db', 0),
+            password=redis_config.get('password'),
+            socket_connect_timeout=5,
+        )
+        client.ping()
+
+        patterns = redis_config.get('ml_cache_patterns') or redis_config.get('cache_patterns', ['sme:gold:*'])
+        total_deleted = 0
+
+        for pattern in patterns:
+            keys = client.keys(pattern)
+            if keys:
+                deleted = client.delete(*keys)
+                total_deleted += deleted
+                logger.info(f"Deleted {deleted} Redis keys matching '{pattern}'")
+
+        logger.info(f"✅ Redis cache invalidation completed, deleted={total_deleted}")
+        context['ti'].xcom_push(key='redis_cache_deleted', value=total_deleted)
     except Exception as e:
         logger.warning(f"⚠️ Redis cache invalidation failed: {e}")
+        context['ti'].xcom_push(key='redis_cache_deleted', value=-1)
 
 
 def predict_cashflow_uc09(**context):
@@ -71,7 +138,7 @@ def predict_cashflow_uc09(**context):
     
     # Set MLflow tracking URI
     env = os.environ.copy()
-    env['MLFLOW_TRACKING_URI'] = 'file:///tmp/airflow_mlflow'
+    env['MLFLOW_TRACKING_URI'] = MLFLOW_TRACKING_URI
     
     result = subprocess.run(
         ['python', '/opt/ops/ml/UC09-forecasting/predict_cashflow.py'],
@@ -104,7 +171,7 @@ def detect_anomalies_uc10(**context):
     
     # Set MLflow tracking URI
     env = os.environ.copy()
-    env['MLFLOW_TRACKING_URI'] = 'file:///tmp/airflow_mlflow'
+    env['MLFLOW_TRACKING_URI'] = MLFLOW_TRACKING_URI
     
     result = subprocess.run(
         ['python', '/opt/ops/ml/UC10-anomoly_detection/ops-ML-anomaly_detection/detect_anomalies.py'],

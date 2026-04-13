@@ -1,13 +1,13 @@
-"""Analytics Service - Business logic orchestrator."""
+"""Service Phân tích - Bộ điều phối logic kinh doanh."""
 
 import logging
 import trino
-import os
 from decimal import Decimal
 from datetime import date, datetime
 from typing import List, Optional, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+from app.core.config import settings
 
 from app.modules.analytics.services import (
     calculate_dso,
@@ -40,31 +40,31 @@ logger = logging.getLogger(__name__)
 
 async def get_dashboard_summary(db: AsyncSession, org_id: int) -> DashboardSummary:
     """
-    Get complete dashboard summary combining KPI and aging data.
+    Lấy tóm tắt bảng điều khiển hoàn chỉnh kết hợp dữ liệu KPI và lão hóa.
     """
     try:
-        # Calculate KPI
+        # Tính toán KPI
         dso = await calculate_dso(db, org_id)
         dpo = await calculate_dpo(db, org_id)
         ccc = await calculate_ccc(dso, dpo)
         
-        # Get AR aging data
+        # Lấy dữ liệu lão hóa AR
         total_ar, _, ar_buckets = await get_ar_aging_buckets(db, org_id)
         
-        # Get AP aging data
+        # Lấy dữ liệu lão hóa AP
         total_ap, _, ap_buckets = await get_ap_aging_buckets(db, org_id)
         
-        # Get cash balance
+        # Lấy số dư tiền mặt
         cash_balance = await _get_cash_balance(db, org_id)
         
-        # Calculate working capital
+        # Tính toán vốn lưu động
         working_capital = cash_balance + total_ar - total_ap
         
-        # Count overdue invoices
+        # Đếm các hóa đơn quá hạn
         overdue_ar_count = sum(bucket.count for bucket in ar_buckets if bucket.bucket_days in ["61-90", ">90"])
         overdue_ar_amount = sum(bucket.total_amount for bucket in ar_buckets if bucket.bucket_days in ["61-90", ">90"])
         
-        # Count overdue bills
+        # Đếm các hợp đồng quá hạn
         overdue_ap_count = sum(bucket.count for bucket in ap_buckets if bucket.bucket_days in ["61-90", ">90"])
         overdue_ap_amount = sum(bucket.total_amount for bucket in ap_buckets if bucket.bucket_days in ["61-90", ">90"])
         
@@ -88,7 +88,7 @@ async def get_dashboard_summary(db: AsyncSession, org_id: int) -> DashboardSumma
 
 
 async def get_ar_aging(db: AsyncSession, org_id: int) -> ARAgingResponse:
-    """Get AR aging report."""
+    """Lấy báo cáo lão hóa AR."""
     try:
         total_ar, total_invoices, buckets = await get_ar_aging_buckets(db, org_id)
         return ARAgingResponse(
@@ -102,7 +102,7 @@ async def get_ar_aging(db: AsyncSession, org_id: int) -> ARAgingResponse:
 
 
 async def get_ap_aging(db: AsyncSession, org_id: int) -> APAgingResponse:
-    """Get AP aging report."""
+    """Lấy báo cáo lão hóa AP."""
     try:
         total_ap, total_bills, buckets = await get_ap_aging_buckets(db, org_id)
         return APAgingResponse(
@@ -116,11 +116,11 @@ async def get_ap_aging(db: AsyncSession, org_id: int) -> APAgingResponse:
 
 
 async def get_daily_revenue_kpi(db: AsyncSession, org_id: int, days: int = 7) -> DailyRevenueResponse:
-    """Get daily revenue KPI."""
+    """Lấy KPI doanh thu hàng ngày."""
     try:
         total_revenue, average_daily, daily_data = await get_daily_revenue(db, org_id, days)
         
-        # Convert daily_data to DailyRevenueDataPoint objects
+        # Chuyển đổi daily_data thành các đối tượng DailyRevenueDataPoint
         data_points = [
             DailyRevenueDataPoint(date=item["date"], revenue=item["revenue"])
             for item in daily_data
@@ -137,7 +137,7 @@ async def get_daily_revenue_kpi(db: AsyncSession, org_id: int, days: int = 7) ->
 
 
 async def get_payment_success_rate_kpi(db: AsyncSession, org_id: int, days: int = 7) -> PaymentSuccessRateResponse:
-    """Get payment success rate KPI."""
+    """Lấy KPI tỷ lệ thanh toán thành công."""
     try:
         success_rate, total_transactions, successful, failed = await get_payment_success_rate(db, org_id, days)
         
@@ -153,7 +153,7 @@ async def get_payment_success_rate_kpi(db: AsyncSession, org_id: int, days: int 
 
 
 async def get_reconciliation_kpi(db: AsyncSession, org_id: int, reconcile_date: date) -> ReconciliationResponse:
-    """Get payment reconciliation status."""
+    """Lấy trạng thái điều hòa thanh toán."""
     try:
         total_txns, reconciled, pending, rate, discrepancies = await get_reconciliation_status(
             db, org_id, reconcile_date
@@ -179,7 +179,7 @@ async def create_export_job_service(
     date_from: str = None,
     date_to: str = None,
 ) -> str:
-    """Create export job."""
+    """Tạo công việc xuất."""
     try:
         job_id = await create_export_job(
             db=db,
@@ -196,7 +196,7 @@ async def create_export_job_service(
 
 
 async def get_export_job_status(db: AsyncSession, job_id: str, org_id: int) -> dict:
-    """Get export job status."""
+    """Lấy trạng thái công việc xuất."""
     try:
         return await get_job_status(db, job_id, org_id)
     except Exception as e:
@@ -205,13 +205,13 @@ async def get_export_job_status(db: AsyncSession, job_id: str, org_id: int) -> d
 
 
 async def _get_cash_balance(db: AsyncSession, org_id: int) -> Decimal:
-    """Get current cash balance from accounts."""
+    """Lấy số dư tiền mặt hiện tại từ tài khoản."""
     try:
         from sqlalchemy import select, func
         
-        # Note: Account model stores balance in balance column
-        # For now return 0 as placeholder - in real system would query account balances
-        # This requires Account model to have proper balance tracking
+        # Lưu ý: Mô hình Account lưu trữ số dư trong cột balance
+        # Hiện tại trả về 0 làm placeholder - trong hệ thống thực sẽ truy vấn số dư tài khoản
+        # Yêu cầu Mô hình Account có theo dõi số dư thích hợp
         return Decimal(0)
     except Exception as e:
         logger.error(f"Error getting cash balance: {e}")
@@ -219,24 +219,23 @@ async def _get_cash_balance(db: AsyncSession, org_id: int) -> Decimal:
 
 
 # ============================================================
-# ML FORECAST & ANOMALY SERVICES
+# DỊCH VỤ DỰ BÁO VÀ PHÁT HIỆN BẤT THƯỜNG CỦA ML
 # ============================================================
 
 def _get_trino_connection():
     """
-    Create Trino connection for querying ML Gold tables with timeout.
+    Tạo kết nối Trino để truy vấn các bảng ML Gold với hết thời gian.
     
-    Returns:
-        Trino connection object
+    Trả lại:
+        Đối tượng kết nối Trino
     """
-    TRINO_TIMEOUT = int(os.getenv("TRINO_TIMEOUT", "40"))  # 40 sec timeout
     conn = trino.dbapi.connect(
-        host=os.getenv("TRINO_HOST", "trino"),
-        port=int(os.getenv("TRINO_PORT", 8080)),
-        user="api_backend",
-        catalog="sme_lake",
-        schema="gold",
-        request_timeout=TRINO_TIMEOUT,  # 40 sec to allow Trino queries to complete
+        host=settings.TRINO_HOST,
+        port=settings.TRINO_PORT,
+        user=settings.TRINO_USER,
+        catalog=settings.TRINO_CATALOG,
+        schema=settings.TRINO_SCHEMA,
+        request_timeout=settings.TRINO_TIMEOUT,
     )
     return conn
 
@@ -248,22 +247,22 @@ async def get_revenue_forecast(
     end_date: Optional[date] = None
 ) -> List[Dict[str, Any]]:
     """
-    Get revenue forecast predictions from ML model.
+    Nhận dự đoán dự báo doanh thu từ mô hình ML.
     
-    Queries sme_lake.gold.ml_cashflow_forecast table via Trino.
-    Falls back to PostgreSQL-based estimates if Trino unavailable.
+    Truy vấn bảng sme_lake.gold.ml_cashflow_forecast qua Trino.
+    Quay lại ước tính dựa trên PostgreSQL nếu Trino không khả dụng.
     
-    Args:
-        db: Database session (used for fallback queries)
-        org_id: Organization ID (for future multi-tenancy support)
-        start_date: Filter forecasts from this date (optional)
-        end_date: Filter forecasts until this date (optional)
+    Tham số:
+        db: Phiên làm việc cơ sở dữ liệu (dùng cho truy vấn dự phòng)
+        org_id: ID Tổ chức (cho hỗ trợ đa người thuê trong tương lai)
+        start_date: Lọc dự báo từ ngày này (không bắt buộc)
+        end_date: Lọc dự báo đến ngày này (không bắt buộc)
     
-    Returns:
-        List of forecast data points with date, forecast, bounds
+    Trả lại:
+        Danh sách các điểm dữ liệu dự báo với ngày, dự báo, giới hạn
     
-    Raises:
-        Exception: If all queries fail
+    Ngoại lệ:
+        Exception: Nếu tất cả truy vấn không thành công
     """
     try:
         logger.info(f"Fetching revenue forecast for org_id={org_id}, dates={start_date} to {end_date}")
@@ -271,7 +270,7 @@ async def get_revenue_forecast(
         conn = _get_trino_connection()
         cursor = conn.cursor()
         
-        # Build query with date filters (Trino doesn't support parameterized queries well)
+        # Xây dựng truy vấn với bộ lọc ngày (Trino không hỗ trợ các truy vấn được tham số hóa tốt)
         query = """
         SELECT 
             forecast_date,
@@ -283,6 +282,7 @@ async def get_revenue_forecast(
         FROM sme_lake.gold.ml_cashflow_forecast
         WHERE 1=1
         """
+        query += f" AND org_id = {int(org_id)}"
         
         if start_date:
             query += f" AND forecast_date >= DATE '{start_date.isoformat()}'"
@@ -298,16 +298,16 @@ async def get_revenue_forecast(
         for row in cursor.fetchall():
             results.append({
                 "date": row[0].isoformat() if hasattr(row[0], 'isoformat') else str(row[0]),
-                "actual": None,  # Historical actual data not stored in forecast table
+                "actual": None,  # Dữ liệu thực tế lịch sử không được lưu trữ trong bảng dự báo
                 "forecast": float(row[1]),
                 "lower_bound": float(row[2]),
                 "upper_bound": float(row[3]),
             })
         
-        # If no results with date filter, fetch ALL available data (demo/seed data fallback)
+        # Nếu không có kết quả với bộ lọc ngày, tìm nạp TẤT CẢ dữ liệu có sẵn (dự phòng dữ liệu demo/seed)
         if len(results) == 0 and (start_date or end_date):
             logger.info("No forecast data in requested date range, fetching all available data")
-            all_data_query = """
+            all_data_query = f"""
             SELECT 
                 forecast_date,
                 predicted_cashflow,
@@ -316,6 +316,7 @@ async def get_revenue_forecast(
                 model_name,
                 prediction_timestamp
             FROM sme_lake.gold.ml_cashflow_forecast
+            WHERE org_id = {int(org_id)}
             ORDER BY forecast_date ASC
             """
             cursor.execute(all_data_query)
@@ -328,6 +329,9 @@ async def get_revenue_forecast(
                     "upper_bound": float(row[3]),
                 })
             logger.info(f"Fetched {len(results)} forecast points (all available data)")
+
+        if len(results) == 0:
+            raise Exception(f"No tenant-scoped forecast data for org_id={org_id}")
         
         cursor.close()
         conn.close()
@@ -338,12 +342,12 @@ async def get_revenue_forecast(
     except Exception as e:
         logger.warning(f"Trino unavailable for forecast, using PostgreSQL fallback: {e}")
         
-        # Fallback: Generate forecast based on historical payment averages
+        # Dự phòng: Tạo dự báo dựa trên mức trung bình thanh toán lịch sử
         try:
             from datetime import timedelta
             import random
             
-            # Query historical payments average from PostgreSQL
+            # Truy vấn mức trung bình thanh toán lịch sử từ PostgreSQL
             pg_query = text("""
                 SELECT 
                     AVG(p.amount) as avg_amount,
@@ -356,10 +360,10 @@ async def get_revenue_forecast(
             result = await db.execute(pg_query, {"org_id": org_id})
             row = result.fetchone()
             
-            avg_amount = float(row[0]) if row and row[0] else 50000000  # Default 50M
+            avg_amount = float(row[0]) if row and row[0] else 50000000  # Mặc định 50M
             stddev_amount = float(row[1]) if row and row[1] else avg_amount * 0.2
             
-            # Generate forecast for requested date range
+            # Tạo dự báo cho khoảng ngày được yêu cầu
             results = []
             if not start_date:
                 start_date = date.today()
@@ -368,7 +372,7 @@ async def get_revenue_forecast(
             
             current_date = start_date
             while current_date <= end_date:
-                # Simple forecast with some randomization
+                # Dự báo đơn giản với một số ngẫu nhiên hóa
                 base_forecast = avg_amount * (1 + random.uniform(-0.1, 0.1))
                 results.append({
                     "date": current_date.isoformat(),
@@ -395,22 +399,22 @@ async def get_revenue_anomalies(
     severity: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """
-    Get revenue anomaly alerts from ML model.
+    Nhận cảnh báo bất thường doanh thu từ mô hình ML.
     
-    Queries sme_lake.gold.ml_anomaly_alerts table via Trino.
+    Truy vấn bảng sme_lake.gold.ml_anomaly_alerts qua Trino.
     
-    Args:
-        db: Database session (not used for Trino queries but kept for consistency)
-        org_id: Organization ID (for future multi-tenancy support)
-        start_date: Filter anomalies from this date (optional)
-        end_date: Filter anomalies until this date (optional)
-        severity: Filter by severity level: CRITICAL, HIGH, MEDIUM, LOW (optional)
+    Tham số:
+        db: Phiên làm việc cơ sở dữ liệu (không dùng cho truy vấn Trino nhưng giữ cho nhất quán)
+        org_id: ID Tổ chức (cho hỗ trợ đa người thuê trong tương lai)
+        start_date: Lọc bất thường từ ngày này (không bắt buộc)
+        end_date: Lọc bất thường đến ngày này (không bắt buộc)
+        severity: Lọc theo mức độ: CRITICAL, HIGH, MEDIUM, LOW (không bắt buộc)
     
-    Returns:
-        List of anomaly alerts with date, amount, score, severity
+    Trả lại:
+        Danh sách cảnh báo bất thường với ngày, số tiền, điểm, mức độ nghiêm trọng
     
-    Raises:
-        Exception: If Trino query fails
+    Ngoại lệ:
+        Exception: Nếu truy vấn Trino không thành công
     """
     try:
         logger.info(f"Fetching revenue anomalies for org_id={org_id}, dates={start_date} to {end_date}, severity={severity}")
@@ -418,7 +422,7 @@ async def get_revenue_anomalies(
         conn = _get_trino_connection()
         cursor = conn.cursor()
         
-        # Build query with filters (Trino string interpolation for dates)
+        # Xây dựng truy vấn với bộ lọc (Trino nội suy chuỗi cho ngày)
         query = """
         SELECT 
             txn_date,
@@ -430,6 +434,7 @@ async def get_revenue_anomalies(
         FROM sme_lake.gold.ml_anomaly_alerts
         WHERE 1=1
         """
+        query += f" AND org_id = {int(org_id)}"
         
         if start_date:
             query += f" AND txn_date >= DATE '{start_date.isoformat()}'"
@@ -448,17 +453,17 @@ async def get_revenue_anomalies(
             results.append({
                 "date": row[0].isoformat() if hasattr(row[0], 'isoformat') else str(row[0]),
                 "amount": float(row[1]),
-                "expected": None,  # Not stored in current schema
+                "expected": None,  # Không được lưu trữ trong lược đồ hiện tại
                 "deviation": float(row[2]),  # anomaly_score
                 "severity": row[3],
                 "category": row[4] if len(row) > 4 else None,
                 "counterparty": row[5] if len(row) > 5 else None,
             })
         
-        # If no results with date filter, fetch ALL available data (demo/seed data fallback)
+        # Nếu không có kết quả với bộ lọc ngày, tìm nạp TẤT CẢ dữ liệu có sẵn (dự phòng dữ liệu demo/seed)
         if len(results) == 0 and (start_date or end_date):
             logger.info("No anomaly data in requested date range, fetching all available data")
-            all_data_query = """
+            all_data_query = f"""
             SELECT 
                 txn_date,
                 amount_vnd,
@@ -470,6 +475,10 @@ async def get_revenue_anomalies(
             """
             if severity:
                 all_data_query += f" WHERE severity = '{severity.upper()}'"
+            else:
+                all_data_query += f" WHERE org_id = {int(org_id)}"
+            if severity:
+                all_data_query += f" AND org_id = {int(org_id)}"
             all_data_query += " ORDER BY anomaly_score ASC LIMIT 1000"
             
             cursor.execute(all_data_query)
@@ -484,6 +493,9 @@ async def get_revenue_anomalies(
                     "counterparty": row[5] if len(row) > 5 else None,
                 })
             logger.info(f"Fetched {len(results)} anomaly alerts (all available data)")
+
+        if len(results) == 0:
+            raise Exception(f"No tenant-scoped anomaly data for org_id={org_id}")
         
         cursor.close()
         conn.close()
@@ -494,11 +506,11 @@ async def get_revenue_anomalies(
     except Exception as e:
         logger.warning(f"Trino unavailable for anomalies, using PostgreSQL fallback: {e}")
         
-        # Fallback: Detect anomalies from PostgreSQL payment data using statistical methods
+        # Dự phòng: Phát hiện bất thường từ dữ liệu thanh toán PostgreSQL bằng các phương pháp thống kê
         try:
             from datetime import timedelta
             
-            # Query payments and calculate outliers using z-score method
+            # Truy vấn thanh toán và tính toán các giá trị ngoại lai bằng phương pháp z-score
             pg_query = text("""
                 WITH payment_stats AS (
                     SELECT 
@@ -556,7 +568,7 @@ async def get_revenue_anomalies(
             
             results = []
             for row in rows:
-                # Filter by severity if specified
+                # Lọc theo mức độ nghiêm trọng nếu được chỉ định
                 if severity and row[3].upper() != severity.upper():
                     continue
                     
@@ -579,7 +591,7 @@ async def get_revenue_anomalies(
 
 
 # ============================================================
-# RECONCILIATION ACTION SERVICES
+# DỊCH VỤ HÀNH ĐỘNG ĐIỀU HÒA
 # ============================================================
 
 async def auto_match_reconciliation(
@@ -589,25 +601,25 @@ async def auto_match_reconciliation(
     tolerance: float = 1000.0
 ) -> ReconciliationAutoMatchResponse:
     """
-    Auto-match bank transactions with system payments.
+    Tự động khớp giao dịch ngân hàng với các khoản thanh toán hệ thống.
     
-    This is a simplified implementation that matches payments
-    based on amount within a tolerance window.
+    Đây là một triển khai đơn giản hóa khớp các khoản thanh toán
+    dựa trên số tiền trong cửa sổ dung sai.
     
-    If reconcile_date is provided, matches for that date only.
-    If no payments found on that date, expands search to last 30 days.
+    Nếu cung cấp reconcile_date, khớp chỉ cho ngày đó.
+    Nếu không tìm thấy thanh toán vào ngày hôm đó, mở rộng tìm kiếm trong 30 ngày qua.
     
-    In a production system, you would:
-    1. Import bank transactions from a separate table
-    2. Match using multiple criteria (amount, date, reference)
-    3. Use ML for fuzzy matching
+    Trong một hệ thống sản xuất, bạn sẽ:
+    1. Nhập giao dịch ngân hàng từ một bảng riêng biệt
+    2. Khớp sử dụng nhiều tiêu chí (số tiền, ngày, tham chiếu)
+    3. Sử dụng ML để khớp mờ
     """
     from app.models.finance import Payment
     from sqlalchemy import select
     from datetime import timedelta
     
     try:
-        # First try: Get payments for the specific date
+        # Lần thứ nhất: Lấy thanh toán cho ngày cụ thể
         query = select(Payment).where(
             Payment.org_id == org_id,
             Payment.transaction_date == reconcile_date
@@ -615,7 +627,7 @@ async def auto_match_reconciliation(
         result = await db.execute(query)
         payments = result.scalars().all()
         
-        # If no payments found on specific date, search last 30 days
+        # Nếu không tìm thấy thanh toán vào ngày cụ thể, tìm kiếm 30 ngày gần đây
         if len(payments) == 0:
             logger.info(f"No payments found for {reconcile_date}, searching last 30 days...")
             start_date = reconcile_date - timedelta(days=30)
@@ -628,25 +640,25 @@ async def auto_match_reconciliation(
             payments = result.scalars().all()
             logger.info(f"Found {len(payments)} payments in last 30 days")
         
-        # In a real system, we'd have a BankTransaction table
-        # For now, we simulate with matching all payments as "matched"
+        # Trong hệ thống thực, chúng ta sẽ có một bảng BankTransaction
+        # Hiện tại, chúng ta mô phỏng bằng cách khớp tất cả các khoản thanh toán thành "đã khớp"
         matches = []
         unmatched_payment_ids = []
         
         for idx, payment in enumerate(payments):
-            # Simulate: every payment gets matched to a "bank transaction"
-            # with simulated bank_transaction_id = payment.id + 10000
+            # Mô phỏng: mỗi khoản thanh toán được khớp với một "giao dịch ngân hàng"
+            # với simulated bank_transaction_id = payment.id + 10000
             match = ReconciliationMatch(
-                bank_transaction_id=payment.id + 10000,  # Simulated bank ID
+                bank_transaction_id=payment.id + 10000,  # ID ngân hàng được mô phỏng
                 payment_id=payment.id,
                 bank_amount=float(payment.amount),
                 payment_amount=float(payment.amount),
-                match_confidence=100.0,  # Perfect match
+                match_confidence=100.0,  # Khớp hoàn hảo
                 status="matched"
             )
             matches.append(match)
         
-        total_bank = len(payments)  # Simulated
+        total_bank = len(payments)  # Mô phỏng
         total_matched = len(matches)
         total_unmatched = 0
         
@@ -674,16 +686,16 @@ async def confirm_reconciliation(
     notes: Optional[str] = None
 ) -> ReconciliationActionResponse:
     """
-    Confirm a reconciliation match.
+    Xác nhận một lần khớp điều hòa.
     
-    In production, this would:
-    1. Update BankTransaction.status = 'matched'
-    2. Link BankTransaction to Payment
-    3. Create audit log entry
+    Trong sản xuất, điều này sẽ:
+    1. Cập nhật BankTransaction.status = 'matched'
+    2. Liên kết BankTransaction với Payment
+    3. Tạo mục nhập nhật ký kiểm toán
     """
     try:
-        # In a real system, update the bank transaction record
-        # For now, we just return success
+        # Trong hệ thống thực, cập nhật bản ghi giao dịch ngân hàng
+        # Hiện tại, chúng ta chỉ trả về thành công
         
         logger.info(f"Confirmed match: bank_txn={transaction_id}, payment={payment_id}, notes={notes}")
         
@@ -705,19 +717,19 @@ async def reject_reconciliation(
     transaction_id: int
 ) -> ReconciliationActionResponse:
     """
-    Reject a suggested reconciliation match.
+    Từ chối một gợi ý khớp điều hòa.
     
-    In production, this would:
-    1. Update BankTransaction.status = 'rejected'
-    2. Remove suggested match
-    3. Keep transaction in pending list for manual review
+    Trong sản xuất, điều này sẽ:
+    1. Cập nhật BankTransaction.status = 'rejected'
+    2. Loại bỏ gợi ý khớp
+    3. Giữ giao dịch trong danh sách chờ xử lý để xem xét thủ công
     """
     try:
         logger.info(f"Rejected match for bank_txn={transaction_id}")
         
         return ReconciliationActionResponse(
             success=True,
-            message=f"Rejected match for bank transaction {transaction_id}",
+            message=f"Successfully rejected match for bank transaction {transaction_id}",
             transaction_id=transaction_id,
             new_status="rejected"
         )
@@ -733,16 +745,16 @@ async def get_pending_reconciliations(
     reconcile_date: date
 ) -> list:
     """
-    Get list of pending (unmatched) transactions.
+    Lấy danh sách các giao dịch chờ xử lý (không khớp).
     
-    In production, this would query BankTransaction table
-    where status = 'pending'.
+    Trong sản xuất, điều này sẽ truy vấn bảng BankTransaction
+    nơi status = 'pending'.
     """
     from app.models.finance import Payment
     from sqlalchemy import select
     
     try:
-        # Get payments that might need reconciliation
+        # Lấy các khoản thanh toán có thể cần điều hòa
         query = select(Payment).where(
             Payment.org_id == org_id,
             Payment.transaction_date == reconcile_date
@@ -750,8 +762,8 @@ async def get_pending_reconciliations(
         result = await db.execute(query)
         payments = result.scalars().all()
         
-        # In a real system, we'd return unmatched bank transactions
-        # For now, return empty list (all matched in simulation)
+        # Trong hệ thống thực, chúng ta sẽ trả về các giao dịch ngân hàng không khớp
+        # Hiện tại, trả về danh sách trống (tất cả khớp trong mô phỏng)
         pending = []
         
         return pending

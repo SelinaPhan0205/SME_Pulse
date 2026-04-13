@@ -11,7 +11,7 @@ services:
       - "${POSTGRES_PORT}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d  # Mount directory of init scripts
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
@@ -71,9 +71,11 @@ services:
       # Performance tuning
       - AIRFLOW__CORE__PARALLELISM=32
       - AIRFLOW__CORE__MAX_ACTIVE_RUNS_PER_DAG=16
-      - AIRFLOW__CORE__DAG_CONCURRENCY=16
+      - AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG=16
       - AIRFLOW__SCHEDULER__SCHEDULER_HEARTBEAT_SEC=5
       - AIRFLOW__LOGGING__LOGGING_LEVEL=INFO
+      # Keep MLflow artifacts under Airflow writable volume path.
+      - MLFLOW_TRACKING_URI=file:///opt/airflow/mlflow
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
@@ -113,6 +115,8 @@ services:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://sme:sme123@postgres:5432/sme
       - AIRFLOW__CORE__FERNET_KEY=ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg=
       - AIRFLOW__WEBSERVER__SECRET_KEY=secret
+      # Keep MLflow artifacts under Airflow writable volume path.
+      - MLFLOW_TRACKING_URI=file:///opt/airflow/mlflow
     ports:
       - "8080:8080"
     volumes:
@@ -140,6 +144,28 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+    networks:
+      - sme-network
+
+  # ===== OPTIONAL DBT SERVICE (PHASED DECOUPLING) =====
+  dbt:
+    build:
+      context: .
+      dockerfile: ./dbt/Dockerfile
+    container_name: sme-dbt
+    command: ["sleep", "infinity"]
+    working_dir: /opt/dbt
+    volumes:
+      - ./dbt:/opt/dbt
+    depends_on:
+      trino:
+        condition: service_healthy
+      hive-metastore:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    profiles:
+      - dbt
     networks:
       - sme-network
 
@@ -288,6 +314,15 @@ services:
       # Redis & Celery
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      # Trino
+      TRINO_HOST: trino
+      TRINO_PORT: 8080
+      TRINO_USER: api_backend
+      TRINO_CATALOG: sme_lake
+      TRINO_SCHEMA: gold
+      TRINO_TIMEOUT: 40
+      # MLflow
+      MLFLOW_TRACKING_URI: file:///opt/airflow/mlflow
       # MinIO
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: minioadmin
@@ -304,7 +339,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD-SHELL", "python -c \"import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health', timeout=5).getcode()==200 else 1)\""]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -330,6 +365,15 @@ services:
       # Redis & Celery
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      # Trino
+      TRINO_HOST: trino
+      TRINO_PORT: 8080
+      TRINO_USER: api_backend
+      TRINO_CATALOG: sme_lake
+      TRINO_SCHEMA: gold
+      TRINO_TIMEOUT: 40
+      # MLflow
+      MLFLOW_TRACKING_URI: file:///opt/airflow/mlflow
       # MinIO
       MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: minioadmin

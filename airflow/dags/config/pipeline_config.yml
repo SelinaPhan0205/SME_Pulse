@@ -27,32 +27,39 @@ dbt:
   project_dir: "/opt/dbt"
   target: "dev"
   threads: 4
+  execution_mode: "airflow_local"  # airflow_local | standalone_service
+  standalone_service:
+    service_name: "dbt"
+    project_dir: "/opt/dbt"
+    profiles_dir: "/opt/dbt"
   
   # dbt commands (executed from project_dir)
   seed_command: "dbt seed --profiles-dir /opt/dbt"
   silver_staging_command: "dbt run --select tag:staging --profiles-dir /opt/dbt"
   test_silver_staging_command: "dbt test --select tag:staging --profiles-dir /opt/dbt"
-  silver_feature_command: "dbt run --select tag:feature --profiles-dir /opt/dbt"
-  test_silver_feature_command: "dbt test --select tag:feature --profiles-dir /opt/dbt"
-  silver_ml_training_command: "dbt run --select tag:ml_training --profiles-dir /opt/dbt"
-  test_silver_ml_training_command: "dbt test --select tag:ml_training --profiles-dir /opt/dbt"
-  gold_dims_command: "dbt run --select tag:dimension --profiles-dir /opt/dbt"
-  test_gold_dims_command: "dbt test --select tag:dimension --profiles-dir /opt/dbt"
-  gold_facts_command: "dbt run --select tag:fact --profiles-dir /opt/dbt"
-  test_gold_facts_command: "dbt test --select tag:fact --profiles-dir /opt/dbt"
-  gold_links_command: "dbt run --select tag:link --profiles-dir /opt/dbt"
-  test_gold_links_command: "dbt test --select tag:link --profiles-dir /opt/dbt"
-  gold_kpi_command: "dbt run --select tag:kpi --profiles-dir /opt/dbt"
-  test_gold_kpi_command: "dbt test --select tag:kpi --profiles-dir /opt/dbt"
-  gold_ml_scores_command: "dbt run --select tag:ml_scores --profiles-dir /opt/dbt"
-  test_gold_ml_scores_command: "dbt test --select tag:ml_scores --profiles-dir /opt/dbt"
+  silver_feature_command: "dbt run --select +tag:feature_store --profiles-dir /opt/dbt"
+  test_silver_feature_command: "dbt test --select +tag:feature_store --profiles-dir /opt/dbt"
+  silver_ml_training_command: "dbt run --select +tag:ml_training --profiles-dir /opt/dbt"
+  test_silver_ml_training_command: "dbt test --select +tag:ml_training --profiles-dir /opt/dbt"
+  gold_dims_command: "dbt run --select +tag:dimension --profiles-dir /opt/dbt"
+  test_gold_dims_command: "dbt test --select +tag:dimension --profiles-dir /opt/dbt"
+  gold_facts_command: "dbt run --select +tag:fact --profiles-dir /opt/dbt"
+  test_gold_facts_command: "dbt test --select +tag:fact --profiles-dir /opt/dbt"
+  gold_links_command: "dbt run --select +tag:link --profiles-dir /opt/dbt"
+  test_gold_links_command: "dbt test --select +tag:link --profiles-dir /opt/dbt"
+  gold_kpi_command: "dbt run --select +tag:kpi --profiles-dir /opt/dbt"
+  test_gold_kpi_command: "dbt test --select +tag:kpi --profiles-dir /opt/dbt"
+  gold_ml_scores_command: "dbt run --select +tag:ml_scores --profiles-dir /opt/dbt"
+  test_gold_ml_scores_command: "dbt test --select +tag:ml_scores --profiles-dir /opt/dbt"
 
 metabase:
+  enabled: true
   url: "http://metabase:3000"
   database_id: 1
   # API key sẽ được lấy từ Airflow Variable: METABASE_API_KEY
 
 redis:
+  enabled: true
   host: "redis"
   port: 6379
   db: 0
@@ -60,6 +67,10 @@ redis:
     - "sme:gold:fact_*"
     - "sme:gold:dim_*"
     - "sme:aggregates:*"
+  ml_cache_patterns:
+    - "sme:ml:*"
+    - "sme:analytics:forecast:*"
+    - "sme:analytics:anomaly:*"
 
 # Source data paths (inside Docker container)
 source_data:

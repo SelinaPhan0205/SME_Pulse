@@ -43,6 +43,29 @@ CONFIG_PATH = Path(__file__).parent / "config" / "pipeline_config.yml"
 with open(CONFIG_PATH, 'r') as f:
     PIPELINE_CONFIG = yaml.safe_load(f)
 
+
+def resolve_dbt_command(command_key: str) -> str:
+    """
+    Resolve dbt command from config with execution-mode abstraction.
+
+    Current default keeps running dbt inside Airflow image for backward
+    compatibility. Standalone mode can be enabled after dbt service contract
+    is fully wired in runtime.
+    """
+    dbt_config = PIPELINE_CONFIG.get('dbt', {})
+    command = dbt_config.get(command_key)
+    if not command:
+        raise ValueError(f"Missing dbt command config for key: {command_key}")
+
+    execution_mode = dbt_config.get('execution_mode', 'airflow_local')
+    if execution_mode == 'standalone_service':
+        logger.warning(
+            "dbt execution_mode=standalone_service is not enabled in DAG runtime yet; "
+            "falling back to airflow_local command execution"
+        )
+
+    return command
+
 # Default DAG arguments
 default_args = {
     'owner': 'data-engineering',
@@ -566,14 +589,14 @@ with DAG(
         # 7a: Silver Staging (stg_* models)
         run_staging = BashOperator(
             task_id='run_staging',
-            bash_command=PIPELINE_CONFIG['dbt']['silver_staging_command'],
+            bash_command=resolve_dbt_command('silver_staging_command'),
             cwd='/opt/dbt',
             execution_timeout=timedelta(minutes=10)
         )
         
         test_staging = BashOperator(
             task_id='test_staging',
-            bash_command=PIPELINE_CONFIG['dbt']['test_silver_staging_command'],
+            bash_command=resolve_dbt_command('test_silver_staging_command'),
             cwd='/opt/dbt',
             execution_timeout=timedelta(minutes=5)
         )
@@ -581,14 +604,14 @@ with DAG(
         # 7b: Silver Features (ftr_* models - depends on staging)
         run_features = BashOperator(
             task_id='run_features',
-            bash_command=PIPELINE_CONFIG['dbt']['silver_feature_command'],
+            bash_command=resolve_dbt_command('silver_feature_command'),
             cwd='/opt/dbt',
             execution_timeout=timedelta(minutes=10)
         )
         
         test_features = BashOperator(
             task_id='test_features',
-            bash_command=PIPELINE_CONFIG['dbt']['test_silver_feature_command'],
+            bash_command=resolve_dbt_command('test_silver_feature_command'),
             cwd='/opt/dbt',
             execution_timeout=timedelta(minutes=5)
         )
@@ -596,14 +619,14 @@ with DAG(
         # 7c: Silver ML Training (ml_training_* models - depends on features)
         run_ml_training = BashOperator(
             task_id='run_ml_training',
-            bash_command=PIPELINE_CONFIG['dbt']['silver_ml_training_command'],
+            bash_command=resolve_dbt_command('silver_ml_training_command'),
             cwd='/opt/dbt',
             execution_timeout=timedelta(minutes=10)
         )
         
         test_ml_training = BashOperator(
             task_id='test_ml_training',
-            bash_command=PIPELINE_CONFIG['dbt']['test_silver_ml_training_command'],
+            bash_command=resolve_dbt_command('test_silver_ml_training_command'),
             cwd='/opt/dbt',
             execution_timeout=timedelta(minutes=5)
         )
@@ -622,14 +645,14 @@ with DAG(
     with TaskGroup('gold_dimensions', tooltip='Build Gold dimension tables') as gold_dims_group:
         run_gold_dims = BashOperator(
             task_id='run_gold_dims',
-            bash_command=PIPELINE_CONFIG['dbt']['gold_dims_command'],
+            bash_command=resolve_dbt_command('gold_dims_command'),
             cwd='/opt/dbt',
             execution_timeout=timedelta(minutes=10)
         )
         
         test_gold_dims = BashOperator(
             task_id='test_gold_dims',
-            bash_command=PIPELINE_CONFIG['dbt']['test_gold_dims_command'],
+            bash_command=resolve_dbt_command('test_gold_dims_command'),
             cwd='/opt/dbt',
             execution_timeout=timedelta(minutes=5)
         )
@@ -646,14 +669,14 @@ with DAG(
     with TaskGroup('gold_facts', tooltip='Build Gold fact tables') as gold_facts_group:
         run_gold_facts = BashOperator(
             task_id='run_gold_facts',
-            bash_command=PIPELINE_CONFIG['dbt']['gold_facts_command'],
+            bash_command=resolve_dbt_command('gold_facts_command'),
             cwd='/opt/dbt',
             execution_timeout=timedelta(minutes=15)
         )
         
         test_gold_facts = BashOperator(
             task_id='test_gold_facts',
-            bash_command=PIPELINE_CONFIG['dbt']['test_gold_facts_command'],
+            bash_command=resolve_dbt_command('test_gold_facts_command'),
             cwd='/opt/dbt',
             execution_timeout=timedelta(minutes=5)
         )
@@ -672,14 +695,14 @@ with DAG(
     with TaskGroup('gold_links', tooltip='Build Gold link tables (1% sample)') as gold_links_group:
         run_gold_links = BashOperator(
             task_id='run_gold_links',
-            bash_command=PIPELINE_CONFIG['dbt']['gold_links_command'],
+            bash_command=resolve_dbt_command('gold_links_command'),
             cwd='/opt/dbt',
             execution_timeout=timedelta(minutes=15)  # 15 min timeout cho links
         )
         
         test_gold_links = BashOperator(
             task_id='test_gold_links',
-            bash_command=PIPELINE_CONFIG['dbt']['test_gold_links_command'],
+            bash_command=resolve_dbt_command('test_gold_links_command'),
             cwd='/opt/dbt',
             execution_timeout=timedelta(minutes=5)
         )
@@ -691,14 +714,14 @@ with DAG(
     with TaskGroup('gold_kpi', tooltip='Build Gold KPI tables') as gold_kpi_group:
         run_gold_kpi = BashOperator(
             task_id='run_gold_kpi',
-            bash_command=PIPELINE_CONFIG['dbt']['gold_kpi_command'],
+            bash_command=resolve_dbt_command('gold_kpi_command'),
             cwd='/opt/dbt',
             execution_timeout=timedelta(minutes=10)
         )
         
         test_gold_kpi = BashOperator(
             task_id='test_gold_kpi',
-            bash_command=PIPELINE_CONFIG['dbt']['test_gold_kpi_command'],
+            bash_command=resolve_dbt_command('test_gold_kpi_command'),
             cwd='/opt/dbt',
             execution_timeout=timedelta(minutes=5)
         )
@@ -710,14 +733,14 @@ with DAG(
     with TaskGroup('gold_ml_scores', tooltip='Build ML Scoring tables (UC05 - AR Priority)') as gold_ml_scores_group:
         run_ml_scores = BashOperator(
             task_id='run_ml_ar_scores',
-            bash_command=PIPELINE_CONFIG['dbt']['gold_ml_scores_command'],
+            bash_command=resolve_dbt_command('gold_ml_scores_command'),
             cwd='/opt/dbt',
             execution_timeout=timedelta(minutes=10)
         )
         
         test_ml_scores = BashOperator(
             task_id='test_ml_ar_scores',
-            bash_command=PIPELINE_CONFIG['dbt']['test_gold_ml_scores_command'],
+            bash_command=resolve_dbt_command('test_gold_ml_scores_command'),
             cwd='/opt/dbt',
             execution_timeout=timedelta(minutes=5)
         )
@@ -756,13 +779,13 @@ with DAG(
     # Linear flow with TaskGroups (seeds skipped - already loaded)
     validate_bronze_task >> silver_group
     silver_group >> gold_dims_group >> gold_facts_group
-    gold_facts_group >> gold_links_group >> gold_kpi_group
     
-    # UC05 ML Scoring runs after KPI
-    gold_kpi_group >> gold_ml_scores_group
+    # FIX [P2]: Parallelize independent Gold layers after facts
+    # links, kpi, and ml_scores all depend only on facts — run them concurrently
+    gold_facts_group >> [gold_links_group, gold_kpi_group, gold_ml_scores_group]
     
-    # Trigger ML Predict DAG after all Gold layers complete
-    gold_ml_scores_group >> trigger_ml_predict
+    # Trigger ML Predict DAG after ALL Gold layers complete
+    [gold_links_group, gold_kpi_group, gold_ml_scores_group] >> trigger_ml_predict
     
     # Report and notification run in parallel with ML trigger
-    gold_ml_scores_group >> generate_report_task >> send_notification_task
+    [gold_links_group, gold_kpi_group, gold_ml_scores_group] >> generate_report_task >> send_notification_task
