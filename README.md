@@ -19,6 +19,7 @@
 - [🛠️ Technology Stack](#️-technology-stack)
 - [📁 Project Structure](#-project-structure)
 - [🚀 Quick Start](#-quick-start)
+- [✅ Project Improvements (Phase 0-3)](#-project-improvements-phase-0-3)
 - [📊 Use Cases](#-use-cases)
 - [🔐 Security & RBAC](#-security--rbac)
 - [📚 Documentation](#-documentation)
@@ -46,7 +47,7 @@
 - 🔄 **dbt Transformations** - Modular SQL models with lineage tracking
 
 ### Developer Experience
-- 🐳 **Docker Compose** - One-command deployment (12 services)
+- 🐳 **Docker Compose** - One-command deployment (11 default services, optional dbt profile)
 - 🔒 **JWT Authentication** - Secure API access with role-based authorization
 - 📊 **Metabase Integration** - Embedded BI dashboards
 - 🚀 **React + FastAPI** - Modern frontend with async backend
@@ -138,7 +139,7 @@
 ```
 sme-pulse/
 ├── 📄 README.md                    # This file
-├── 🐳 docker-compose.yml           # 12 services orchestration
+├── 🐳 docker-compose.yml           # 11 default services orchestration (+ optional dbt profile)
 ├── 🔒 .env                         # Environment variables (SECRET_KEY, DB passwords)
 ├── 📚 docs/                        # Documentation
 │   ├── architecture/               # System design docs
@@ -287,7 +288,7 @@ pip install -r ops/requirements_ingest.txt
 ### 4️⃣ Start Services
 
 ```bash
-# Start all 12 services
+# Start default runtime services
 docker-compose up -d
 
 # Check service health
@@ -301,11 +302,13 @@ docker-compose logs -f backend
 | Service | Port | URL |
 |---------|------|-----|
 | Backend (FastAPI) | 8000 | http://localhost:8000/api/docs |
-| Frontend (React) | 5173 | http://localhost:5173 |
 | Airflow Web | 8080 | http://localhost:8080 (admin/admin) |
 | Metabase | 3000 | http://localhost:3000 |
 | MinIO Console | 9001 | http://localhost:9001 |
 | Trino | 8081 | http://localhost:8081 |
+
+**Optional profile service (not started by default):**
+- dbt service: `docker compose --profile dbt up -d dbt`
 
 ### 5️⃣ Bootstrap Lakehouse
 
@@ -314,21 +317,21 @@ docker-compose logs -f backend
 docker-compose exec trino trino --catalog sme_lake --execute "$(cat sql/00_bootstrap_schemas.sql)"
 
 # Run initial data ingestion
-docker-compose exec backend python /opt/ops/run_all_ingest.py
+docker-compose exec airflow-scheduler python /opt/ops/run_all_ingest.py
 ```
 
 ### 5️⃣ Run dbt Transformations
 
 ```bash
-# Run all dbt models (Bronze → Silver → Gold)
-docker-compose exec dbt dbt run
+# Default runtime: execute dbt inside Airflow container (mounted at /opt/dbt)
+docker-compose exec airflow-scheduler bash -lc "cd /opt/dbt && dbt run --profiles-dir /opt/dbt"
 
 # Run dbt tests
-docker-compose exec dbt dbt test
+docker-compose exec airflow-scheduler bash -lc "cd /opt/dbt && dbt test --profiles-dir /opt/dbt"
 
-# Generate documentation
-docker-compose exec dbt dbt docs generate
-docker-compose exec dbt dbt docs serve --port 8082
+# Optional: use standalone dbt profile service
+# docker compose --profile dbt up -d dbt
+# docker compose exec dbt dbt run --profiles-dir /opt/dbt
 ```
 
 ### 6️⃣ Trigger Airflow DAGs
@@ -351,9 +354,35 @@ docker-compose exec airflow-scheduler airflow dags trigger sme_pulse_daily_etl
 # Open browser: http://localhost:5173
 
 # Default credentials (demo user):
-# Email: owner@demo.com
-# Password: password123
+# Email: admin@sme.com
+# Password: 123456
 ```
+
+---
+
+## ✅ Project Improvements (Phase 0-3)
+
+### Phase 0 - Baseline and Runtime Verification
+- Verified compose runtime health across core lakehouse and backend services.
+- Validated Airflow DAG import/runtime readiness for daily ETL and ML flows.
+- Confirmed baseline schema/table accessibility through Trino.
+
+### Phase 1 - Data Pipeline Hardening
+- Stabilized Bronze -> Silver -> Gold flow orchestration.
+- Improved dbt transformation consistency and deterministic DAG execution order.
+- Added/validated data-quality checks on critical Gold outputs.
+
+### Phase 2 - ML Pipeline and Serving Correctness
+- Hardened UC09/UC10 evaluation and serving reliability.
+- Enforced tenant-safe ML output usage (org-scoped serving behavior).
+- Improved prediction write-path behavior and runtime validation evidence.
+
+### Phase 3 - Security, Runtime, and Platform Readiness
+- Standardized RBAC dependencies on sensitive mutation endpoints.
+- Centralized backend runtime configuration for Trino/MLflow and startup safety checks.
+- Replaced ML serving cache placeholders with concrete Redis invalidation and Metabase refresh hooks.
+- Added phased standalone dbt service contract while preserving backward-compatible default runtime.
+- Completed full runtime validation (backend + airflow + redis + metabase) with passing evidence.
 
 ---
 
@@ -402,7 +431,7 @@ docker-compose exec airflow-scheduler airflow dags trigger sme_pulse_daily_etl
 ## 🔐 Security & RBAC
 
 ### Authentication
-- **JWT Tokens**: RS256 algorithm with 60-min expiry
+- **JWT Tokens**: HS256 algorithm (configurable via `BACKEND_ALGORITHM`) with default 30-min expiry
 - **Password Hashing**: bcrypt with salt
 - **Multi-tenancy**: All queries filtered by `org_id`
 
@@ -466,19 +495,20 @@ docker-compose exec backend pytest tests/test_auth.py
 ### Frontend Tests
 ```bash
 # Run unit tests
-docker-compose exec frontend npm test
+npm test
 
 # Run E2E tests
-docker-compose exec frontend npm run test:e2e
+npm run test:e2e
 ```
 
 ### dbt Tests
 ```bash
-# Run all dbt tests
-docker-compose exec dbt dbt test
+# Default runtime: execute dbt tests from Airflow container
+docker-compose exec airflow-scheduler bash -lc "cd /opt/dbt && dbt test --profiles-dir /opt/dbt"
 
-# Run specific model tests
-docker-compose exec dbt dbt test --select stg_invoices
+# Optional profile service mode
+# docker compose --profile dbt up -d dbt
+# docker compose exec dbt dbt test --profiles-dir /opt/dbt
 ```
 
 ---
@@ -489,8 +519,8 @@ docker-compose exec dbt dbt test --select stg_invoices
 | Level | Technology | TTL | Purpose |
 |-------|-----------|-----|---------|
 | **L1** | React Query | 30 min | Browser cache (forecast) |
-| **L2** | Redis | 30 min | Backend cache (KPIs) |
-| **L3** | Trino | Auto | Query result cache |
+| **L2** | Redis | N/A | Celery broker/result backend + ML cache invalidation patterns |
+| **L3** | Trino | Engine-managed | Query execution layer for Gold analytics |
 
 ### Typical Response Times
 | Endpoint | Cache HIT | Cache MISS | Notes |
@@ -499,21 +529,6 @@ docker-compose exec dbt dbt test --select stg_invoices
 | AR/AP Aging | ~2ms | ~50ms | PostgreSQL |
 | Prophet Forecast | ~50ms | ~400ms | Trino + Iceberg |
 | Anomaly Detection | ~10ms | ~350ms | Trino + Iceberg |
-
----
-
-## 🔄 CI/CD (Planned)
-
-### GitHub Actions Workflow
-```yaml
-# .github/workflows/ci.yml
-- Lint (Python: black, flake8 | JS: eslint)
-- Unit Tests (pytest, jest)
-- Build Docker Images
-- Deploy to Staging
-- E2E Tests
-- Deploy to Production
-```
 
 ---
 
@@ -582,14 +597,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
     </td>
   </tr>
 </table>
-
-### Responsibilities
-
-| Member | Backend | Frontend | Data Pipeline | ML/AI | Analytics |
-|--------|---------|----------|---------------|-------|-----------|
-| **Nguyễn Anh Tuấn** | ✅ FastAPI, SQLAlchemy, Auth JWT | | ✅ Airflow, dbt, Trino, Iceberg | ✅ Prophet | |
-| **Phan Thị Xuân Tiên** | | ✅ React, TanStack Query | ✅ ETL, dbt models, Trino, Iceberg | | ✅ AR/AP scoring |
-| **Nguyễn Văn Thanh Sơn** | | | ✅ Trino, Iceberg, dbt | ✅Isolation Forest | ✅ KPI, Reports Metabase | 
 
 ### Contact
 
