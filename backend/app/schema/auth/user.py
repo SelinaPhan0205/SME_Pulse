@@ -1,11 +1,11 @@
-"""User-related schemas."""
+"""Các schema liên quan đến người dùng."""
 
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
 class TokenPayload(BaseModel):
-    """JWT token payload structure."""
+    """Cáu trúc tải trọng JWT token."""
     sub: int = Field(..., description="User ID")
     org_id: int = Field(..., description="Organization ID for multi-tenancy")
     roles: List[str] = Field(default_factory=list, description="User roles")
@@ -13,7 +13,7 @@ class TokenPayload(BaseModel):
 
 
 class UserResponse(BaseModel):
-    """User response for /auth/me endpoint."""
+    """Phản hồi người dùng cho endpoint /auth/me."""
     id: int
     email: str
     full_name: Optional[str] = None

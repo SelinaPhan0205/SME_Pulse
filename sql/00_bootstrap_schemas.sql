@@ -8,24 +8,24 @@
 -- =====================================================
 
 -- Catalog: sme_lake (Iceberg connector with Hive Metastore)
--- Warehouse location: s3a://sme-lake/
+-- Warehouse location: s3://sme-lake/
 
 -- 1. Create Bronze schema (raw Iceberg tables)
 CREATE SCHEMA IF NOT EXISTS sme_lake.bronze
 WITH (
-    location = 's3a://sme-lake/bronze/'
+    location = 's3://sme-lake/bronze/'
 );
 
 -- 2. Create Silver schema (cleaned, conformed data)
 CREATE SCHEMA IF NOT EXISTS sme_lake.silver
 WITH (
-    location = 's3a://sme-lake/silver/'
+    location = 's3://sme-lake/silver/'
 );
 
 -- 3. Create Gold schema (business metrics, aggregates)
 CREATE SCHEMA IF NOT EXISTS sme_lake.gold
 WITH (
-    location = 's3a://sme-lake/gold/'
+    location = 's3://sme-lake/gold/'
 );
 
 -- Verify schemas created

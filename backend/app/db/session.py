@@ -1,4 +1,4 @@
-﻿"""Async SQLAlchemy Session Management"""
+﻿"""Quản lý AsyncSession của SQLAlchemy"""
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -11,7 +11,7 @@ from sqlalchemy.pool import NullPool
 from app.core.config import settings
 
 
-# Create async engine
+# Tạo async engine
 engine: AsyncEngine = create_async_engine(
     settings.DATABASE_URL,
     pool_size=settings.BACKEND_POOL_SIZE,
@@ -20,7 +20,7 @@ engine: AsyncEngine = create_async_engine(
     poolclass=NullPool if settings.BACKEND_ENVIRONMENT == "test" else None,
 )
 
-# Create async session factory
+# Tạo async session factory
 AsyncSessionLocal = async_sessionmaker(
     engine,
     class_=AsyncSession,
@@ -31,7 +31,7 @@ AsyncSessionLocal = async_sessionmaker(
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """Dependency for FastAPI routes to get database session"""
+    """Dependency cho FastAPI routes để lấy session cơ sở dữ liệu"""
     async with AsyncSessionLocal() as session:
         try:
             yield session

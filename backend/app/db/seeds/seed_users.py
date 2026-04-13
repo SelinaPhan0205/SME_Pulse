@@ -1,4 +1,4 @@
-"""Seed script for users."""
+"""Kịch bản seed cho người dùng."""
 
 from sqlalchemy import select
 from app.models.core import User, Role, UserRole, Organization
@@ -6,11 +6,11 @@ from app.core.security import get_password_hash
 
 
 async def seed_users(session):
-    """Insert default admin user with roles into the database."""
-    # Get default organization
+    """Chèn người dùng quản trị viên mặc định có vai trò vào cơ sở dữ liệu."""
+    # Lấy tổ chức mặc định
     org = (await session.execute(select(Organization))).scalar_one()
 
-    # Get roles
+    # Lấy các vai trò
     role_owner = (
         await session.execute(select(Role).where(Role.code == "owner"))
     ).scalar_one()
@@ -18,11 +18,11 @@ async def seed_users(session):
         await session.execute(select(Role).where(Role.code == "admin"))
     ).scalar_one()
 
-    # Create admin user
+    # Tạo người dùng quản trị viên
     admin_data = {
         "email": "admin@sme.com",
         "full_name": "Administrator",
-        "password_hash": get_password_hash("123456"),  # Password = 123456
+        "password_hash": get_password_hash("123456"),  # Mật khẩu = 123456
         "org_id": org.id,
         "status": "active",
     }
@@ -35,12 +35,12 @@ async def seed_users(session):
     if not user:
         user = User(**admin_data)
         session.add(user)
-        await session.flush()  # Need flush to get user.id
+        await session.flush()  # Cần flush để lấy user.id
         print("[seed] Created admin user (email: admin@sme.com, password: 123456)")
     else:
         print("[seed] Admin user already exists, skipping")
 
-    # Assign both roles: owner + admin
+    # Gán cả hai vai trò: chủ sở hữu + quản trị viên
     existing_owner_role = await session.execute(
         select(UserRole).where(
             (UserRole.user_id == user.id)

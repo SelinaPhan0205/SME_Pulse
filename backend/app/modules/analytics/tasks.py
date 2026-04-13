@@ -1,4 +1,4 @@
-"""Celery tasks for background export jobs"""
+"""Celery tasks cho các công việc xuất khẩu dưới nền"""
 
 import logging
 import pandas as pd
@@ -12,19 +12,19 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Trino connection string (for data warehouse queries)
+# Chuỗi kết nối Trino (cho các truy vấn kho dữ liệu)
 TRINO_HOST = os.getenv("TRINO_HOST", "trino")
 TRINO_PORT = int(os.getenv("TRINO_PORT", "8080"))
 TRINO_USER = "trino"
 TRINO_CATALOG = "sme_lake"
 TRINO_SCHEMA = "silver"
 
-# PostgreSQL fallback for when Trino is not available
-# Use sync connection URL for pandas
+# Dự phòng PostgreSQL cho khi Trino không có sẵn
+# Sử dụng URL kết nối đồng bộ cho pandas
 PG_DATABASE_URL = settings.DATABASE_URL_SYNC
 
 def get_trino_connection():
-    """Create Trino SQL connection"""
+    """Tạo kết nối SQL Trino"""
     import trino
     return trino.dbapi.connect(
         host=TRINO_HOST,
@@ -35,19 +35,19 @@ def get_trino_connection():
     )
 
 def get_postgres_engine():
-    """Create PostgreSQL engine for fallback queries"""
+    """Tạo engine PostgreSQL cho truy vấn dự phòng"""
     return create_engine(PG_DATABASE_URL)
 
 def query_with_fallback(trino_query: str, postgres_query: str, use_postgres: bool = False):
     """
-    Try Trino first, fall back to PostgreSQL if Trino is unavailable.
+    Thử Trino trước, quay lại PostgreSQL nếu Trino không khả dụng.
     
-    Args:
-        trino_query: SQL query for Trino
-        postgres_query: SQL query for PostgreSQL
-        use_postgres: Force PostgreSQL fallback
+    Đối số:
+        trino_query: Truy vấn SQL cho Trino
+        postgres_query: Truy vấn SQL cho PostgreSQL
+        use_postgres: Buộc dự phòng PostgreSQL
         
-    Returns:
+    Trả lại:
         pandas DataFrame
     """
     if not use_postgres:
@@ -55,35 +55,35 @@ def query_with_fallback(trino_query: str, postgres_query: str, use_postgres: boo
             conn = get_trino_connection()
             df = pd.read_sql(trino_query, conn)
             conn.close()
-            logger.info("✅ Query executed via Trino")
+            logger.info("Query executed via Trino")
             return df
         except Exception as e:
-            logger.warning(f"⚠️ Trino unavailable, falling back to PostgreSQL: {e}")
+            logger.warning(f"Trino unavailable, falling back to PostgreSQL: {e}")
     
-    # Fallback to PostgreSQL
+    # Dự phòng sang PostgreSQL
     engine = get_postgres_engine()
     df = pd.read_sql(postgres_query, engine)
     engine.dispose()
-    logger.info("✅ Query executed via PostgreSQL fallback")
+    logger.info("Query executed via PostgreSQL fallback")
     return df
 
 @celery_app.task(bind=True, name="export_ar_aging")
 def export_ar_aging(self, org_id: int) -> dict:
     """
-    Background task to export AR aging report
+    Công việc dưới nền để xuất báo cáo lão hóa AR
     
-    Args:
-        org_id: Organization ID
+    Đối số:
+        org_id: ID Tổ chức
         
-    Returns:
-        dict with status and file_url
+    Trả lại:
+        dict với trạng thái và file_url
     """
     try:
-        # Update job status to processing
+        # Cập nhật trạng thái công việc để xử lý
         self.update_state(state="PROGRESS", meta={"status": "processing", "progress": 25})
-        logger.info(f"📊 Exporting AR Aging for org_id={org_id}")
+        logger.info(f"Exporting AR Aging for org_id={org_id}")
         
-        # Query for Trino
+        # Truy vấn cho Trino
         trino_query = f"""
         SELECT 
             payment_id,
@@ -95,11 +95,12 @@ def export_ar_aging(self, org_id: int) -> dict:
             status,
             updated_at
         FROM {TRINO_CATALOG}.{TRINO_SCHEMA}.stg_app_payments
+        WHERE org_id = {org_id}
         ORDER BY updated_at DESC
         """
         
-        # Fallback query for PostgreSQL - AR Invoices
-        # Tables are in 'finance' and 'core' schemas
+        # Truy vấn dự phòng cho PostgreSQL - Hóa đơn AR
+        # Bảng nằm trong các lược đồ 'finance' và 'core'
         postgres_query = f"""
         SELECT 
             i.id as invoice_id,
@@ -131,27 +132,27 @@ def export_ar_aging(self, org_id: int) -> dict:
         
         df = query_with_fallback(trino_query, postgres_query)
         
-        logger.info(f"✅ Loaded {len(df)} records")
+        logger.info(f"Loaded {len(df)} records")
         self.update_state(state="PROGRESS", meta={"status": "generating_excel", "progress": 50})
         
-        # Generate Excel file
+        # Tạo tệp Excel
         file_path = excel_service.export_ar_aging(df, org_id)
-        logger.info(f"✅ Generated Excel: {file_path}")
+        logger.info(f"Generated Excel: {file_path}")
         
         self.update_state(state="PROGRESS", meta={"status": "uploading_file", "progress": 75})
         
-        # Try MinIO upload, fallback to local file URL
+        # Cố gắng tải lên MinIO, quay lại URL tệp cục bộ
         try:
             filename = os.path.basename(file_path)
             object_name = f"exports/ar_aging/{filename}"
             result = minio_client.upload_file(file_path, object_name)
             file_url = result["file_url"]
-            logger.info(f"✅ Uploaded to MinIO: {object_name}")
+            logger.info(f"Uploaded to MinIO: {object_name}")
             
-            # Clean up local file
+            # Dọn sạch tệp cục bộ
             os.remove(file_path)
         except Exception as upload_err:
-            logger.warning(f"⚠️ MinIO upload failed, keeping local file: {upload_err}")
+            logger.warning(f"MinIO upload failed, keeping local file: {upload_err}")
             file_url = f"file://{file_path}"
         
         return {
@@ -162,7 +163,7 @@ def export_ar_aging(self, org_id: int) -> dict:
         }
         
     except Exception as e:
-        logger.error(f"❌ Export AR Aging failed: {e}")
+        logger.error(f"Export AR Aging failed: {e}")
         return {
             "status": "failed",
             "error_message": str(e),
@@ -172,21 +173,21 @@ def export_ar_aging(self, org_id: int) -> dict:
 @celery_app.task(bind=True, name="export_ap_aging")
 def export_ap_aging(self, org_id: int) -> dict:
     """
-    Background task to export AP aging report
+    Tác vụ nền để xuất báo cáo lão hóa AP
     
-    Args:
-        job_id: Export job ID
-        org_id: Organization ID
+    Đối số:
+        job_id: ID Công việc xuất
+        org_id: ID Tổ chức
         
-    Returns:
-        dict with status and file_url
+    Trả lại:
+        dict với trạng thái và file_url
     """
     try:
-        # Update job status to processing
+        # Cập nhật trạng thái công việc để xử lý
         self.update_state(state="PROGRESS", meta={"status": "processing", "progress": 25})
-        logger.info(f"📊 Exporting AP Aging for org_id={org_id}")
+        logger.info(f"Exporting AP Aging for org_id={org_id}")
         
-        # Query for Trino
+        # Truy vấn cho Trino
         trino_query = f"""
         SELECT 
             payment_id,
@@ -197,10 +198,11 @@ def export_ap_aging(self, org_id: int) -> dict:
             reference_no,
             status
         FROM {TRINO_CATALOG}.{TRINO_SCHEMA}.stg_app_payments
+        WHERE org_id = {org_id}
         ORDER BY updated_at DESC
         """
         
-        # Fallback query for PostgreSQL - AP Bills
+        # Truy vấn dự phòng cho PostgreSQL - Hợp đồng AP
         postgres_query = f"""
         SELECT 
             b.id as bill_id,
@@ -232,25 +234,25 @@ def export_ap_aging(self, org_id: int) -> dict:
         
         df = query_with_fallback(trino_query, postgres_query)
         
-        logger.info(f"✅ Loaded {len(df)} AP payments")
+        logger.info(f"Loaded {len(df)} AP payments")
         self.update_state(state="PROGRESS", meta={"status": "generating_excel", "progress": 50})
         
-        # Generate Excel file
+        # Tạo tệp Excel
         file_path = excel_service.export_ap_aging(df, org_id)
-        logger.info(f"✅ Generated Excel: {file_path}")
+        logger.info(f"Generated Excel: {file_path}")
         
         self.update_state(state="PROGRESS", meta={"status": "uploading_file", "progress": 75})
         
-        # Upload to MinIO
+        # Tải lên MinIO
         filename = os.path.basename(file_path)
         object_name = f"exports/ap_aging/{filename}"
         result = minio_client.upload_file(file_path, object_name)
         
-        logger.info(f"✅ Uploaded to MinIO: {object_name}")
+        logger.info(f"Uploaded to MinIO: {object_name}")
         
-        # Clean up local file
+        # Dọn sạch tệp cục bộ
         os.remove(file_path)
-        logger.info(f"✅ Cleaned up local file")
+        logger.info(f"Cleaned up local file")
         
         return {
             "status": "completed",
@@ -260,7 +262,7 @@ def export_ap_aging(self, org_id: int) -> dict:
         }
         
     except Exception as e:
-        logger.error(f"❌ Export AP Aging failed: {e}")
+        logger.error(f"Export AP Aging failed: {e}")
         return {
             "status": "failed",
             "error_message": str(e),
@@ -270,21 +272,21 @@ def export_ap_aging(self, org_id: int) -> dict:
 @celery_app.task(bind=True, name="export_cashflow_forecast")
 def export_cashflow_forecast(self, org_id: int) -> dict:
     """
-    Background task to export cashflow forecast
+    Tác vụ nền để xuất dự báo dòng tiền
     
-    Args:
-        job_id: Export job ID
-        org_id: Organization ID
+    Đối số:
+        job_id: ID Công việc xuất
+        org_id: ID Tổ chức
         
-    Returns:
-        dict with status and file_url
+    Trả lại:
+        dict với trạng thái và file_url
     """
     try:
-        # Update job status to processing
+        # Cập nhật trạng thái công việc để xử lý
         self.update_state(state="PROGRESS", meta={"status": "processing", "progress": 25})
         logger.info(f"📊 Exporting Cashflow Forecast for org_id={org_id}")
         
-        # Query for Trino - Combined AR + Payments for cashflow
+        # Truy vấn cho Trino - AR + Thanh toán kết hợp cho dòng tiền
         trino_query = f"""
         SELECT 
             'AR' as type,
@@ -292,6 +294,7 @@ def export_cashflow_forecast(self, org_id: int) -> dict:
             baseline_create_date as date,
             total_open_amount as amount
         FROM {TRINO_CATALOG}.{TRINO_SCHEMA}.stg_app_ar_invoices
+        WHERE org_id = {org_id}
         UNION ALL
         SELECT 
             'Payment' as type,
@@ -299,11 +302,12 @@ def export_cashflow_forecast(self, org_id: int) -> dict:
             payment_date_formatted as date,
             payment_amount as amount
         FROM {TRINO_CATALOG}.{TRINO_SCHEMA}.stg_app_payments
+        WHERE org_id = {org_id}
         ORDER BY date DESC
         """
         
-        # Fallback query for PostgreSQL - Cashflow Forecast
-        # Note: payments table doesn't have payment_type, using amount sign to determine direction
+        # Truy vấn dự phòng cho PostgreSQL - Dự báo Dòng tiền
+        # Lưu ý: bảng payments không có payment_type, sử dụng dấu amount để xác định hướng
         postgres_query = f"""
         SELECT 
             'AR_Invoice' as type,
@@ -339,20 +343,20 @@ def export_cashflow_forecast(self, org_id: int) -> dict:
         logger.info(f"✅ Loaded {len(df)} forecast records")
         self.update_state(state="PROGRESS", meta={"status": "generating_excel", "progress": 50})
         
-        # Generate Excel file
+        # Tạo tệp Excel
         file_path = excel_service.export_cashflow_forecast(df, org_id)
         logger.info(f"✅ Generated Excel: {file_path}")
         
         self.update_state(state="PROGRESS", meta={"status": "uploading_file", "progress": 75})
         
-        # Upload to MinIO
+        # Tải lên MinIO
         filename = os.path.basename(file_path)
         object_name = f"exports/cashflow/{filename}"
         result = minio_client.upload_file(file_path, object_name)
         
         logger.info(f"✅ Uploaded to MinIO: {object_name}")
         
-        # Clean up local file
+        # Dọn sạch tệp cục bộ
         os.remove(file_path)
         logger.info(f"✅ Cleaned up local file")
         

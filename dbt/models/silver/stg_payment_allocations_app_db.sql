@@ -10,7 +10,7 @@
 -- ===================================================================
 
 with src as (
-    select * from {{ source('app_db', 'payment_allocations_app_db_raw') }}
+    select * from {{ source('bronze_app_db', 'payment_allocations_app') }}
 ),
 
 -- Clean and standardize

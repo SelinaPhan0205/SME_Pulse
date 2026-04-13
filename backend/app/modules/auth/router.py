@@ -1,4 +1,4 @@
-"""Authentication router - API endpoints."""
+"""Router xác thực - API endpoints."""
 
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -34,43 +34,43 @@ async def login(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Login endpoint - authenticate user and return JWT token.
+    Endpoint đăng nhập - xác thực người dùng và trả về JWT token.
     
-    **UC01 - Login**
+    **UC01 - Đăng nhập**
     
-    Args:
-        credentials: Email and password
-        db: Database session
+    Đối số:
+        credentials: Email và mật khẩu
+        db: Phiên cơ sở dữ liệu
     
-    Returns:
-        LoginResponse with JWT token, user info, and roles
+    Trả lại:
+        LoginResponse với JWT token, thông tin người dùng và vai trò
     
-    Raises:
-        HTTPException 401: Invalid credentials
+    Tăng:
+        HTTPException 401: Thông tin xác thực không hợp lệ
     """
-    # Authenticate user
+    # Xác thực người dùng
     result = await authenticate_user(db, credentials.email, credentials.password)
     
     if result is None:
-        logger.warning(f"Failed login attempt for: {credentials.email}")
+        logger.warning(f"Cố gắng đăng nhập thất bại cho: {credentials.email}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Email hoặc mật khẩu không chính xác",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
     user, roles = result
     
-    # Create JWT token
+    # Tạo JWT token
     access_token, expires_in = create_user_token(
         user_id=user.id,
         org_id=user.org_id,
         roles=roles
     )
     
-    logger.info(f"Successful login for user: {user.email} with roles: {roles}")
+    logger.info(f"Đăng nhập thành công cho người dùng: {user.email} với vai trò: {roles}")
     
-    # Build response
+    # Xây dựng phản hồi
     return LoginResponse(
         access_token=access_token,
         token_type="bearer",
@@ -91,17 +91,17 @@ async def get_me(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Get current authenticated user information.
+    Lấy thông tin người dùng đã xác thực hiện tại.
     
-    **Protected endpoint for testing JWT validation**
+    **Endpoint được bảo vệ để kiểm tra xác thực JWT**
     
-    Args:
-        current_user: Current authenticated user from JWT token
+    Đối số:
+        current_user: Người dùng đã xác thực hiện tại từ JWT token
     
-    Returns:
-        UserResponse with user info and roles
+    Trả lại:
+        UserResponse với thông tin người dùng và vai trò
     """
-    # Extract roles from user
+    # Trích xuất vai trò từ người dùng
     roles = [ur.role.code for ur in current_user.roles if ur.role]
     
     return UserResponse(
@@ -121,20 +121,20 @@ async def change_password(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Change current user's password.
+    Thay đổi mật khẩu của người dùng hiện tại.
     
-    **Protected endpoint - requires authentication**
+    **Endpoint được bảo vệ - yêu cầu xác thực**
     
-    Args:
-        request: Old and new passwords
-        current_user: Current authenticated user
-        db: Database session
+    Đối số:
+        request: Mật khẩu cũ và mới
+        current_user: Người dùng đã xác thực hiện tại
+        db: Phiên cơ sở dữ liệu
     
-    Returns:
-        Success message
+    Trả lại:
+        Thông báo thành công
     
-    Raises:
-        HTTPException 400: Old password incorrect or validation failed
+    Tăng:
+        HTTPException 400: Mật khẩu cũ không chính xác hoặc xác thực thất bại
     """
     await change_user_password(
         db=db,
@@ -143,9 +143,9 @@ async def change_password(
         new_password=request.new_password
     )
     
-    logger.info(f"Password changed for user: {current_user.email}")
+    logger.info(f"Mật khẩu đã thay đổi cho người dùng: {current_user.email}")
     
-    return {"message": "Password changed successfully"}
+    return {"message": "Mật khẩu đã được thay đổi thành công"}
 
 
 @router.post("/forgot-password", response_model=PasswordResetResponse)
@@ -154,28 +154,28 @@ async def forgot_password(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Initiate forgot password flow.
+    Bắt đầu quy trình quên mật khẩu.
     
-    **Public endpoint**
+    **Endpoint công khai**
     
-    Sends password reset instructions to user's email.
-    For security, always returns success even if email doesn't exist.
+    Gửi hướng dẫn đặt lại mật khẩu đến email của người dùng.
+    Để bảo mật, luôn trả lại thành công ngay cả khi email không tồn tại.
     
-    Args:
-        request: User email
-        db: Database session
+    Đối số:
+        request: Email người dùng
+        db: Phiên cơ sở dữ liệu
     
-    Returns:
-        Success message with email
+    Trả lại:
+        Thông báo thành công với email
     
-    Note:
-        In production, this should generate a secure reset token,
-        store it in DB, and send an email with reset link.
-        Currently logs the request for development.
+    Ghi chú:
+        Trong sản xuất, điều này sẽ tạo một token đặt lại an toàn,
+        lưu nó trong DB và gửi một email với liên kết đặt lại.
+        Hiện tại ghi nhật ký yêu cầu để phát triển.
     """
     email = await initiate_password_reset(db=db, email=request.email)
     
     return PasswordResetResponse(
-        message="If the email exists, password reset instructions have been sent",
+        message="Nếu email tồn tại, hướng dẫn đặt lại mật khẩu đã được gửi",
         email=email
     )

@@ -1,4 +1,4 @@
-"""Master seed runner - execute all seeds in correct order."""
+"""Trình chạy seed chính - thực thi tất cả các seed theo đúng thứ tự."""
 
 import asyncio
 from app.db.session import AsyncSessionLocal
@@ -10,7 +10,7 @@ from app.db.seeds.seed_accounts import seed_accounts
 
 
 async def run_all_seeds():
-    """Run all seed functions in order."""
+    """Chạy tất cả các hàm seed theo thứ tự."""
     async with AsyncSessionLocal() as session:
         try:
             print("\n🌱 Starting database seed...\n")

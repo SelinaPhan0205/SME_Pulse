@@ -10,6 +10,10 @@ wait_for_postgres() {
     echo "PostgreSQL is ready!"
 }
 
+prepare_mlflow_dir() {
+    mkdir -p /opt/airflow/mlflow
+}
+
 # Function to initialize database (chỉ chạy 1 lần)
 init_airflow() {
     if [ ! -f /opt/airflow/.airflow_db_initialized ]; then
@@ -38,12 +42,14 @@ init_airflow() {
 case "$1" in
     webserver)
         wait_for_postgres
+        prepare_mlflow_dir
         init_airflow
         echo "Starting Airflow Webserver..."
         exec airflow webserver
         ;;
     scheduler)
         wait_for_postgres
+        prepare_mlflow_dir
         # Scheduler cũng check init, nhưng không gây conflict vì có flag file
         init_airflow
         echo "Starting Airflow Scheduler..."

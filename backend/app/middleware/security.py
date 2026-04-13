@@ -1,4 +1,4 @@
-"""Security middleware for request tracking and rate limiting."""
+"""Middleware bảo mật cho theo dõi yêu cầu và giới hạn tốc độ."""
 
 import time
 import uuid
@@ -17,28 +17,28 @@ logger = logging.getLogger(__name__)
 
 class RequestContextMiddleware(BaseHTTPMiddleware):
     """
-    Add request ID and timing to all requests.
-    Useful for request tracing and performance monitoring.
+    Thêm ID yêu cầu và thời gian vào tất cả các yêu cầu.
+    Hữu ích cho theo dõi yêu cầu và giám sát hiệu suất.
     """
     
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        # Generate unique request ID
+        # Tạo ID yêu cầu duy nhất
         request_id = str(uuid.uuid4())
         request.state.request_id = request_id
         
-        # Track request timing
+        # Theo dõi thời gian yêu cầu
         start_time = time.time()
         
-        # Add request ID to response headers
+        # Thêm ID yêu cầu vào header phản hồi
         response = await call_next(request)
         
         process_time = time.time() - start_time
         response.headers["X-Request-ID"] = request_id
         response.headers["X-Process-Time"] = str(process_time)
         
-        # Log request
+        # Ghi nhật ký yêu cầu
         logger.info(
-            f"Request completed",
+            f"Yêu cầu đã hoàn thành",
             extra={
                 "request_id": request_id,
                 "method": request.method,
@@ -54,14 +54,14 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """
-    Add security headers to all responses.
-    Protects against common web vulnerabilities.
+    Thêm header bảo mật vào tất cả các phản hồi.
+    Bảo vệ chống lại các lỗ hổng web phổ biến.
     """
     
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         response = await call_next(request)
         
-        # Security headers
+        # Header bảo mật
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
@@ -73,10 +73,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
-    Simple in-memory rate limiter.
-    Limits login attempts to prevent brute force attacks.
+    Giới hạn tốc độ trong bộ nhớ đơn giản.
+    Giới hạn các cố gắng đăng nhập để ngăn chặn các cuộc tấn công brute force.
     
-    For production: Use Redis-based rate limiting (e.g., slowapi, redis)
+    Để sản xuất: Sử dụng giới hạn tốc độ dựa trên Redis (ví dụ: slowapi, redis)
     """
     
     def __init__(
@@ -89,13 +89,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.max_requests = max_requests
         self.window_seconds = window_seconds
-        self.paths = paths or ["/auth/login"]  # Protect login by default
+        self.paths = paths or ["/auth/login"]  # Bảo vệ đăng nhập theo mặc định
         
-        # In-memory storage: {ip: [(timestamp, count), ...]}
+        # Lưu trữ trong bộ nhớ: {ip: [(timestamp, count), ...]}
         self.requests = defaultdict(list)
     
     def _clean_old_requests(self, ip: str, now: datetime):
-        """Remove requests older than the time window."""
+        """Xóa các yêu cầu cũ hơn cửa sổ thời gian."""
         cutoff = now - timedelta(seconds=self.window_seconds)
         self.requests[ip] = [
             (ts, count) for ts, count in self.requests[ip]
@@ -103,25 +103,25 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         ]
     
     def _get_request_count(self, ip: str, now: datetime) -> int:
-        """Get total request count within the time window."""
+        """Nhận tổng số lượng yêu cầu trong cửa sổ thời gian."""
         self._clean_old_requests(ip, now)
         return sum(count for _, count in self.requests[ip])
     
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        # Only rate limit specific paths
+        # Chỉ giới hạn tốc độ các đường dẫn cụ thể
         if request.url.path not in self.paths:
             return await call_next(request)
         
-        # Get client IP
+        # Lấy IP khách hàng
         client_ip = request.client.host if request.client else "unknown"
         now = datetime.now()
         
-        # Check rate limit
+        # Kiểm tra giới hạn tốc độ
         request_count = self._get_request_count(client_ip, now)
         
         if request_count >= self.max_requests:
             logger.warning(
-                f"Rate limit exceeded",
+                f"Giới hạn tốc độ vượt quá",
                 extra={
                     "client_ip": client_ip,
                     "path": request.url.path,
@@ -129,18 +129,18 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     "max_requests": self.max_requests,
                 }
             )
-            # Return 429 response directly (don't raise HTTPException in middleware)
+            # Trả về phản hồi 429 trực tiếp (không tăng HTTPException trong middleware)
             return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 content={
-                    "error": "Too many requests",
-                    "detail": f"Rate limit exceeded. Please try again in {self.window_seconds} seconds.",
+                    "error": "Quá nhiều yêu cầu",
+                    "detail": f"Giới hạn tốc độ vượt quá. Vui lòng thử lại trong {self.window_seconds} giây.",
                     "retry_after": self.window_seconds,
                 },
                 headers={"Retry-After": str(self.window_seconds)},
             )
         
-        # Record this request
+        # Ghi lại yêu cầu này
         self.requests[client_ip].append((now, 1))
         
         return await call_next(request)

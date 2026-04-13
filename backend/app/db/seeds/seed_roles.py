@@ -1,11 +1,11 @@
-"""Seed script for roles."""
+"""Kịch bản seed cho các vai trò."""
 
 from sqlalchemy import select
 from app.models.core import Role
 
 
 async def seed_roles(session):
-    """Insert default roles into the database."""
+    """Chèn các vai trò mặc định vào cơ sở dữ liệu."""
     roles = [
         {"code": "owner", "name": "Owner"},
         {"code": "accountant", "name": "Accountant"},
@@ -25,4 +25,4 @@ async def seed_roles(session):
         else:
             print(f"[seed] Role {role_data['code']} already exists, skipping")
     
-    await session.flush()  # Flush to make all roles available for subsequent queries
+    await session.flush()  # Flush để làm cho tất cả các vai trò khả dụng cho các truy vấn tiếp theo

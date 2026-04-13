@@ -3,6 +3,11 @@
 # ===================================================
 FROM apache/airflow:2.9.3-python3.11
 
+USER root
+# dbt debug checks git availability; install git once in the custom image.
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
 USER airflow
 # Cài dbt-core và dbt-trino cho Lakehouse stack
 RUN pip install --no-cache-dir \

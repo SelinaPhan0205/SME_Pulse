@@ -1,6 +1,8 @@
 {{
   config(
-    materialized='table',
+    materialized='incremental',
+    unique_key='match_key',
+    incremental_strategy='merge',
     schema='gold',
     tags=['gold', 'links', 'reconciliation']
   )
@@ -14,11 +16,14 @@
 -- LINK_ORDER_SHIPMENT: Đối soát Orders vs Shipments
 -- Match rule: Time window + Customer matching
 -- Purpose: Track order fulfillment and delivery
+-- Fixes applied:
+--   [P0] Removed 1% sampling (MOD hack)
+--   [P1] Replaced CROSS JOIN with INNER JOIN on customer_key + date window
+--   [P1] Added incremental strategy for performance at scale
 -- =====================================================================
 
 WITH orders AS (
-  -- Lấy orders
-  SELECT 
+  SELECT
     f.order_id,
     f.order_date,
     f.customer_key,
@@ -26,16 +31,17 @@ WITH orders AS (
     s.branch_id,
     f.revenue AS order_amount_vnd
   FROM {{ ref('fact_orders') }} f
-  JOIN {{ ref('stg_orders_vn') }} s 
+  JOIN {{ ref('stg_orders_vn') }} s
     ON f.order_id = s.order_id_nat
-  WHERE MOD(f.date_key, 100) = 0  -- SAMPLE 1% for testing
+  {% if is_incremental() %}
+  WHERE f.order_date >= (SELECT COALESCE(MAX(order_date), DATE '2020-01-01') FROM {{ this }}) - INTERVAL '7' DAY
+  {% endif %}
 ),
 
 shipments AS (
-  -- Lấy shipments
   SELECT
     f.shipment_id,
-    f.order_date AS ship_date,  -- fact_shipments stores order_date, not ship_date
+    f.order_date AS ship_date,
     f.customer_key,
     f.customer_email AS customer_id,
     f.shipping_method_src AS carrier_code,
@@ -45,12 +51,14 @@ shipments AS (
     f.is_priority_shipping,
     f.estimated_delivery_days
   FROM {{ ref('fact_shipments') }} f
-  WHERE 
-    f.is_cancelled = FALSE  -- Exclude cancelled shipments
-    AND MOD(f.date_key, 100) = 0  -- SAMPLE 1% for testing
+  WHERE
+    f.is_cancelled = FALSE
+    {% if is_incremental() %}
+    AND f.order_date >= (SELECT COALESCE(MAX(ship_date), DATE '2020-01-01') FROM {{ this }}) - INTERVAL '7' DAY
+    {% endif %}
 ),
 
--- Cross join với điều kiện
+-- FIX: Replace CROSS JOIN with INNER JOIN on customer_key + date window
 potential_matches AS (
   SELECT
     o.order_id,
@@ -81,13 +89,8 @@ potential_matches AS (
     END AS is_customer_match
     
   FROM orders o
-  CROSS JOIN shipments s
-  WHERE 
-    -- Filter 1: Time window <= 7 days (shipment usually happens within a week)
-    ABS(DATE_DIFF('day', o.order_date, s.ship_date)) <= 7
-    -- Filter 2: Shipment should be AFTER order (or same day)
-    AND s.ship_date >= o.order_date
-    -- Filter 3: Amount difference <= 20% (shipment may be partial)
+  INNER JOIN shipments s
+    ON s.ship_date BETWEEN o.order_date AND DATE_ADD('day', 7, o.order_date)
     AND ABS(o.order_amount_vnd - s.shipment_order_value_vnd) <= 0.20 * o.order_amount_vnd
 ),
 
@@ -193,8 +196,8 @@ SELECT
   created_at,
   updated_at
 FROM deduped
-WHERE 
-  -- Giữ best match cho mỗi order/shipment
-  (rank_order = 1 OR rank_shipment = 1)
-  -- HOẶC giữ các high-confidence matches (allow multiple shipments per order)
-  OR confidence_score >= 0.75
+WHERE
+  -- Giữ best match cho mỗi order/shipment (bijective)
+  (rank_order = 1 AND rank_shipment = 1)
+  -- HOẶC giữ các high-confidence matches (allow partial shipments)
+  OR (confidence_score >= 0.75 AND rank_order <= 2)

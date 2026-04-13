@@ -1,4 +1,4 @@
-"""Core Domain Models: Identity, Users, Partners, Accounts"""
+"""Các mô hình miền lõi: Danh tính, Người dùng, Đối tác, Tài khoản"""
 from sqlalchemy import String, Integer, ForeignKey, Text, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Optional
@@ -6,7 +6,7 @@ from app.db.base import Base, TimestampMixin, TenantMixin
 
 
 class Organization(Base, TimestampMixin):
-    """Organization (Tenant) - Root entity for multi-tenancy"""
+    """Organization (Thuê) - Thực thể gốc cho đa thuê"""
     __tablename__ = "organizations"
     __table_args__ = {"schema": "core"}
     
@@ -18,7 +18,7 @@ class Organization(Base, TimestampMixin):
 
 
 class Role(Base):
-    """Role - System-wide roles (owner, accountant, cashier)"""
+    """Role - Các vai trò trong hệ thống (owner, accountant, cashier)"""
     __tablename__ = "roles"
     __table_args__ = {"schema": "core"}
     
@@ -29,7 +29,7 @@ class Role(Base):
 
 
 class User(Base, TimestampMixin, TenantMixin):
-    """User - Application users with organization membership"""
+    """User - Người dùng ứng dụng với thành viên tổ chức"""
     __tablename__ = "users"
     __table_args__ = (
         Index("ix_users_email_org", "email", "org_id"),
@@ -42,12 +42,12 @@ class User(Base, TimestampMixin, TenantMixin):
     full_name: Mapped[Optional[str]] = mapped_column(String(255))
     status: Mapped[str] = mapped_column(String(20), default="active")
     
-    # Relationships
+    # Quan hệ
     roles: Mapped[list["UserRole"]] = relationship("UserRole", back_populates="user", cascade="all, delete-orphan")
 
 
 class UserRole(Base, TimestampMixin, TenantMixin):
-    """UserRole - Many-to-many relationship between Users and Roles"""
+    """UserRole - Quan hệ nhiều-nhiều giữa Người dùng và Vai trò"""
     __tablename__ = "user_roles"
     __table_args__ = {"schema": "core"}
     
@@ -62,13 +62,13 @@ class UserRole(Base, TimestampMixin, TenantMixin):
         primary_key=True
     )
     
-    # Relationships
+    # Quan hệ
     user: Mapped["User"] = relationship("User", back_populates="roles")
     role: Mapped["Role"] = relationship("Role")
 
 
 class Customer(Base, TimestampMixin, TenantMixin):
-    """Customer - Accounts Receivable partners"""
+    """Customer - Đối tác Phải thu (Accounts Receivable)"""
     __tablename__ = "customers"
     __table_args__ = (
         Index("ix_customers_code_org", "code", "org_id"),
@@ -82,12 +82,12 @@ class Customer(Base, TimestampMixin, TenantMixin):
     email: Mapped[Optional[str]] = mapped_column(String(255))
     phone: Mapped[Optional[str]] = mapped_column(String(50))
     address: Mapped[Optional[str]] = mapped_column(Text)
-    credit_term: Mapped[int] = mapped_column(Integer, default=30)  # Days
+    credit_term: Mapped[int] = mapped_column(Integer, default=30)  # Ngày
     is_active: Mapped[bool] = mapped_column(default=True)
 
 
 class Supplier(Base, TimestampMixin, TenantMixin):
-    """Supplier - Accounts Payable partners"""
+    """Supplier - Đối tác Phải trả (Accounts Payable)"""
     __tablename__ = "suppliers"
     __table_args__ = (
         Index("ix_suppliers_code_org", "code", "org_id"),
@@ -101,18 +101,18 @@ class Supplier(Base, TimestampMixin, TenantMixin):
     email: Mapped[Optional[str]] = mapped_column(String(255))
     phone: Mapped[Optional[str]] = mapped_column(String(50))
     address: Mapped[Optional[str]] = mapped_column(Text)
-    payment_term: Mapped[int] = mapped_column(Integer, default=30)  # Days
+    payment_term: Mapped[int] = mapped_column(Integer, default=30)  # Ngày
     is_active: Mapped[bool] = mapped_column(default=True)
 
 
 class Account(Base, TimestampMixin, TenantMixin):
-    """Account - Bank/Cash accounts for payments"""
+    """Account - Tài khoản Ngân hàng/Tiền mặt cho thanh toán"""
     __tablename__ = "accounts"
     __table_args__ = {"schema": "core"}
     
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    type: Mapped[str] = mapped_column(String(20), nullable=False)  # cash, bank
+    type: Mapped[str] = mapped_column(String(20), nullable=False)  # tiền mặt, ngân hàng
     account_number: Mapped[Optional[str]] = mapped_column(String(50))
     bank_name: Mapped[Optional[str]] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(default=True)

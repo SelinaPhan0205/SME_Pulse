@@ -5,7 +5,7 @@ import mlflow
 import os
 import json
 
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "file:///tmp/airflow_mlflow")
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "file:///opt/airflow/mlflow")
 MLFLOW_EXPERIMENT_NAME = "sme_pulse_cashflow_forecast"
 
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
@@ -77,8 +77,8 @@ try:
     
     print("\n" + "="*80)
     print(f"\n💡 To load this model for prediction:")
-    print(f"   model_uri = 'runs:/{run.info.run_id}/isolation_forest_model'")
-    print(f"   model = mlflow.sklearn.load_model(model_uri)")
+    print(f"   model_uri = 'runs:/{run.info.run_id}/prophet_model'")
+    print(f"   model = mlflow.prophet.load_model(model_uri)")
     print("="*80)
 
 except Exception as e:

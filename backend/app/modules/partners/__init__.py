@@ -1,1 +1,1 @@
-"""Partners Module - Customer & Supplier Management."""
+"""Mô-đun Đối tác - Quản lý Khách hàng & Nhà cung cấp."""

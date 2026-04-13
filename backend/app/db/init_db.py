@@ -1,4 +1,4 @@
-﻿"""Database Schema Initialization"""
+﻿"""Khởi tạo Schema Database"""
 import logging
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -11,7 +11,7 @@ REQUIRED_SCHEMAS = ["core", "finance", "analytics"]
 
 
 async def create_schemas_if_not_exists(db_engine: AsyncEngine) -> None:
-    """Create PostgreSQL schemas if they dont exist"""
+    """Tạo các PostgreSQL schema nếu chúng chưa tồn tại"""
     async with db_engine.begin() as conn:
         for schema in REQUIRED_SCHEMAS:
             try:
@@ -25,7 +25,7 @@ async def create_schemas_if_not_exists(db_engine: AsyncEngine) -> None:
 
 
 async def initialize_database_schemas() -> None:
-    """Application startup hook to initialize database schemas"""
+    """Hàm hook khởi động ứng dụng để khởi tạo các schema cơ sở dữ liệu"""
     logger.info("Initializing database schemas...")
     await create_schemas_if_not_exists(engine)
     logger.info("Database schemas initialized successfully")

@@ -1,4 +1,4 @@
-"""AP Bill Service Layer - Business Logic for Bills (mirror of AR Invoices)."""
+"""Lớp Dịch vụ AP Bill - Logic kinh doanh cho Hóa đơn (phản chiếu của Hóa đơn AR)."""
 
 import logging
 from typing import Optional
@@ -26,22 +26,22 @@ async def get_bills(
     date_to: Optional[date] = None,
 ) -> tuple[list[APBill], int]:
     """
-    Get paginated list of bills for an organization.
+    Lấy danh sách hóa đơn phân trang cho một tổ chức.
     
-    Args:
+    Tham số:
         db: Database session
-        org_id: Organization ID (CRITICAL for multi-tenancy)
-        skip: Number of records to skip
-        limit: Max records to return
-        status: Filter by status (draft, posted, partial, paid, cancelled)
-        supplier_id: Filter by supplier ID
-        date_from: Filter by issue_date >= date_from
-        date_to: Filter by issue_date <= date_to
+        org_id: ID tổ chức (CRITICAL cho multi-tenancy)
+        skip: Số bản ghi cần bỏ qua
+        limit: Số bản ghi tối đa trả về
+        status: Lọc theo trạng thái (draft, posted, partial, paid, cancelled)
+        supplier_id: Lọc theo ID nhà cung cấp
+        date_from: Lọc theo issue_date >= date_from
+        date_to: Lọc theo issue_date <= date_to
     
-    Returns:
-        Tuple of (bills list, total count)
+    Trả về:
+        Tuple (danh sách hóa đơn, tổng số)
     """
-    # Build filters
+    # Xây dựng bộ lọc
     filters = [APBill.org_id == org_id]
     
     if status:
@@ -56,12 +56,12 @@ async def get_bills(
     if date_to:
         filters.append(APBill.issue_date <= date_to)
     
-    # Count total
+    # Đếm tổng số
     count_stmt = select(func.count()).select_from(APBill).where(and_(*filters))
     total_result = await db.execute(count_stmt)
     total = total_result.scalar_one()
     
-    # Get paginated data
+    # Lây danh sách với phân trang
     stmt = (
         select(APBill)
         .where(and_(*filters))
@@ -83,20 +83,20 @@ async def get_bill(
     org_id: int,
 ) -> APBill:
     """
-    Get single bill by ID.
+    Lấy một hóa đơn đơn lẻ theo ID.
     
-    CRITICAL: Always filter by org_id to prevent cross-tenant access.
+    CRITICAL: Luôn lọc theo org_id để ngăn chặn cross-tenant access.
     
-    Args:
+    Tham số:
         db: Database session
-        bill_id: Bill ID
-        org_id: Organization ID
+        bill_id: ID hóa đơn
+        org_id: ID tổ chức
     
-    Returns:
-        APBill object with supplier loaded
+    Trả về:
+        APBill object với supplier được load
     
-    Raises:
-        HTTPException 404: Bill not found
+    Nâng cao:
+        HTTPException 404: Hóa đơn không tìm thấy
     """
     stmt = (
         select(APBill)
@@ -122,26 +122,26 @@ async def create_bill(
     org_id: int,
 ) -> APBill:
     """
-    Create new bill in DRAFT status.
+    Tạo hóa đơn mới ở trạng thái DRAFT.
     
-    Business Rules:
-    - bill_no should be unique within organization
-    - Supplier must exist and belong to organization
-    - due_date must be >= issue_date
-    - Default status is 'draft', paid_amount is 0
+    Quy tắc kinh doanh:
+    - bill_no nên độc lập trong tổ chức
+    - Nhà cung cấp phải tồn tại và thuộc tổ chức
+    - due_date phải >= issue_date
+    - Trạng thái mặc định là 'draft', paid_amount là 0
     
-    Args:
+    Tham số:
         db: Database session
         schema: BillCreate schema
-        org_id: Organization ID
+        org_id: ID tổ chức
     
-    Returns:
-        Created bill
+    Trả về:
+        Hóa đơn được tạo
     
-    Raises:
-        HTTPException 400: Validation errors (duplicate bill_no, invalid supplier, invalid dates)
+    Nâng cao:
+        HTTPException 400: Lỗi xác thực (bill_no trùng lặp, nhà cung cấp không hợp lệ, ngày không hợp lệ)
     """
-    # Validate bill_no uniqueness
+    # Xác thực bill_no độc nhất
     existing_stmt = select(APBill).where(
         and_(APBill.bill_no == schema.bill_no, APBill.org_id == org_id)
     )
@@ -152,7 +152,7 @@ async def create_bill(
             detail=f"Bill number '{schema.bill_no}' already exists"
         )
     
-    # Validate supplier exists
+    # Xác thực nhà cung cấp tồn tại
     supplier_stmt = select(Supplier).where(
         and_(Supplier.id == schema.supplier_id, Supplier.org_id == org_id)
     )
@@ -163,14 +163,14 @@ async def create_bill(
             detail=f"Supplier {schema.supplier_id} not found"
         )
     
-    # Validate dates
+    # Xác thực ngày
     if schema.due_date < schema.issue_date:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Due date must be >= issue date"
         )
     
-    # Create bill
+    # Tạo hóa đơn
     bill = APBill(
         bill_no=schema.bill_no,
         supplier_id=schema.supplier_id,
@@ -187,7 +187,7 @@ async def create_bill(
     await db.commit()
     await db.refresh(bill)
     
-    # Load supplier
+    # Tải lại với supplier được load
     await db.execute(
         select(APBill)
         .where(APBill.id == bill.id)
@@ -205,38 +205,38 @@ async def update_bill(
     org_id: int,
 ) -> APBill:
     """
-    Update bill (only allowed in DRAFT status).
+    Cập nhật hóa đơn (chỉ được phép ở trạng thái DRAFT).
     
-    Business Rules:
-    - Can only update draft bills
-    - Cannot change bill once posted
+    Quy tắc kinh doanh:
+    - Chỉ có thể cập nhật hóa đơn draft
+    - Không thể thay đổi hóa đơn sau khi được ghi
     
-    Args:
+    Tham số:
         db: Database session
-        bill_id: Bill ID to update
+        bill_id: ID hóa đơn cần cập nhật
         schema: BillUpdate schema
-        org_id: Organization ID
+        org_id: ID tổ chức
     
-    Returns:
-        Updated bill
+    Trả về:
+        Hóa đơn được cập nhật
     
-    Raises:
-        HTTPException 400: Bill already posted
-        HTTPException 404: Bill not found
+    Nâng cao:
+        HTTPException 400: Hóa đơn đã được ghi
+        HTTPException 404: Hóa đơn không tìm thấy
     """
-    # Get bill
+    # Lấy hóa đơn
     bill = await get_bill(db, bill_id, org_id)
     
-    # Check if bill is draft
+    # Kiểm tra xem hóa đơn có ở trạng thái nháp không
     if bill.status != "draft":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Can only update bills in draft status"
         )
     
-    # Update fields
+    # Cập nhật các trường
     if schema.supplier_id is not None:
-        # Validate supplier exists
+        # Xác thực nhà cung cấp tồn tại
         supplier_stmt = select(Supplier).where(
             and_(Supplier.id == schema.supplier_id, Supplier.org_id == org_id)
         )
@@ -260,7 +260,7 @@ async def update_bill(
     if schema.notes is not None:
         bill.notes = schema.notes
     
-    # Validate dates
+    # Xac thực ngày
     if bill.due_date < bill.issue_date:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -280,44 +280,44 @@ async def post_bill(
     org_id: int,
 ) -> APBill:
     """
-    Post bill (transition from DRAFT to POSTED).
+    Ghi hóa đơn (chuyển DRAFT thành POSTED).
     
-    After posting, bill becomes immutable and can receive payment allocations.
+    Sau khi ghi, hóa đơn trở thành bất biến và có thể nhận phân bổ thanh toán.
     
-    Business Rules:
-    - Can only post draft bills
-    - total_amount must be > 0
+    Quy tắc kinh doanh:
+    - Chỉ có thể ghi hóa đơn draft
+    - total_amount phải > 0
     
-    Args:
+    Tham số:
         db: Database session
-        bill_id: Bill ID
-        org_id: Organization ID
+        bill_id: ID hóa đơn
+        org_id: ID tổ chức
     
-    Returns:
-        Posted bill
+    Trả về:
+        Hóa đơn được ghi
     
-    Raises:
-        HTTPException 400: Bill already posted or invalid amount
-        HTTPException 404: Bill not found
+    Nâng cao:
+        HTTPException 400: Hóa đơn đã được ghi hoặc số tiền không hợp lệ
+        HTTPException 404: Hóa đơn không tìm thấy
     """
-    # Get bill
+    # Lấy hóa đơn
     bill = await get_bill(db, bill_id, org_id)
     
-    # Validate status
+    # Xác thực trạng thái draft
     if bill.status != "draft":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Bill already posted"
         )
     
-    # Validate amount
+    # Xác thực tổng số tiền
     if bill.total_amount <= 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Total amount must be greater than 0"
         )
     
-    # Update status
+    # Chuyển trạng thái thành posted
     bill.status = "posted"
     
     await db.commit()
@@ -333,32 +333,32 @@ async def delete_bill(
     org_id: int,
 ) -> None:
     """
-    Delete bill (only allowed in DRAFT status).
+    Xóa hóa đơn (chỉ được phép ở trạng thái DRAFT).
     
-    Business Rules:
-    - Can only delete draft bills
-    - Set status to 'cancelled' (soft delete)
+    Quy tắc kinh doanh:
+    - Chỉ có thể xóa hóa đơn draft
+    - Đặt trạng thái thành 'cancelled' (soft delete)
     
-    Args:
+    Tham số:
         db: Database session
-        bill_id: Bill ID
-        org_id: Organization ID
+        bill_id: ID hóa đơn
+        org_id: ID tổ chức
     
-    Raises:
-        HTTPException 400: Bill already posted
-        HTTPException 404: Bill not found
+    Nâng cao:
+        HTTPException 400: Hóa đơn đã được ghi
+        HTTPException 404: Hóa đơn không tìm thấy
     """
-    # Get bill
+    # Lấy hóa đơn
     bill = await get_bill(db, bill_id, org_id)
     
-    # Check if bill is draft
+    # Kiểm tra xem hóa đơn có ở trạng thái nháp không
     if bill.status != "draft":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Can only delete bills in draft status"
         )
     
-    # Soft delete
+    # Đặt trạng thái thành cancelled
     bill.status = "cancelled"
     
     await db.commit()

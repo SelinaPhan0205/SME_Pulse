@@ -1,17 +1,17 @@
-"""Login and authentication schemas."""
+"""Schema đăng nhập và xác thực."""
 
 from typing import List, Optional
 from pydantic import BaseModel, EmailStr, Field
 
 
 class LoginRequest(BaseModel):
-    """Login request schema."""
+    """Schema yêu cầu đăng nhập."""
     email: EmailStr = Field(..., description="User email address")
     password: str = Field(..., min_length=1, description="User password")
 
 
 class UserInfo(BaseModel):
-    """User information in login response."""
+    """Thông tin người dùng trong phản hồi đăng nhập."""
     id: int
     email: str
     full_name: Optional[str] = None
@@ -23,7 +23,7 @@ class UserInfo(BaseModel):
 
 
 class LoginResponse(BaseModel):
-    """Login response with JWT token."""
+    """Phản hồi đăng nhập có JWT token."""
     access_token: str = Field(..., description="JWT access token")
     token_type: str = Field(default="bearer", description="Token type")
     expires_in: int = Field(..., description="Token expiry in seconds")
@@ -32,17 +32,17 @@ class LoginResponse(BaseModel):
 
 
 class ChangePasswordRequest(BaseModel):
-    """Change password request schema."""
+    """Schema yêu cầu đổi mật khẩu."""
     old_password: str = Field(..., min_length=1, description="Current password")
     new_password: str = Field(..., min_length=6, description="New password (min 6 characters)")
 
 
 class ForgotPasswordRequest(BaseModel):
-    """Forgot password request schema."""
+    """Schema yêu cầu quên mật khẩu."""
     email: EmailStr = Field(..., description="User email address")
 
 
 class PasswordResetResponse(BaseModel):
-    """Password reset response."""
+    """Phản hồi đặt lại mật khẩu."""
     message: str = Field(..., description="Success message")
     email: str = Field(..., description="Email where reset link was sent")

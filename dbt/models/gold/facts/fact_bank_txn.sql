@@ -43,12 +43,67 @@ WITH bank_txn_enriched AS (
     CASE WHEN ABS(b.amount_vnd) > 100000000 THEN TRUE ELSE FALSE END AS is_large_transaction,  -- >100M VND
     
     -- Transaction classification (for cash flow forecasting)
+    -- FIX [P1]: Keyword-based classification for Vietnamese bank counterparty names
     CASE
-      WHEN b.direction_in_out = 'in' AND LOWER(b.counterparty_name) LIKE '%customer%' THEN 'RECEIVABLE'
+      -- Receivables: customer payments, sales revenue
+      WHEN b.direction_in_out = 'in' AND (
+        LOWER(b.counterparty_name) LIKE '%customer%'
+        OR LOWER(b.counterparty_name) LIKE '%khach%'
+        OR LOWER(b.counterparty_name) LIKE '%kh %'
+        OR LOWER(b.counterparty_name) LIKE '%doanh thu%'
+        OR LOWER(b.counterparty_name) LIKE '%ban hang%'
+        OR LOWER(b.counterparty_name) LIKE '%thu tien%'
+        OR LOWER(b.counterparty_name) LIKE '%thanh toan%'
+        OR LOWER(b.counterparty_name) LIKE '%cong ty%'
+        OR LOWER(b.counterparty_name) LIKE '%payment%'
+        OR LOWER(b.counterparty_name) LIKE '%invoice%'
+      ) THEN 'RECEIVABLE'
+
+      -- Other income (inflows not matching receivables)
       WHEN b.direction_in_out = 'in' THEN 'OTHER_INCOME'
-      WHEN b.direction_in_out = 'out' AND LOWER(b.counterparty_name) LIKE '%supplier%' THEN 'PAYABLE'
-      WHEN b.direction_in_out = 'out' AND LOWER(b.counterparty_name) LIKE '%salary%' THEN 'PAYROLL'
+
+      -- Payables: supplier payments, material/goods purchases
+      WHEN b.direction_in_out = 'out' AND (
+        LOWER(b.counterparty_name) LIKE '%supplier%'
+        OR LOWER(b.counterparty_name) LIKE '%nha cung%'
+        OR LOWER(b.counterparty_name) LIKE '%ncc%'
+        OR LOWER(b.counterparty_name) LIKE '%mua hang%'
+        OR LOWER(b.counterparty_name) LIKE '%nguyen lieu%'
+        OR LOWER(b.counterparty_name) LIKE '%vat tu%'
+        OR LOWER(b.counterparty_name) LIKE '%vendor%'
+        OR LOWER(b.counterparty_name) LIKE '%purchase%'
+      ) THEN 'PAYABLE'
+
+      -- Payroll: salary, wages, bonus
+      WHEN b.direction_in_out = 'out' AND (
+        LOWER(b.counterparty_name) LIKE '%salary%'
+        OR LOWER(b.counterparty_name) LIKE '%luong%'
+        OR LOWER(b.counterparty_name) LIKE '%thuong%'
+        OR LOWER(b.counterparty_name) LIKE '%nhan vien%'
+        OR LOWER(b.counterparty_name) LIKE '%payroll%'
+        OR LOWER(b.counterparty_name) LIKE '%wage%'
+      ) THEN 'PAYROLL'
+
+      -- Tax / Government
+      WHEN b.direction_in_out = 'out' AND (
+        LOWER(b.counterparty_name) LIKE '%thue%'
+        OR LOWER(b.counterparty_name) LIKE '%tax%'
+        OR LOWER(b.counterparty_name) LIKE '%bao hiem%'
+        OR LOWER(b.counterparty_name) LIKE '%bhxh%'
+      ) THEN 'TAX_INSURANCE'
+
+      -- Utilities / Rent
+      WHEN b.direction_in_out = 'out' AND (
+        LOWER(b.counterparty_name) LIKE '%dien%'
+        OR LOWER(b.counterparty_name) LIKE '%nuoc%'
+        OR LOWER(b.counterparty_name) LIKE '%thue mat bang%'
+        OR LOWER(b.counterparty_name) LIKE '%rent%'
+        OR LOWER(b.counterparty_name) LIKE '%utility%'
+      ) THEN 'UTILITIES_RENT'
+
+      -- Other expenses (outflows not matching above)
       WHEN b.direction_in_out = 'out' THEN 'OTHER_EXPENSE'
+
       ELSE 'UNCLASSIFIED'
     END AS transaction_category,
     

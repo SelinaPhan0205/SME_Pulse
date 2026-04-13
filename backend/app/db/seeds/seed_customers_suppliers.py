@@ -1,11 +1,11 @@
-"""Seed script for customers and suppliers."""
+"""Kịch bản seed cho khách hàng và nhà cung cấp."""
 
 from sqlalchemy import select
 from app.models.core import Customer, Supplier, Organization
 
 
 async def seed_customers_suppliers(session):
-    """Insert sample customers and suppliers into the database."""
+    """Chèn các khách hàng và nhà cung cấp mẫu vào cơ sở dữ liệu."""
     org = (await session.execute(select(Organization))).scalar_one()
 
     customers = [
@@ -42,7 +42,7 @@ async def seed_customers_suppliers(session):
         },
     ]
 
-    # Insert customers
+    # Chèn các khách hàng
     for c in customers:
         exists = await session.execute(
             select(Customer).where(Customer.code == c["code"])
@@ -51,7 +51,7 @@ async def seed_customers_suppliers(session):
             session.add(Customer(**c))
             print(f"[seed] Inserted customer {c['code']}")
 
-    # Insert suppliers
+    # Chèn các nhà cung cấp
     for s in suppliers:
         exists = await session.execute(
             select(Supplier).where(Supplier.code == s["code"])

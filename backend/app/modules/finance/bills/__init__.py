@@ -1,4 +1,4 @@
-"""Bills Management Module - AP Bills for Accounts Payable."""
+"""Mô-đun Quản lý Hóa đơn - Hóa đơn AP cho Quản lý Công nợ Phải trả."""
 
 from app.modules.finance.bills.router import router
 

@@ -1,4 +1,4 @@
-"""Quick script to fix admin password."""
+"""Kịch bản nhanh để sửa mật khẩu admin."""
 import asyncio
 from app.db.session import AsyncSessionLocal
 from app.core.security import get_password_hash

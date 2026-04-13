@@ -34,7 +34,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 # Cấu hình MLflow
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "file:///tmp/airflow_mlflow")
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "file:///opt/airflow/mlflow")
 MLFLOW_EXPERIMENT_NAME = "sme_pulse_anomaly_detection"
 MODEL_NAME = "isolation_forest_anomaly_v1"
 
@@ -350,13 +350,14 @@ def evaluate_model(df_features, model, scaler, predictions):
         
         logger.info(f"\n🔍 Silhouette Score (Cluster Quality) - Sampled:")
         logger.info(f"   Score: {metrics['silhouette_score']:.4f} (computed on {sample_size:,} samples)")
-        logger.info(f"   Interpretation: ", end="")
+        interpretation = ""
         if silhouette_avg > 0.5:
-            logger.info("STRONG clustering ✅ (Model is accurate!)")
+            interpretation = "STRONG clustering ✅ (Model is accurate!)"
         elif silhouette_avg > 0.25:
-            logger.info("MODERATE clustering ⚠️ (Acceptable)")
+            interpretation = "MODERATE clustering ⚠️ (Acceptable)"
         else:
-            logger.info("WEAK clustering ❌ (Overlapping clusters)")
+            interpretation = "WEAK clustering ❌ (Overlapping clusters)"
+        logger.info(f"   Interpretation: {interpretation}")
         
         logger.info(f"\n📊 Anomaly Detection Quality:")
         logger.info(f"   Score Separation: {metrics.get('score_separation', 0):.4f}")
@@ -492,11 +493,26 @@ def main():
         # 2. Feature engineering
         df_features, feature_names, df_with_features = engineer_features(df)
         
-        # 3. Train model
-        model, scaler, anomaly_scores, predictions = train_isolation_forest(df_features, feature_names)
+        # --- FIX [P2]: Temporal train/eval split (80/20 by date) ---
+        # This prevents evaluating on training data and catches distribution drift
+        split_idx = int(len(df_features) * 0.8)
+        df_train = df_features.iloc[:split_idx].copy()
+        df_eval = df_features.iloc[split_idx:].copy()
+        logger.info(f"\n📊 Temporal split: train={len(df_train):,} rows, eval={len(df_eval):,} rows")
         
-        # 4. Evaluate model
-        metrics = evaluate_model(df_features, model, scaler, predictions)
+        # 3. Train model (fit ONLY on train set)
+        model, scaler, anomaly_scores, predictions = train_isolation_forest(df_train, feature_names)
+        
+        # 4. Evaluate on HELD-OUT eval set (not training data)
+        logger.info("\n📊 Evaluating on held-out eval set (not training data)...")
+        X_eval_scaled = scaler.transform(df_eval)
+        eval_predictions = model.predict(X_eval_scaled)
+        metrics = evaluate_model(df_eval, model, scaler, eval_predictions)
+        
+        # Log split info
+        metrics['train_size'] = len(df_train)
+        metrics['eval_size'] = len(df_eval)
+        metrics['train_eval_split'] = 0.8
         
         # 5. Save to MLflow
         run_id = save_model_to_mlflow(model, scaler, feature_names, metrics)

@@ -1,1 +1,1 @@
-﻿"""Business domain modules"""
+﻿"""Các mô-đun miền kinh doanh"""

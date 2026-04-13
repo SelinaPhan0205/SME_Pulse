@@ -5,7 +5,7 @@ import mlflow
 import os
 import json
 
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "file:///tmp/airflow_mlflow")
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "file:///opt/airflow/mlflow")
 MLFLOW_EXPERIMENT_NAME = "sme_pulse_anomaly_detection"
 
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)

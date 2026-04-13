@@ -1,4 +1,4 @@
-"""Invoice Service - Business logic for AR Invoice management."""
+"""Service Hóa đơn - Logic kinh doanh cho quản lý Hóa đơn AR."""
 
 from datetime import date
 from typing import Optional, Sequence
@@ -23,26 +23,26 @@ async def get_invoices(
     date_from: Optional[date] = None,
     date_to: Optional[date] = None,
 ) -> tuple[Sequence[ARInvoice], int]:
-    """Get list of AR invoices with filtering and pagination.
+    """Lấy danh sách hóa đơn AR có lọc và phân trang.
     
-    Args:
-        db: Database session
-        org_id: Organization ID from JWT
-        skip: Offset for pagination
-        limit: Max records to return
-        status: Filter by invoice status
-        customer_id: Filter by customer
-        date_from: Filter by issue_date >= date_from
-        date_to: Filter by issue_date <= date_to
+    Đối số:
+        db: Phiên cơ sở dữ liệu
+        org_id: ID tổ chức từ JWT
+        skip: Offset cho phân trang
+        limit: Tối đa bản ghi trả về
+        status: Lọc theo trạng thái hóa đơn
+        customer_id: Lọc theo khách hàng
+        date_from: Lọc theo issue_date >= date_from
+        date_to: Lọc theo issue_date <= date_to
     
-    Returns:
-        Tuple of (invoice list, total count)
+    Trả lại:
+        Tuple của (danh sách hóa đơn, tổng số)
     """
-    # Build base query
+    # Xây dựng truy vấn cơ bản
     query = select(ARInvoice).where(ARInvoice.org_id == org_id)
     count_query = select(func.count()).select_from(ARInvoice).where(ARInvoice.org_id == org_id)
     
-    # Apply filters
+    # Áp dụng bộ lọc
     if status:
         query = query.where(ARInvoice.status == status)
         count_query = count_query.where(ARInvoice.status == status)
@@ -59,10 +59,10 @@ async def get_invoices(
         query = query.where(ARInvoice.issue_date <= date_to)
         count_query = count_query.where(ARInvoice.issue_date <= date_to)
     
-    # Add pagination
+    # Thêm phân trang và sắp xếp
     query = query.offset(skip).limit(limit).order_by(ARInvoice.issue_date.desc())
     
-    # Execute queries
+    # Thực thi truy vấn
     result = await db.execute(query)
     invoices = result.scalars().all()
     
@@ -77,18 +77,18 @@ async def get_invoice(
     invoice_id: int,
     org_id: int,
 ) -> ARInvoice:
-    """Get single invoice by ID.
+    """Lấy một hóa đơn theo ID.
     
-    Args:
-        db: Database session
-        invoice_id: Invoice ID
-        org_id: Organization ID from JWT
+    Đối số:
+        db: Phiên cơ sở dữ liệu
+        invoice_id: ID hóa đơn
+        org_id: ID tổ chức từ JWT
     
-    Returns:
-        ARInvoice instance
+    Trả lại:
+        Instance ARInvoice
     
-    Raises:
-        HTTPException: 404 if not found or belongs to different org
+    Tăng:
+        HTTPException: 404 nếu không tìm thấy hoặc thuộc org khác
     """
     query = select(ARInvoice).where(
         ARInvoice.id == invoice_id,
@@ -111,20 +111,20 @@ async def create_invoice(
     schema: InvoiceCreate,
     org_id: int,
 ) -> ARInvoice:
-    """Create new AR invoice in DRAFT status.
+    """Tạo hóa đơn AR mới ở trạng thái NHÁP.
     
-    Args:
-        db: Database session
-        schema: Invoice creation data
-        org_id: Organization ID from JWT
+    Đối số:
+        db: Phiên cơ sở dữ liệu
+        schema: Dữ liệu tạo hóa đơn
+        org_id: ID tổ chức từ JWT
     
-    Returns:
-        Created ARInvoice instance
+    Trả lại:
+        Instance ARInvoice được tạo
     
-    Raises:
-        HTTPException: 400 if customer doesn't exist or belongs to different org
+    Tăng:
+        HTTPException: 400 nếu khách hàng không tồn tại hoặc thuộc org khác
     """
-    # Validate customer exists and belongs to org
+    # Xác thực khách hàng tồn tại và thuộc tổ chức
     customer_query = select(Customer).where(
         Customer.id == schema.customer_id,
         Customer.org_id == org_id,
@@ -138,12 +138,12 @@ async def create_invoice(
             detail=f"Customer {schema.customer_id} not found in your organization",
         )
     
-    # Create invoice in DRAFT status
+    # Tạo hóa đơn
     invoice = ARInvoice(
         **schema.model_dump(),
         org_id=org_id,
         status="draft",
-        paid_amount=0,  # Always start at 0
+        paid_amount=0,  # lúc tạo luôn đặt paid_amount = 0
     )
     
     db.add(invoice)
@@ -159,30 +159,30 @@ async def update_invoice(
     schema: InvoiceUpdate,
     org_id: int,
 ) -> ARInvoice:
-    """Update invoice fields (only allowed in DRAFT status).
+    """Cập nhật trường hóa đơn (chỉ được phép ở trạng thái DRAFT).
     
-    Args:
+    Đối số:
         db: Database session
-        invoice_id: Invoice ID to update
-        schema: Fields to update
-        org_id: Organization ID from JWT
+        invoice_id: ID hóa đơn cần cập nhật
+        schema: Các trường cần cập nhật
+        org_id: ID tổ chức từ JWT
     
-    Returns:
-        Updated ARInvoice instance
+    Trả về:
+        Instance ARInvoice được cập nhật
     
-    Raises:
-        HTTPException: 404 if not found, 400 if already posted
+    Nâng cao:
+        HTTPException: 404 nếu không tìm thấy, 400 nếu đã ghi
     """
     invoice = await get_invoice(db, invoice_id, org_id)
     
-    # Only allow updates on DRAFT invoices
+    # Chỉ cho phép cập nhật các hóa đơn DRAFT
     if invoice.status != "draft":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Cannot update invoice in {invoice.status} status. Only DRAFT invoices can be modified.",
         )
     
-    # If customer_id is being changed, validate it exists
+    # Nếu customer_id đang được thay đổi, xác thực nó tồn tại
     if schema.customer_id is not None and schema.customer_id != invoice.customer_id:
         customer_query = select(Customer).where(
             Customer.id == schema.customer_id,
@@ -197,7 +197,7 @@ async def update_invoice(
                 detail=f"Customer {schema.customer_id} not found in your organization",
             )
     
-    # Update fields (exclude unset to allow partial updates)
+    # Cập nhật các trường (exclude unset để cho phép cập nhật từng phần)
     update_data = schema.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(invoice, field, value)
@@ -213,38 +213,38 @@ async def post_invoice(
     invoice_id: int,
     org_id: int,
 ) -> ARInvoice:
-    """Post invoice (DRAFT → POSTED transition).
+    """Ghi hóa đơn (chuyển DRAFT → POSTED).
     
-    After posting, invoice becomes immutable (cannot be updated/deleted).
+    Sau khi ghi, hóa đơn trở thành bất biến (không thể cập nhật/xóa).
     
-    Args:
+    Đối số:
         db: Database session
-        invoice_id: Invoice ID to post
-        org_id: Organization ID from JWT
+        invoice_id: ID hóa đơn cần ghi
+        org_id: ID tổ chức từ JWT
     
-    Returns:
-        Posted ARInvoice instance
+    Trả về:
+        Instance ARInvoice được ghi
     
-    Raises:
-        HTTPException: 404 if not found, 400 if already posted or invalid amount
+    Nâng cao:
+        HTTPException: 404 nếu không tìm thấy, 400 nếu đã ghi hoặc số tiền không hợp lệ
     """
     invoice = await get_invoice(db, invoice_id, org_id)
     
-    # Validate current status
+    # Xác thực trạng thái hiện tại
     if invoice.status != "draft":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invoice is already {invoice.status}. Only DRAFT invoices can be posted.",
         )
     
-    # Validate total_amount is positive
+    # Xác thực total_amount là dương
     if invoice.total_amount <= 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot post invoice with zero or negative total amount",
         )
     
-    # Transition to POSTED
+    # Chuyển đổi sang POSTED
     invoice.status = "posted"
     
     await db.commit()
@@ -258,19 +258,19 @@ async def delete_invoice(
     invoice_id: int,
     org_id: int,
 ) -> None:
-    """Delete invoice (only allowed in DRAFT status).
+    """Xóa hóa đơn (chỉ được phép ở trạng thái DRAFT).
     
-    Args:
+    Đối số:
         db: Database session
-        invoice_id: Invoice ID to delete
-        org_id: Organization ID from JWT
+        invoice_id: ID hóa đơn cần xóa
+        org_id: ID tổ chức từ JWT
     
-    Raises:
-        HTTPException: 404 if not found, 400 if already posted
+    Nâng cao:
+        HTTPException: 404 nếu không tìm thấy, 400 nếu đã ghi
     """
     invoice = await get_invoice(db, invoice_id, org_id)
     
-    # Only allow deletion of DRAFT invoices
+    # Chỉ cho phép xóa các hóa đơn DRAFT
     if invoice.status != "draft":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -287,16 +287,16 @@ async def bulk_import_invoices(
     org_id: int,
     auto_post: bool = False,
 ) -> dict:
-    """Bulk import multiple invoices from Excel/CSV.
+    """Bulk import nhiều hóa đơn từ Excel/CSV.
     
-    Args:
+    Đối số:
         db: Database session
-        invoices_data: List of invoice data dicts
-        org_id: Organization ID from JWT
-        auto_post: If True, automatically post invoices after creation
+        invoices_data: Danh sách các dicts dữ liệu hóa đơn
+        org_id: ID tổ chức từ JWT
+        auto_post: Nếu True, tự động ghi hóa đơn sau khi tạo
     
-    Returns:
-        dict with import results: total_submitted, total_success, total_failed, results
+    Trả về:
+        dict với kết quả import: total_submitted, total_success, total_failed, results
     """
     results = []
     success_count = 0
@@ -304,7 +304,7 @@ async def bulk_import_invoices(
     
     for inv_data in invoices_data:
         try:
-            # Check for duplicate invoice_no
+            # Kiểm tra hóa đơn trùng lặp
             existing_query = select(ARInvoice).where(
                 ARInvoice.org_id == org_id,
                 ARInvoice.invoice_no == inv_data.invoice_no,
@@ -320,7 +320,7 @@ async def bulk_import_invoices(
                 failed_count += 1
                 continue
             
-            # Create invoice
+            # Tạo hóa đơn
             invoice = ARInvoice(
                 org_id=org_id,
                 invoice_no=inv_data.invoice_no,
@@ -333,9 +333,9 @@ async def bulk_import_invoices(
                 paid_amount=0,
             )
             db.add(invoice)
-            await db.flush()  # Get ID without committing
+            await db.flush()  # Lấy ID ngay lập tức
             
-            # Auto-post if requested
+            # Tự động ghi nếu được yêu cầu
             if auto_post:
                 invoice.status = "posted"
             
@@ -356,7 +356,7 @@ async def bulk_import_invoices(
             })
             failed_count += 1
     
-    # Commit all successful imports
+    # Commit tất cả các imports thành công
     if success_count > 0:
         await db.commit()
     

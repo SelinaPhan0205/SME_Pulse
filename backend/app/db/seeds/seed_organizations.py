@@ -1,11 +1,11 @@
-"""Seed script for organizations."""
+"""Kịch bản seed cho các tổ chức."""
 
 from sqlalchemy import select
 from app.models.core import Organization
 
 
 async def seed_organizations(session):
-    """Insert default organization into the database."""
+    """Chèn tổ chức mặc định vào cơ sở dữ liệu."""
     default_org = {
         "name": "SME Demo Company",
         "tax_code": "1234567890",
@@ -19,7 +19,7 @@ async def seed_organizations(session):
 
     if not org:
         session.add(Organization(**default_org))
-        await session.flush()  # Flush to make it available for subsequent queries
+        await session.flush()  # Flush để làm cho nó khả dụng cho các truy vấn tiếp theo
         print("[seed] Created default organization")
     else:
         print("[seed] Organization already exists, skipping")

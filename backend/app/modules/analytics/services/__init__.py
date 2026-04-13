@@ -1,4 +1,4 @@
-"""Analytics services module."""
+"""Mô-đun các dịch vụ phân tích."""
 
 from app.modules.analytics.services.kpi_service import calculate_dso, calculate_dpo, calculate_ccc
 from app.modules.analytics.services.aging_service import get_ar_aging_buckets, get_ap_aging_buckets

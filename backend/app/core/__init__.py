@@ -1,1 +1,1 @@
-﻿"""Core application configurations"""
+﻿"""Cấu hình ứng dụng cốt lõi"""

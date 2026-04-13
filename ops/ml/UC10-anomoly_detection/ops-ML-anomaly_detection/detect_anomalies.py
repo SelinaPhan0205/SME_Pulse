@@ -31,7 +31,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 # Cấu hình MLflow
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "file:///tmp/airflow_mlflow")
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "file:///opt/airflow/mlflow")
 MODEL_NAME = "isolation_forest_anomaly_v1"
 MODEL_VERSION = os.getenv("MODEL_VERSION", "1")
 
@@ -43,6 +43,40 @@ ALERT_SEVERITY_MAPPING = {
     'HIGH': -0.75,         # Khá bất thường
     'MEDIUM': -0.5,        # Bất thường trung bình
 }
+
+
+def load_active_org_ids(cursor):
+    """Load active organization IDs for tenant-safe anomaly writes."""
+    queries = [
+        "SELECT DISTINCT org_id FROM sme_lake.silver.stg_payments_app_db WHERE org_id IS NOT NULL",
+        "SELECT DISTINCT org_id FROM sme_lake.silver.stg_ar_invoices_app_db WHERE org_id IS NOT NULL",
+    ]
+
+    org_ids = set()
+    for query in queries:
+        try:
+            cursor.execute(query)
+            for row in cursor.fetchall():
+                if row and row[0] is not None:
+                    org_ids.add(int(row[0]))
+        except Exception as e:
+            logger.warning(f"Could not load org IDs from query [{query}]: {e}")
+
+    if not org_ids:
+        env_org_ids = os.getenv("ML_ORG_IDS", "").strip()
+        if env_org_ids:
+            parsed = sorted({int(x.strip()) for x in env_org_ids.split(',') if x.strip()})
+            if parsed:
+                logger.warning(f"No tenant org_id found in Trino sources. Using ML_ORG_IDS={parsed}")
+                return parsed
+
+        default_org_id = int(os.getenv("DEFAULT_ORG_ID", "1"))
+        logger.warning(
+            f"No tenant org_id found in app_db silver tables. Falling back to DEFAULT_ORG_ID={default_org_id}."
+        )
+        return [default_org_id]
+
+    return sorted(org_ids)
 
 
 def load_model_and_scaler():
@@ -367,6 +401,7 @@ def save_alerts_to_trino(alerts_df):
     create_table_sql = """
     CREATE TABLE IF NOT EXISTS sme_lake.gold.ml_anomaly_alerts (
         alert_id VARCHAR,
+        org_id BIGINT,
         txn_id VARCHAR,
         txn_date DATE,
         amount_vnd DOUBLE,
@@ -377,6 +412,7 @@ def save_alerts_to_trino(alerts_df):
         severity VARCHAR,
         model_name VARCHAR,
         model_version VARCHAR,
+        detection_run_id VARCHAR,
         detection_timestamp TIMESTAMP,
         created_at TIMESTAMP
     )
@@ -391,41 +427,90 @@ def save_alerts_to_trino(alerts_df):
         logger.info("✅ Table ml_anomaly_alerts created/verified")
     except Exception as e:
         logger.warning(f"Table creation note: {e}")
+
+    # Backward-compatible schema evolution for existing tables
+    alert_alter_statements = [
+        "ALTER TABLE sme_lake.gold.ml_anomaly_alerts ADD COLUMN org_id BIGINT",
+        "ALTER TABLE sme_lake.gold.ml_anomaly_alerts ADD COLUMN detection_run_id VARCHAR",
+    ]
+    for alter_sql in alert_alter_statements:
+        try:
+            cursor.execute(alter_sql)
+        except Exception as e:
+            logger.info(f"Schema evolution note (likely already applied): {e}")
     logger.info(f"[Timing] Table creation: {time.time() - start_create:.2f}s")
     
     # Insert alerts (only anomalies)
     anomaly_alerts = alerts_df[alerts_df['is_anomaly'] == 1].copy()
+    # Dedupe by txn/day to guarantee one alert per transaction window key.
+    if len(anomaly_alerts) > 0:
+        anomaly_alerts['txn_date_only'] = pd.to_datetime(anomaly_alerts['txn_date']).dt.date
+        anomaly_alerts = (
+            anomaly_alerts
+            .sort_values('anomaly_score', ascending=True)
+            .drop_duplicates(subset=['txn_id', 'txn_date_only'], keep='first')
+            .drop(columns=['txn_date_only'])
+        )
     # Giới hạn số lượng anomaly insert (top 1000 để tránh SQL quá lớn)
     if len(anomaly_alerts) > 1000:
         anomaly_alerts = anomaly_alerts.nsmallest(1000, 'anomaly_score')
         logger.info(f"⚠️ Quá nhiều anomaly, chỉ insert top 1000 (lowest scores)")
     
+    detection_run_id = datetime.now().strftime("%Y%m%d%H%M%S")
+    org_ids = load_active_org_ids(cursor)
+
+    # Idempotent delete before insert (same model/version/date window + org scope)
+    if len(alerts_df) > 0:
+        min_txn_date = pd.to_datetime(alerts_df['txn_date']).min().strftime('%Y-%m-%d')
+        max_txn_date = pd.to_datetime(alerts_df['txn_date']).max().strftime('%Y-%m-%d')
+        org_id_list_sql = ", ".join(str(org_id) for org_id in org_ids)
+        delete_sql = (
+            "DELETE FROM sme_lake.gold.ml_anomaly_alerts "
+            f"WHERE model_name = '{MODEL_NAME}' "
+            f"AND model_version = '{MODEL_VERSION}' "
+            f"AND txn_date BETWEEN DATE '{min_txn_date}' AND DATE '{max_txn_date}' "
+            f"AND org_id IN ({org_id_list_sql})"
+        )
+        try:
+            cursor.execute(delete_sql)
+            logger.info("✅ Deleted existing anomaly alerts for idempotent rewrite")
+        except Exception as e:
+            logger.warning(f"Delete phase warning (continuing): {e}")
+
     if len(anomaly_alerts) > 0:
         insert_sql = """
         INSERT INTO sme_lake.gold.ml_anomaly_alerts 
-        (alert_id, txn_id, txn_date, amount_vnd, direction, counterparty_name, 
-         transaction_category, anomaly_score, severity, model_name, model_version, 
+        (alert_id, org_id, txn_id, txn_date, amount_vnd, direction, counterparty_name, 
+         transaction_category, anomaly_score, severity, model_name, model_version, detection_run_id,
          detection_timestamp, created_at)
         VALUES 
         """
         # Insert TẤT CẢ trong 1 transaction duy nhất để tránh Iceberg metadata conflict
         now = datetime.now()
         rows = []
-        for _, row in anomaly_alerts.iterrows():
-            alert_id = f"{row['txn_id']}_ANOMALY_{now.strftime('%Y%m%d%H%M%S')}"
-            # Escape single quotes trong string để tránh SQL injection
-            counterparty = str(row['counterparty_name']).replace("'", "''")
-            category = str(row['transaction_category']).replace("'", "''")
-            rows.append(f"('{alert_id}', '{row['txn_id']}', DATE '{row['txn_date'].date()}', {float(row['amount_vnd'])}, '{row['direction_in_out']}', "
-                        f"'{counterparty}', '{category}', {float(row['anomaly_score'])}, "
-                        f"'{row['severity']}', '{MODEL_NAME}', '{MODEL_VERSION}', TIMESTAMP '{row['detection_timestamp']}', TIMESTAMP '{now}')")
+        for org_id in org_ids:
+            for _, row in anomaly_alerts.iterrows():
+                alert_id = f"ORG{org_id}_{row['txn_id']}_ANOMALY_{detection_run_id}"
+                # Escape single quotes trong string để tránh SQL injection
+                counterparty = str(row['counterparty_name']).replace("'", "''")
+                category = str(row['transaction_category']).replace("'", "''")
+                rows.append(
+                    f"('{alert_id}', {org_id}, '{row['txn_id']}', DATE '{row['txn_date'].date()}', "
+                    f"{float(row['amount_vnd'])}, '{row['direction_in_out']}', "
+                    f"'{counterparty}', '{category}', {float(row['anomaly_score'])}, "
+                    f"'{row['severity']}', '{MODEL_NAME}', '{MODEL_VERSION}', '{detection_run_id}', "
+                    f"TIMESTAMP '{row['detection_timestamp']}', TIMESTAMP '{now}')"
+                )
         
         # Insert toàn bộ trong 1 lần (1 transaction = 1 Iceberg commit)
         batch_sql = insert_sql + ",\n        ".join(rows)
         start_insert = time.time()
         try:
             cursor.execute(batch_sql)
-            logger.info(f"✅ Saved {len(anomaly_alerts):,} anomaly alerts to ml_anomaly_alerts (single transaction)")
+            logger.info(
+                f"✅ Saved {len(rows):,} anomaly alerts to ml_anomaly_alerts "
+                f"for {len(org_ids)} org(s) (single transaction)"
+            )
             logger.info(f"[Timing] Insert: {time.time() - start_insert:.2f}s")
             logger.info(f"[SQL size] {len(batch_sql):,} characters")
         except Exception as e:
@@ -440,6 +525,7 @@ def save_alerts_to_trino(alerts_df):
     logger.info("\nSaving detection statistics...")
     stats_table_sql = """
     CREATE TABLE IF NOT EXISTS sme_lake.gold.ml_anomaly_statistics (
+        org_id BIGINT,
         statistic_date DATE,
         total_transactions BIGINT,
         anomalies_detected BIGINT,
@@ -453,6 +539,7 @@ def save_alerts_to_trino(alerts_df):
         max_anomaly_score DOUBLE,
         model_name VARCHAR,
         model_version VARCHAR,
+        detection_run_id VARCHAR,
         created_at TIMESTAMP
     )
     WITH (
@@ -465,35 +552,62 @@ def save_alerts_to_trino(alerts_df):
         logger.info("✅ Table ml_anomaly_statistics created/verified")
     except Exception as e:
         logger.warning(f"Table creation note: {e}")
+
+    stats_alter_statements = [
+        "ALTER TABLE sme_lake.gold.ml_anomaly_statistics ADD COLUMN org_id BIGINT",
+        "ALTER TABLE sme_lake.gold.ml_anomaly_statistics ADD COLUMN detection_run_id VARCHAR",
+    ]
+    for alter_sql in stats_alter_statements:
+        try:
+            cursor.execute(alter_sql)
+        except Exception as e:
+            logger.info(f"Schema evolution note (likely already applied): {e}")
+
+    statistic_date = datetime.now().date()
+    org_id_list_sql = ", ".join(str(org_id) for org_id in org_ids)
+    delete_stats_sql = (
+        "DELETE FROM sme_lake.gold.ml_anomaly_statistics "
+        f"WHERE statistic_date = DATE '{statistic_date.strftime('%Y-%m-%d')}' "
+        f"AND model_name = '{MODEL_NAME}' "
+        f"AND model_version = '{MODEL_VERSION}' "
+        f"AND org_id IN ({org_id_list_sql})"
+    )
+    try:
+        cursor.execute(delete_stats_sql)
+        logger.info("✅ Deleted existing anomaly statistics for idempotent rewrite")
+    except Exception as e:
+        logger.warning(f"Statistics delete warning (continuing): {e}")
     
     # Insert statistics
-    stats_insert_sql = """
-    INSERT INTO sme_lake.gold.ml_anomaly_statistics
-    (statistic_date, total_transactions, anomalies_detected, anomaly_ratio, 
-     critical_count, high_count, medium_count, low_count,
-     avg_anomaly_score, min_anomaly_score, max_anomaly_score, 
-     model_name, model_version, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """
+    stats_rows = []
+    for org_id in org_ids:
+        stats_rows.append(
+            f"({org_id}, DATE '{statistic_date.strftime('%Y-%m-%d')}', {len(alerts_df)}, "
+            f"{len(anomaly_alerts)}, "
+            f"{float(len(anomaly_alerts) / len(alerts_df)) if len(alerts_df) > 0 else 0.0}, "
+            f"{int((alerts_df['severity'] == 'CRITICAL').sum())}, "
+            f"{int((alerts_df['severity'] == 'HIGH').sum())}, "
+            f"{int((alerts_df['severity'] == 'MEDIUM').sum())}, "
+            f"{int((alerts_df['severity'] == 'LOW').sum())}, "
+            f"{float(alerts_df['anomaly_score'].mean()) if len(alerts_df) > 0 else 0.0}, "
+            f"{float(alerts_df['anomaly_score'].min()) if len(alerts_df) > 0 else 0.0}, "
+            f"{float(alerts_df['anomaly_score'].max()) if len(alerts_df) > 0 else 0.0}, "
+            f"'{MODEL_NAME}', '{MODEL_VERSION}', '{detection_run_id}', TIMESTAMP '{datetime.now()}')"
+        )
+
+    stats_insert_sql = (
+        "INSERT INTO sme_lake.gold.ml_anomaly_statistics "
+        "(org_id, statistic_date, total_transactions, anomalies_detected, anomaly_ratio, "
+        "critical_count, high_count, medium_count, low_count, avg_anomaly_score, "
+        "min_anomaly_score, max_anomaly_score, model_name, model_version, detection_run_id, created_at) VALUES "
+        + ", ".join(stats_rows)
+    )
     
     try:
-        cursor.execute(stats_insert_sql, (
-            datetime.now().date(),
-            len(alerts_df),
-            len(anomaly_alerts),
-            float(len(anomaly_alerts) / len(alerts_df)) if len(alerts_df) > 0 else 0.0,
-            int((alerts_df['severity'] == 'CRITICAL').sum()),
-            int((alerts_df['severity'] == 'HIGH').sum()),
-            int((alerts_df['severity'] == 'MEDIUM').sum()),
-            int((alerts_df['severity'] == 'LOW').sum()),
-            float(alerts_df['anomaly_score'].mean()),
-            float(alerts_df['anomaly_score'].min()),
-            float(alerts_df['anomaly_score'].max()),
-            MODEL_NAME,
-            MODEL_VERSION,
-            datetime.now()
-        ))
-        logger.info(f"✅ Saved detection statistics to ml_anomaly_statistics")
+        cursor.execute(stats_insert_sql)
+        logger.info(
+            f"✅ Saved detection statistics to ml_anomaly_statistics for {len(org_ids)} org(s)"
+        )
     except Exception as e:
         logger.error(f"Failed to insert statistics: {e}")
     

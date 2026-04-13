@@ -1,4 +1,4 @@
-"""Core schemas - re-export for easy imports."""
+"""Schema lõi - tái xuất cho nhập khẩu dễ dàng."""
 
 from app.schema.core.customer import (
     CustomerBase,

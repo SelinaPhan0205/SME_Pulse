@@ -5,6 +5,7 @@ from prophet import Prophet
 from prophet.diagnostics import cross_validation, performance_metrics
 import sys
 import os
+import numpy as np
 
 # Add current directory to path for imports
 sys.path.insert(0, '/opt/ops/ml/UC09-forecasting')
@@ -17,7 +18,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Cấu hình MLflow (Dùng local filesystem với quyền write)
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "file:///tmp/airflow_mlflow")
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "file:///opt/airflow/mlflow")
 MLFLOW_EXPERIMENT_NAME = "sme_pulse_cashflow_forecast"
 
 def train_cashflow_forecast():
@@ -41,6 +42,7 @@ def train_cashflow_forecast():
 
         # Dữ liệu 501 rows là hơi ít, nhưng đủ để chạy
         logger.info(f"Loaded {len(df)} rows from ml_training_cashflow_fcst.")
+        df = df.sort_values('ds').reset_index(drop=True)
         
         # 2. Chuẩn bị Regressors (Các biến ngoại sinh)
         # Prophet tự động hiểu 'ds' và 'y'.
@@ -75,16 +77,67 @@ def train_cashflow_forecast():
             mlflow.log_param("data_end_date", df['ds'].max())
             
             # 5. Đánh giá Model (Backtesting)
-            # Chạy cross-validation 30 ngày, 3 lần
-            logger.info("Running cross-validation...")
-            df_cv = cross_validation(model, initial='365 days', period='90 days', horizon='30 days')
-            df_p = performance_metrics(df_cv)
-            
-            # Log Metrics (Lưu lại kết quả đánh giá)
-            mape = df_p['mape'].mean()
-            logger.info(f"Cross-Validation MAPE: {mape}")
-            mlflow.log_metric("mape", mape)
-            mlflow.log_metric("rmse", df_p['rmse'].mean())
+            logger.info("Running model evaluation...")
+            data_span_days = int((df['ds'].max() - df['ds'].min()).days)
+            horizon_days = max(7, min(30, data_span_days // 5 if data_span_days > 0 else 7))
+            initial_days = max(30, min(365, data_span_days - horizon_days - 1))
+            period_days = max(7, min(90, horizon_days // 2))
+
+            if data_span_days > (horizon_days + initial_days + 1):
+                logger.info(
+                    f"Cross-validation windows: initial={initial_days}d, period={period_days}d, horizon={horizon_days}d"
+                )
+                df_cv = cross_validation(
+                    model,
+                    initial=f'{initial_days} days',
+                    period=f'{period_days} days',
+                    horizon=f'{horizon_days} days'
+                )
+                df_p = performance_metrics(df_cv)
+
+                mape = float(df_p['mape'].mean())
+                rmse = float(df_p['rmse'].mean())
+                logger.info(f"Cross-Validation MAPE: {mape}")
+                mlflow.log_metric("mape", mape)
+                mlflow.log_metric("rmse", rmse)
+                mlflow.log_param("evaluation_mode", "cross_validation")
+            else:
+                logger.warning(
+                    "Insufficient history for Prophet CV windows. Falling back to temporal holdout evaluation."
+                )
+                split_idx = max(1, int(len(df) * 0.8))
+                train_df = df.iloc[:split_idx].copy()
+                holdout_df = df.iloc[split_idx:].copy()
+
+                if len(holdout_df) == 0:
+                    holdout_df = df.tail(1).copy()
+                    train_df = df.iloc[:-1].copy()
+
+                eval_model = Prophet(yearly_seasonality=True, weekly_seasonality=True, daily_seasonality=False)
+                eval_model.add_country_holidays(country_name='VN')
+                for reg in regressors:
+                    eval_model.add_regressor(reg)
+                eval_model.fit(train_df)
+
+                holdout_input_cols = ['ds'] + regressors
+                holdout_forecast = eval_model.predict(holdout_df[holdout_input_cols])
+
+                y_true = holdout_df['y'].astype(float).values
+                y_pred = holdout_forecast['yhat'].astype(float).values
+                denominator = np.where(np.abs(y_true) < 1e-9, 1.0, np.abs(y_true))
+                mape = float(np.mean(np.abs((y_true - y_pred) / denominator)))
+                rmse = float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
+                mae = float(np.mean(np.abs(y_true - y_pred)))
+                smape = float(np.mean(2.0 * np.abs(y_pred - y_true) / (np.abs(y_true) + np.abs(y_pred) + 1e-9)))
+
+                mlflow.log_metric("mape", mape)
+                mlflow.log_metric("rmse", rmse)
+                mlflow.log_metric("holdout_mae", mae)
+                mlflow.log_metric("holdout_smape", smape)
+                mlflow.log_metric("holdout_rows", len(holdout_df))
+                mlflow.log_param("evaluation_mode", "temporal_holdout")
+                mlflow.log_param("cv_skipped", True)
+                mlflow.log_param("cv_skip_reason", "insufficient_history")
             
             # 6. Log Model (Quan trọng nhất: lưu lại model đã train)
             logger.info("Logging model to MLflow...")

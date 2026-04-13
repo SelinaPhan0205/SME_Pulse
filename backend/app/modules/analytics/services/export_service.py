@@ -1,4 +1,4 @@
-"""Export Service - Background export job handling."""
+"""Service Xuất - Xử lý công việc xuất dưới nền."""
 
 import logging
 import uuid
@@ -19,23 +19,23 @@ async def create_export_job(
     date_to: str = None
 ) -> str:
     """
-    Create export job and return job_id.
+    Tạo công việc xuất và trả về job_id.
     
-    Args:
-        db: Database session
-        org_id: Organization ID
+    Đối số:
+        db: Phiên cơ sở dữ liệu
+        org_id: ID Tổ chức
         report_type: ar_aging, ap_aging, cashflow, payment
-        format: xlsx or pdf
-        date_from: Optional start date (YYYY-MM-DD)
-        date_to: Optional end date (YYYY-MM-DD)
+        format: xlsx hoặc pdf
+        date_from: Ngày bắt đầu tùy chọn (YYYY-MM-DD)
+        date_to: Ngày kết thúc tùy chọn (YYYY-MM-DD)
     
-    Returns:
-        job_id for tracking
+    Trả lại:
+        job_id để theo dõi
     """
     try:
         public_job_id = f"exp_{uuid.uuid4().hex[:12]}"
         
-        # Create ExportJob record with auto-incrementing ID, but store public job_id in job_id field
+        # Tạo record ExportJob với ID tự động tăng, nhưng lưu trữ job_id công khai trong trường job_id
         job = ExportJob(
             job_id=public_job_id,
             org_id=org_id,
@@ -67,7 +67,7 @@ async def get_job_status(
     job_id: str,
     org_id: int
 ) -> dict:
-    """Get export job status."""
+    """Lấy trạng thái công việc xuất."""
     try:
         query = select(ExportJob).where(
             ExportJob.job_id == job_id,
@@ -102,7 +102,7 @@ async def update_job_status(
     file_url: str = None,
     error_log: str = None
 ) -> None:
-    """Update export job status."""
+    """Cập nhật trạng thái công việc xuất."""
     try:
         query = select(ExportJob).where(ExportJob.job_id == job_id)
         result = await db.execute(query)

@@ -1,4 +1,4 @@
-"""Payment Service - Business logic for payment and allocation management."""
+"""Dịch vụ thanh toán - Logic kinh doanh cho quản lý thanh toán và phân bổ."""
 
 from datetime import date
 from typing import Optional, Sequence
@@ -24,22 +24,22 @@ async def get_payments(
     account_id: Optional[int] = None,
     payment_method: Optional[str] = None,
 ) -> tuple[Sequence[Payment], int]:
-    """Get list of payments with pagination and filtering.
+    """Lấy danh sách thanh toán với phân trang và lọc.
     
-    Args:
+    Đối số:
         db: Database session
-        org_id: Organization ID from JWT
-        skip: Offset for pagination
-        limit: Max records to return
-        date_from: Filter by transaction_date >= date_from
-        date_to: Filter by transaction_date <= date_to
-        account_id: Filter by account ID
-        payment_method: Filter by payment method (cash, transfer, vietqr, card)
+        org_id: ID tổ chức từ JWT
+        skip: Độ lệch cho phân trang
+        limit: Tối đa bản ghi trả về
+        date_from: Lọc theo transaction_date >= date_from
+        date_to: Lọc theo transaction_date <= date_to
+        account_id: Lọc theo ID tài khoản
+        payment_method: Lọc theo phương thức thanh toán (cash, transfer, vietqr, card)
     
-    Returns:
-        Tuple of (payment list, total count)
+    Trả về:
+        Tuple (danh sách thanh toán, tổng số)
     """
-    # Build base query conditions
+    # Xây dựng điều kiện truy vấn cơ sở
     conditions = [Payment.org_id == org_id]
     
     if date_from:
@@ -51,7 +51,7 @@ async def get_payments(
     if payment_method:
         conditions.append(Payment.payment_method == payment_method)
     
-    # Build query with allocations eager loading
+    # Xây dựng query với eager loading phân bổ
     query = (
         select(Payment)
         .where(*conditions)
@@ -67,7 +67,7 @@ async def get_payments(
         .where(*conditions)
     )
     
-    # Execute queries
+    # Thực thi các truy vấn
     result = await db.execute(query)
     payments = result.scalars().all()
     
@@ -82,18 +82,18 @@ async def get_payment(
     payment_id: int,
     org_id: int,
 ) -> Payment:
-    """Get single payment by ID with allocations.
+    """Lấy một thanh toán theo ID với phân bổ.
     
-    Args:
+    Đối số:
         db: Database session
-        payment_id: Payment ID
-        org_id: Organization ID from JWT
+        payment_id: ID thanh toán
+        org_id: ID tổ chức từ JWT
     
-    Returns:
-        Payment instance with allocations loaded
+    Trả về:
+        Instance Payment với phân bổ được load
     
-    Raises:
-        HTTPException: 404 if not found or belongs to different org
+    Nâng cao:
+        HTTPException: 404 nếu không tìm thấy hoặc thuộc org khác
     """
     query = (
         select(Payment)
@@ -117,32 +117,32 @@ async def create_payment_with_allocations(
     schema: PaymentCreate,
     org_id: int,
 ) -> Payment:
-    """Create payment with allocations to invoices/bills (ATOMIC transaction).
+    """Tạo thanh toán với phân bổ cho hóa đơn/hóa đơn (giao dịch ATOMIC).
     
-    This function implements ACID transaction logic:
-    1. Validates account exists
-    2. Creates Payment record
-    3. For each allocation:
-       - Validates invoice/bill exists and belongs to org
-       - Validates allocated_amount doesn't exceed remaining balance
-       - Creates PaymentAllocation record
-       - Updates invoice/bill paid_amount
-       - Updates invoice/bill status (partial/paid)
-    4. Commits ALL changes atomically (all or nothing)
+    Hàm này triển khai logic giao dịch ACID:
+    1. Xác thực tài khoản tồn tại
+    2. Tạo record Payment
+    3. Với mỗi phân bổ:
+       - Xác thực hóa đơn tồn tại và thuộc org
+       - Xác thực allocated_amount không vượt quá số dư còn lại
+       - Tạo record PaymentAllocation
+       - Cập nhật paid_amount của hóa đơn
+       - Cập nhật trạng thái hóa đơn (partial/paid)
+    4. Commit tất cả thay đổi một cách atomic (tất cả hoặc không)
     
-    Args:
+    Đối số:
         db: Database session
-        schema: Payment creation data with allocations
-        org_id: Organization ID from JWT
+        schema: Dữ liệu tạo Payment với phân bổ
+        org_id: ID tổ chức từ JWT
     
-    Returns:
-        Created Payment instance with allocations loaded
+    Trả về:
+        Instance Payment được tạo với phân bổ được load
     
-    Raises:
-        HTTPException: 400 if validation fails (account, invoice, allocation amount)
+    Nâng cao:
+        HTTPException: 400 nếu xác thực thất bại (tài khoản, hóa đơn, số tiền phân bổ)
     """
     try:
-        # Step 1: Validate account exists and belongs to org
+        # Bước 1: Xác thực tài khoản tồn tại và thuộc org
         account_query = select(Account).where(
             Account.id == schema.account_id,
             Account.org_id == org_id,
@@ -156,29 +156,29 @@ async def create_payment_with_allocations(
                 detail=f"Account {schema.account_id} not found in your organization",
             )
         
-        # Step 2: Create payment record
+        # Bước 2: Tạo record payment
         payment = Payment(
             **schema.model_dump(exclude={'allocations'}),
             org_id=org_id,
         )
         db.add(payment)
-        await db.flush()  # Get payment.id for allocations
+        await db.flush()  # Đảm bảo payment.id được tạo
         
-        # Step 3: Process each allocation ATOMICALLY
+        # Bước 3: Xử lý từng phân bổ ATOMIC
         for alloc_item in schema.allocations:
-            # Handle AR Invoice allocation
+            # Xử lý phân bổ hóa đơn AR
             if alloc_item.ar_invoice_id is not None:
-                # Validate invoice exists and belongs to org
+                # Xác thực hóa đơn tồn tại và thuộc org
                 invoice = await get_invoice(db, alloc_item.ar_invoice_id, org_id)
                 
-                # Validate invoice is POSTED (cannot allocate to DRAFT)
+                # Xác thực hóa đơn là POSTED (không thể phân bổ cho DRAFT)
                 if invoice.status == "draft":
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=f"Cannot allocate payment to DRAFT invoice {invoice.invoice_no}. Post it first.",
                     )
                 
-                # Calculate remaining balance
+                # Tính số dư còn lại
                 remaining = invoice.total_amount - invoice.paid_amount
                 
                 if alloc_item.allocated_amount > remaining:
@@ -190,7 +190,7 @@ async def create_payment_with_allocations(
                         ),
                     )
                 
-                # Create allocation record
+                # Tạo bản ghi phân bổ
                 allocation = PaymentAllocation(
                     payment_id=payment.id,
                     ar_invoice_id=alloc_item.ar_invoice_id,
@@ -199,18 +199,18 @@ async def create_payment_with_allocations(
                 )
                 db.add(allocation)
                 
-                # Update invoice paid_amount
+                # Cập nhật paid_amount của hóa đơn
                 invoice.paid_amount += alloc_item.allocated_amount
                 
-                # Update invoice status based on paid amount
+                # Cập nhật trạng thái hóa đơn dựa trên số tiền thanh toán
                 if invoice.paid_amount >= invoice.total_amount:
                     invoice.status = "paid"
                 else:
                     invoice.status = "partial"
             
-            # Handle AP Bill allocation
+            # Xử lý phân bổ hóa đơn AP
             elif alloc_item.ap_bill_id is not None:
-                # Query AP bill
+                # Truy vấn hóa đơn AP
                 bill_query = select(APBill).where(
                     APBill.id == alloc_item.ap_bill_id,
                     APBill.org_id == org_id,
@@ -224,14 +224,14 @@ async def create_payment_with_allocations(
                         detail=f"AP Bill {alloc_item.ap_bill_id} not found in your organization",
                     )
                 
-                # Validate bill is POSTED
+                # Xác thực hóa đơn là POSTED
                 if bill.status == "draft":
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=f"Cannot allocate payment to DRAFT bill {bill.bill_no}. Post it first.",
                     )
                 
-                # Calculate remaining balance
+                # Tính số dư còn lại
                 remaining = bill.total_amount - bill.paid_amount
                 
                 if alloc_item.allocated_amount > remaining:
@@ -243,7 +243,7 @@ async def create_payment_with_allocations(
                         ),
                     )
                 
-                # Create allocation record
+                # Tạo bản ghi phân bổ
                 allocation = PaymentAllocation(
                     payment_id=payment.id,
                     ap_bill_id=alloc_item.ap_bill_id,
@@ -252,30 +252,30 @@ async def create_payment_with_allocations(
                 )
                 db.add(allocation)
                 
-                # Update bill paid_amount
+                # Cập nhật paid_amount của hóa đơn
                 bill.paid_amount += alloc_item.allocated_amount
                 
-                # Update bill status
+                # Cập nhật trạng thái hóa đơn
                 if bill.paid_amount >= bill.total_amount:
                     bill.status = "paid"
                 else:
                     bill.status = "partial"
         
-        # Step 4: Commit ALL changes atomically
+        # Bước 4: Commit tất cả thay đổi một cách atomic
         await db.commit()
         await db.refresh(payment)
         
-        # Load allocations relationship
+        # Tải lại phân bổ
         await db.refresh(payment, attribute_names=['allocations'])
         
         return payment
     
     except HTTPException:
-        # Re-raise HTTP exceptions (validation errors)
+        # Tái tung các ngoại lệ HTTP (lỗi xác thực)
         await db.rollback()
         raise
     except Exception as e:
-        # Rollback on any other error
+        # Rollback nếu có lỗi khác
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -289,34 +289,34 @@ async def update_payment(
     org_id: int,
     schema: PaymentUpdate,
 ) -> Payment:
-    """Update payment metadata (notes, reference_code only).
+    """Cập nhật metadata thanh toán (notes, reference_code chỉ).
     
-    IMMUTABLE FIELDS - Cannot be updated after creation:
-    - amount (audit compliance)
+    CÁC TRƯỜNG BẤT BIẾN - Không thể cập nhật sau khi tạo:
+    - amount (tuân thủ audit)
     - transaction_date
     - account_id
-    - allocations (must unallocate/reallocate if needed)
+    - allocations (phải hủy phân bổ/tái phân bổ nếu cần)
     
-    Business Rules:
-    - Only notes and reference_code can be modified
-    - All other fields are audit-locked (immutable)
-    - Useful for adding bank transaction details after creation
+    Quy tắc kinh doanh:
+    - Chỉ có thể sửa đổi notes và reference_code
+    - Tất cả các trường khác bị khóa audit (bất biến)
+    - Hữu ích để thêm chi tiết giao dịch ngân hàng sau khi tạo
     
-    Args:
+    Đối số:
         db: Database session
-        payment_id: Payment ID to update
-        org_id: Organization ID from JWT
-        schema: Update data (notes, reference_code)
+        payment_id: ID thanh toán cần cập nhật
+        org_id: ID tổ chức từ JWT
+        schema: Cập nhật dữ liệu (notes, reference_code)
     
-    Returns:
-        Updated Payment instance with allocations loaded
+    Trả về:
+        Instance Payment được cập nhật với phân bổ được load
     
-    Raises:
-        404: If payment not found
-        400: If attempting to update immutable fields
+    Nâng cao:
+        404: Nếu thanh toán không tìm thấy
+        400: Nếu cố gắng cập nhật các trường bất biến
     """
     try:
-        # Query payment with allocations
+        # Truy vấn thanh toán với phân bổ
         query = (
             select(Payment)
             .where(Payment.id == payment_id, Payment.org_id == org_id)
@@ -331,14 +331,14 @@ async def update_payment(
                 detail=f"Payment {payment_id} not found in your organization",
             )
         
-        # Update only allowed fields
+        # Cập nhật chỉ các trường được phép
         if schema.notes is not None:
             payment.notes = schema.notes
         
         if schema.reference_code is not None:
             payment.reference_code = schema.reference_code
         
-        # Commit changes
+        # Commit thay đổi
         await db.commit()
         await db.refresh(payment, attribute_names=['allocations'])
         

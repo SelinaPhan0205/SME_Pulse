@@ -219,3 +219,28 @@ sources:
             description: "Record creation timestamp"
           - name: updated_at
             description: "Record update timestamp (for incremental loading)"
+
+      - name: payment_allocations_app
+        description: "Payment allocations from finance.payment_allocations (Phase 3 Backend)"
+        meta:
+          external_location: "s3a://sme-lake/bronze/app_db/payment_allocations/"
+          file_format: parquet
+        columns:
+          - name: id
+            description: "Primary key (auto-increment)"
+          - name: org_id
+            description: "Organization ID (multi-tenancy)"
+            tests:
+              - not_null
+          - name: payment_id
+            description: "Foreign key to finance.payments"
+          - name: ar_invoice_id
+            description: "Foreign key to finance.ar_invoices"
+          - name: allocated_amount
+            description: "Allocated amount from payment to invoice (VND)"
+          - name: notes
+            description: "Optional notes"
+          - name: created_at
+            description: "Record creation timestamp"
+          - name: updated_at
+            description: "Record update timestamp"

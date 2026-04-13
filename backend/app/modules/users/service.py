@@ -1,4 +1,4 @@
-"""User Management Service Layer - Business Logic with RBAC."""
+"""Service Layer Quản lý Người dùng - Logic kinh doanh với RBAC."""
 
 import logging
 from typing import Optional, List
@@ -24,21 +24,21 @@ async def get_users(
     status: Optional[str] = None,
 ) -> tuple[list[User], int]:
     """
-    Get paginated list of users for an organization.
+    Lấy danh sách người dùng được phân trang cho một tổ chức.
     
-    Args:
-        db: Database session
-        org_id: Organization ID (CRITICAL for multi-tenancy)
-        skip: Number of records to skip
-        limit: Max records to return
-        search: Search query for email/name
-        role: Filter by role code
-        status: Filter by status (active, inactive)
+    Đối số:
+        db: Phiên cơ sở dữ liệu
+        org_id: ID tổ chức (QUAN TRỌNG để đa thuê)
+        skip: Số bản ghi cần bỏ qua
+        limit: Tối đa bản ghi trả về
+        search: Truy vấn tìm kiếm cho email/tên
+        role: Lọc theo mã vai trò
+        status: Lọc theo trạng thái (hoạt động, không hoạt động)
     
-    Returns:
-        Tuple of (users list, total count)
+    Trả lại:
+        Tuple của (danh sách người dùng, tổng số)
     """
-    # Build filters
+    # Xây dựng bộ lọc
     filters = [User.org_id == org_id]
     
     if search:
@@ -53,11 +53,11 @@ async def get_users(
     if status:
         filters.append(User.status == status)
     
-    # If role filter provided, join with UserRole
+    # Nếu cung cấp bộ lọc vai trò, hãy nối với UserRole
     base_query = select(User).where(and_(*filters))
     
     if role:
-        # Join with roles to filter by role code
+        # Nối với vai trò để lọc theo mã vai trò
         base_query = (
             base_query
             .join(User.roles)
@@ -65,7 +65,7 @@ async def get_users(
             .where(Role.code == role)
         )
     
-    # Count total
+    # Đếm tổng số
     count_stmt = select(func.count()).select_from(User).where(and_(*filters))
     if role:
         count_stmt = (
@@ -78,7 +78,7 @@ async def get_users(
     total_result = await db.execute(count_stmt)
     total = total_result.scalar_one()
     
-    # Get paginated data with roles loaded
+    # Lấy dữ liệu được phân trang với vai trò được tải
     stmt = (
         base_query
         .options(selectinload(User.roles).selectinload(UserRole.role))
@@ -99,20 +99,20 @@ async def get_user(
     org_id: int,
 ) -> User:
     """
-    Get single user by ID.
+    Lấy một người dùng theo ID.
     
-    CRITICAL: Always filter by org_id to prevent cross-tenant access.
+    QUAN TRỌNG: Luôn lọc theo org_id để ngăn chặn truy cập đa thuê.
     
-    Args:
-        db: Database session
-        user_id: User ID
-        org_id: Organization ID
+    Đối số:
+        db: Phiên cơ sở dữ liệu
+        user_id: ID người dùng
+        org_id: ID tổ chức
     
-    Returns:
-        User object with roles loaded
+    Trả lại:
+        Đối tượng người dùng với các vai trò được tải
     
-    Raises:
-        HTTPException 404: User not found
+    Tăng:
+        HTTPException 404: Người dùng không được tìm thấy
     """
     stmt = (
         select(User)
@@ -126,7 +126,7 @@ async def get_user(
         logger.warning(f"User {user_id} not found for org_id={org_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            detail="Người dùng không được tìm thấy"
         )
     
     return user
@@ -139,37 +139,37 @@ async def create_user(
     current_user: User,
 ) -> User:
     """
-    Create new user.
+    Tạo người dùng mới.
     
-    RBAC: Only Owner/Admin can create users.
-    Business Rules:
-    - Email must be unique within organization
-    - Password is hashed before storage
-    - User is assigned to specified role
+    RBAC: Chỉ Chủ sở/Quản trị viên mới có thể tạo người dùng.
+    Quy tắc kinh doanh:
+    - Email phải duy nhất trong tổ chức
+    - Mật khẩu được băm trước khi lưu
+    - Người dùng được gán cho vai trò được chỉ định
     
-    Args:
-        db: Database session
-        schema: UserCreate schema
-        org_id: Organization ID
-        current_user: Current authenticated user (for RBAC check)
+    Đối số:
+        db: Phiên cơ sở dữ liệu
+        schema: Lược đồ UserCreate
+        org_id: ID tổ chức
+        current_user: Người dùng được xác thực hiện tại (để kiểm tra RBAC)
     
-    Returns:
-        Created user
+    Trả lại:
+        Người dùng được tạo
     
-    Raises:
-        HTTPException 403: Insufficient permissions
-        HTTPException 400: Email already exists
+    Tăng:
+        HTTPException 403: Quyền không đủ
+        HTTPException 400: Email đã tồn tại
     """
-    # RBAC Check: Only Owner/Admin can create users
+    # Kiểm tra RBAC: Chỉ Owner/Admin mới có thể tạo người dùng
     current_user_roles = [ur.role.code for ur in current_user.roles if ur.role]
     if not any(role in ['owner', 'admin'] for role in current_user_roles):
         logger.warning(f"User {current_user.id} attempted to create user without permission")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only Owner/Admin can create users"
+            detail="Chỉ Chủ sở/Quản trị viên mới có thể tạo người dùng"
         )
     
-    # Check if email already exists in organization
+    # Kiểm tra nếu email đã tồn tại trong tổ chức
     existing_stmt = select(User).where(
         and_(User.email == schema.email, User.org_id == org_id)
     )
@@ -177,10 +177,10 @@ async def create_user(
     if existing_result.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already exists in organization"
+            detail="Email đã tồn tại trong tổ chức"
         )
     
-    # Get role by code
+    # Lấy vai trò theo mã
     role_stmt = select(Role).where(Role.code == schema.role)
     role_result = await db.execute(role_stmt)
     role = role_result.scalar_one_or_none()
@@ -188,10 +188,10 @@ async def create_user(
     if not role:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Role '{schema.role}' not found"
+            detail=f"Vai trò '{schema.role}' không được tìm thấy"
         )
     
-    # Create user
+    # Tạo người dùng
     user = User(
         email=schema.email,
         full_name=schema.full_name,
@@ -200,9 +200,9 @@ async def create_user(
         status="active",
     )
     db.add(user)
-    await db.flush()  # Flush to get user.id
+    await db.flush()  # Xả để lấy user.id
     
-    # Assign role
+    # Gán vai trò
     user_role = UserRole(
         user_id=user.id,
         role_id=role.id,
@@ -213,7 +213,7 @@ async def create_user(
     await db.commit()
     await db.refresh(user)
     
-    # Load roles
+    # Tải vai trò
     await db.execute(
         select(User)
         .where(User.id == user.id)
@@ -232,36 +232,36 @@ async def update_user(
     current_user: User,
 ) -> User:
     """
-    Update user.
+    Cập nhật người dùng.
     
-    RBAC: Only Owner/Admin can update users (except self).
+    RBAC: Chỉ Chủ sở/Quản trị viên mới có thể cập nhật người dùng (ngoại trừ chính bản thân).
     
-    Args:
-        db: Database session
-        user_id: User ID to update
-        schema: UserUpdate schema
-        org_id: Organization ID
-        current_user: Current authenticated user
+    Đối số:
+        db: Phiên cơ sở dữ liệu
+        user_id: ID người dùng cần cập nhật
+        schema: Lược đồ UserUpdate
+        org_id: ID tổ chức
+        current_user: Người dùng được xác thực hiện tại
     
-    Returns:
-        Updated user
+    Trả lại:
+        Người dùng được cập nhật
     
-    Raises:
-        HTTPException 403: Insufficient permissions
-        HTTPException 404: User not found
+    Tăng:
+        HTTPException 403: Quyền không đủ
+        HTTPException 404: Người dùng không được tìm thấy
     """
-    # RBAC Check
+    # RBAC Kiểm tra
     current_user_roles = [ur.role.code for ur in current_user.roles if ur.role]
     if not any(role in ['owner', 'admin'] for role in current_user_roles):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only Owner/Admin can update users"
+            detail="Chỉ Chủ sở/Quản trị viên mới có thể cập nhật người dùng"
         )
     
-    # Get user
+    # Lấy người dùng
     user = await get_user(db, user_id, org_id)
     
-    # Update fields
+    # Cập nhật các trường
     if schema.full_name is not None:
         user.full_name = schema.full_name
     
@@ -269,7 +269,7 @@ async def update_user(
         user.status = schema.status
     
     if schema.role is not None:
-        # Get new role
+    # Lấy vai trò mới
         role_stmt = select(Role).where(Role.code == schema.role)
         role_result = await db.execute(role_stmt)
         new_role = role_result.scalar_one_or_none()
@@ -277,17 +277,17 @@ async def update_user(
         if not new_role:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Role '{schema.role}' not found"
+                detail=f"Vai trò '{schema.role}' không được tìm thấy"
             )
         
-        # Remove old roles
+        # Xóa vai trò cũ
         await db.execute(
             select(UserRole).where(UserRole.user_id == user.id)
         )
         for ur in user.roles:
             await db.delete(ur)
         
-        # Assign new role
+        # Gán vai trò mới
         user_role = UserRole(
             user_id=user.id,
             role_id=new_role.id,
@@ -298,7 +298,7 @@ async def update_user(
     await db.commit()
     await db.refresh(user)
     
-    # Reload with roles
+    # Tải lại với vai trò
     stmt = (
         select(User)
         .where(User.id == user.id)
@@ -318,41 +318,41 @@ async def delete_user(
     current_user: User,
 ) -> None:
     """
-    Delete user (soft delete - set status to inactive).
+    Xóa người dùng (xóa mềm - đặt trạng thái thành không hoạt động).
     
-    RBAC: Only Owner/Admin can delete users.
-    Cannot delete yourself.
+    RBAC: Chỉ Chủ sở/Quản trị viên mới có thể xóa người dùng.
+    Không thể xóa chính bạn.
     
-    Args:
-        db: Database session
-        user_id: User ID to delete
-        org_id: Organization ID
-        current_user: Current authenticated user
+    Đối số:
+        db: Phiên cơ sở dữ liệu
+        user_id: ID người dùng cần xóa
+        org_id: ID tổ chức
+        current_user: Người dùng được xác thực hiện tại
     
-    Raises:
-        HTTPException 403: Insufficient permissions
-        HTTPException 400: Cannot delete yourself
-        HTTPException 404: User not found
+    Tăng:
+        HTTPException 403: Quyền không đủ
+        HTTPException 400: Không thể xóa chính bạn
+        HTTPException 404: Người dùng không được tìm thấy
     """
-    # RBAC Check
+    # Kiểm tra RBAC
     current_user_roles = [ur.role.code for ur in current_user.roles if ur.role]
     if not any(role in ['owner', 'admin'] for role in current_user_roles):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only Owner/Admin can delete users"
+            detail="Chỉ Chủ sở/Quản trị viên mới có thể xóa người dùng"
         )
     
-    # Cannot delete yourself
+    # Không thể xóa chính bạn
     if user_id == current_user.id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete yourself"
+            detail="Không thể xóa chính bạn"
         )
     
-    # Get user
+    # Lấy người dùng
     user = await get_user(db, user_id, org_id)
     
-    # Soft delete - set status to inactive
+    # Xóa mềm - đặt trạng thái thành không hoạt động
     user.status = "inactive"
     
     await db.commit()
@@ -368,33 +368,33 @@ async def reset_user_password(
     current_user: User,
 ) -> None:
     """
-    Reset user password (Admin only).
+    Đặt lại mật khẩu người dùng (Chỉ Quản trị viên).
     
-    RBAC: Only Owner/Admin can reset passwords.
+    RBAC: Chỉ Chủ sở/Quản trị viên mới có thể đặt lại mật khẩu.
     
-    Args:
-        db: Database session
-        user_id: User ID
-        new_password: New password (plain text, will be hashed)
-        org_id: Organization ID
-        current_user: Current authenticated user
+    Đối số:
+        db: Phiên cơ sở dữ liệu
+        user_id: ID người dùng
+        new_password: Mật khẩu mới (văn bản thuần túy, sẽ được băm)
+        org_id: ID tổ chức
+        current_user: Người dùng được xác thực hiện tại
     
-    Raises:
-        HTTPException 403: Insufficient permissions
-        HTTPException 404: User not found
+    Tăng:
+        HTTPException 403: Quyền không đủ
+        HTTPException 404: Người dùng không được tìm thấy
     """
-    # RBAC Check
+    # RBAC Kiểm tra
     current_user_roles = [ur.role.code for ur in current_user.roles if ur.role]
     if not any(role in ['owner', 'admin'] for role in current_user_roles):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only Owner/Admin can reset passwords"
+            detail="Chỉ Chủ sở/Quản trị viên mới có thể đặt lại mật khẩu"
         )
     
-    # Get user
+    # Lấy người dùng
     user = await get_user(db, user_id, org_id)
     
-    # Reset password
+    # Đặt lại mật khẩu
     user.password_hash = get_password_hash(new_password)
     
     await db.commit()

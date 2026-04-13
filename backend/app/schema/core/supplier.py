@@ -1,4 +1,4 @@
-"""Supplier schemas."""
+"""Schema Nhà cung cấp."""
 
 from datetime import datetime
 from typing import Optional
@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, EmailStr
 
 
 class SupplierBase(BaseModel):
-    """Base schema for Supplier - shared fields."""
+    """Schema cơ bản cho Nhà cung cấp - các trường chia sẻ."""
     name: str = Field(..., min_length=1, max_length=255, description="Supplier name")
     code: Optional[str] = Field(None, max_length=50, description="Supplier code (unique within org)")
     tax_code: Optional[str] = Field(None, max_length=50, description="Tax identification number")
@@ -18,12 +18,12 @@ class SupplierBase(BaseModel):
 
 
 class SupplierCreate(SupplierBase):
-    """Schema for creating a new Supplier."""
+    """Schema cho việc tạo mới Nhà cung cấp."""
     pass
 
 
 class SupplierUpdate(BaseModel):
-    """Schema for updating a Supplier - all fields optional."""
+    """Schema cho việc cập nhật Nhà cung cấp - tất cả các trường là tuy chọn."""
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     code: Optional[str] = Field(None, max_length=50)
     tax_code: Optional[str] = Field(None, max_length=50)
@@ -35,7 +35,7 @@ class SupplierUpdate(BaseModel):
 
 
 class SupplierResponse(SupplierBase):
-    """Schema for Supplier response - includes DB fields."""
+    """Schema cho phản hồi Nhà cung cấp - bao gồm các trường CSDL."""
     id: int
     org_id: int
     created_at: datetime
@@ -45,7 +45,7 @@ class SupplierResponse(SupplierBase):
 
 
 class PaginatedSuppliersResponse(BaseModel):
-    """Paginated response for suppliers list."""
+    """Phản hồi có phân trang cho danh sách nhà cung cấp."""
     total: int
     skip: int
     limit: int

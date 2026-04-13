@@ -1,4 +1,4 @@
-"""Users Management Module - CRUD operations for user accounts."""
+"""Mô-đun Quản lý Người dùng - Hoạt động CRUD cho các tài khoản người dùng."""
 
 from app.modules.users.router import router
 

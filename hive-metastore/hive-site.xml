@@ -22,7 +22,7 @@
     <!-- Warehouse directory trên MinIO -->
     <property>
         <name>hive.metastore.warehouse.dir</name>
-        <value>s3a://bronze/warehouse</value>
+        <value>s3a://sme-lake/warehouse</value>
     </property>
 
     <!-- QUAN TRỌNG: MinIO S3A Credentials -->

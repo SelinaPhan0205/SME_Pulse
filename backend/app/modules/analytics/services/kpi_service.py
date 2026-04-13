@@ -1,4 +1,4 @@
-"""KPI Service - Calculate DSO, DPO, CCC."""
+"""Service KPI - Tính toán DSO, DPO, CCC."""
 
 import logging
 from decimal import Decimal
@@ -13,13 +13,13 @@ logger = logging.getLogger(__name__)
 
 async def calculate_dso(db: AsyncSession, org_id: int) -> float:
     """
-    Calculate Days Sales Outstanding (DSO).
-    Formula: (Total AR / Daily Revenue) * 30
+    Tính toán Days Sales Outstanding (DSO).
+    Công thức: (Tổng AR / Doanh thu hàng ngày) * 30
     
-    Approximation: (Total AR / Total Invoice Amount Last 30 Days) * 30
+    Xấp xỉ: (Tổng AR / Tổng Hóa đơn 30 ngày cuối) * 30
     """
     try:
-        # Get total AR
+        # Lấy tổng AR
         ar_query = select(func.sum(ARInvoice.total_amount - ARInvoice.paid_amount)).where(
             ARInvoice.org_id == org_id,
             ARInvoice.status.in_(["posted", "partial", "overdue"])
@@ -27,7 +27,7 @@ async def calculate_dso(db: AsyncSession, org_id: int) -> float:
         ar_result = await db.execute(ar_query)
         total_ar = ar_result.scalar() or Decimal(0)
         
-        # Get invoices from last 30 days
+        # Lấy hóa đơn từ 30 ngày cuối
         thirty_days_ago = datetime.utcnow().date() - timedelta(days=30)
         revenue_query = select(func.sum(ARInvoice.total_amount)).where(
             ARInvoice.org_id == org_id,
@@ -50,13 +50,13 @@ async def calculate_dso(db: AsyncSession, org_id: int) -> float:
 
 async def calculate_dpo(db: AsyncSession, org_id: int) -> float:
     """
-    Calculate Days Payable Outstanding (DPO).
-    Formula: (Total AP / Daily Cost of Goods Sold) * 30
+    Tính toán Days Payable Outstanding (DPO).
+    Công thức: (Tổng AP / Chi phí hàng ngày) * 30
     
-    Approximation: (Total AP / Total Bill Amount Last 30 Days) * 30
+    Xấp xỉ: (Tổng AP / Tổng Hợp đồng 30 ngày cuối) * 30
     """
     try:
-        # Get total AP
+        # Lấy tổng AP
         ap_query = select(func.sum(APBill.total_amount - APBill.paid_amount)).where(
             APBill.org_id == org_id,
             APBill.status.in_(["unpaid", "partial"])
@@ -64,7 +64,7 @@ async def calculate_dpo(db: AsyncSession, org_id: int) -> float:
         ap_result = await db.execute(ap_query)
         total_ap = ap_result.scalar() or Decimal(0)
         
-        # Get bills from last 30 days
+        # Lấy hợp đồng từ 30 ngày cuối
         thirty_days_ago = datetime.utcnow().date() - timedelta(days=30)
         bill_query = select(func.sum(APBill.total_amount)).where(
             APBill.org_id == org_id,
@@ -87,8 +87,8 @@ async def calculate_dpo(db: AsyncSession, org_id: int) -> float:
 
 async def calculate_ccc(dso: float, dpo: float) -> float:
     """
-    Calculate Cash Conversion Cycle (CCC).
-    Formula: DSO - DPO
+    Tính toán Cash Conversion Cycle (CCC).
+    Công thức: DSO - DPO
     """
     ccc = dso - dpo
     return ccc

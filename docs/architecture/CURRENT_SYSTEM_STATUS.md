@@ -190,130 +190,146 @@ class Payment(Base, TimestampMixin, TenantMixin):
 
 ### 3.0 Sơ đồ Kiến trúc Backend (Simplified Clean Architecture)
 
-```plantuml
-@startuml
-package "Presentation Layer" {
-    interface AuthRouter as AR {
-        /auth/login
-        /auth/me
-    }
-    interface FinanceRouter as FR {
-        /api/v1/invoices
-        /api/v1/payments
-    }
-    interface AnalyticsRouter as ANR {
-        /api/v1/analytics/summary
-        /api/v1/analytics/forecast
-        /api/v1/analytics/anomalies
-    }
-}
-
-package "Service Layer" {
-    class AuthService {
-        +authenticate_user()
-        +create_token()
-    }
-    class FinanceService {
-        +create_invoice()
-        +create_payment()
-        +allocate_payment()
-    }
-    class AnalyticsService {
-        +get_dashboard()
-        +calculate_kpi()
-        +get_forecast()
-    }
-}
-
-package "Domain Models" {
+```mermaid
+classDiagram
+    %% Core Domain Entities
     class Organization {
-        -id: int
-        -name: string
-        -tax_code: string
+        +UUID org_id
+        +String name
+        +String tax_code
+        +DateTime created_at
     }
+    
     class User {
-        -id: int
-        -email: string
-        -password_hash: string
-        -org_id: int
+        +UUID user_id
+        +UUID org_id
+        +String username
+        +String email
+        +String hashed_password
+        +Role role
+        +authenticate()
+        +check_permission()
     }
+    
     class Customer {
-        -id: int
-        -name: string
-        -credit_term: int
-        -org_id: int
+        +UUID customer_id
+        +UUID org_id
+        +String name
+        +Integer credit_term
+        +Decimal credit_limit
+        +String contact_email
     }
+    
     class Supplier {
-        -id: int
-        -name: string
-        -org_id: int
+        +UUID supplier_id
+        +UUID org_id
+        +String name
+        +Integer payment_terms
+        +String contact_email
     }
+    
     class ARInvoice {
-        -id: int
-        -invoice_no: string
-        -customer_id: int
-        -total_amount: decimal
-        -paid_amount: decimal
-        -status: string
-        -org_id: int
+        +UUID invoice_id
+        +UUID org_id
+        +UUID customer_id
+        +String invoice_no
+        +Decimal total_amount
+        +Decimal paid_amount
+        +InvoiceStatus status
+        +Date issue_date
+        +Date due_date
+        +calculate_aging()
+        +calculate_balance()
     }
+    
     class APBill {
-        -id: int
-        -bill_no: string
-        -supplier_id: int
-        -total_amount: decimal
-        -org_id: int
+        +UUID bill_id
+        +UUID org_id
+        +UUID supplier_id
+        +String bill_no
+        +Decimal total_amount
+        +Decimal paid_amount
+        +BillStatus status
+        +Date issue_date
+        +Date due_date
     }
+    
     class Payment {
-        -id: int
-        -amount: decimal
-        -payment_method: string
-        -org_id: int
+        +UUID payment_id
+        +UUID org_id
+        +Date payment_date
+        +Decimal amount
+        +PaymentMethod method
+        +String reference
+        +allocate_to_invoice()
+        +allocate_to_bill()
     }
-}
-
-package "Infrastructure" {
-    class SecurityService {
-        +verify_password()
-        +create_jwt()
+    
+    class PaymentAllocation {
+        +UUID allocation_id
+        +UUID payment_id
+        +UUID invoice_id
+        +UUID bill_id
+        +Decimal allocated_amount
     }
-    class Database {
-        PostgreSQL
-        AsyncSession
+    
+    %% Enums
+    class Role {
+        <<enumeration>>
+        OWNER
+        ADMIN
+        ACCOUNTANT
+        CASHIER
     }
-    class TrinoEngine {
-        Query ML Tables
-        Gold Layer
+    
+    class InvoiceStatus {
+        <<enumeration>>
+        DRAFT
+        PENDING
+        PAID
+        OVERDUE
+        CANCELLED
     }
-}
-
-AR --> AuthService : uses
-FR --> FinanceService : uses
-ANR --> AnalyticsService : uses
-
-AuthService --> SecurityService : uses
-AuthService --> Database : uses
-AuthService --> User : operates
-
-FinanceService --> Database : uses
-FinanceService --> ARInvoice : creates/operates
-FinanceService --> APBill : operates
-FinanceService --> Payment : operates
-
-AnalyticsService --> Database : uses
-AnalyticsService --> TrinoEngine : queries
-AnalyticsService --> ARInvoice : queries
-AnalyticsService --> Payment : queries
-
-Organization "1" --* "many" User : contains
-Organization "1" --* "many" Customer : contains
-Organization "1" --* "many" ARInvoice : contains
-Customer "1" --* "many" ARInvoice : issues
-Supplier "1" --* "many" APBill : sends
-Payment "many" -* "many" ARInvoice : allocates
-Payment "many" -* "many" APBill : allocates
-
-@enduml
+    
+    class BillStatus {
+        <<enumeration>>
+        PENDING
+        PAID
+        OVERDUE
+        CANCELLED
+    }
+    
+    class PaymentMethod {
+        <<enumeration>>
+        BANK_TRANSFER
+        CASH
+        CHECK
+        CREDIT_CARD
+    }
+    
+    %% Relationships - Multi-tenancy
+    Organization "1" --> "*" User : contains
+    Organization "1" --> "*" Customer : manages
+    Organization "1" --> "*" Supplier : works_with
+    Organization "1" --> "*" ARInvoice : issues
+    Organization "1" --> "*" APBill : receives
+    Organization "1" --> "*" Payment : processes
+    
+    %% Business Relationships
+    Customer "1" --> "*" ARInvoice : owes
+    Supplier "1" --> "*" APBill : sends
+    
+    %% Payment Allocation (Many-to-Many)
+    Payment "1" --> "*" PaymentAllocation : splits_into
+    ARInvoice "0..1" --> "*" PaymentAllocation : receives
+    APBill "0..1" --> "*" PaymentAllocation : receives
+    
+    %% Enums
+    User --> Role : has
+    ARInvoice --> InvoiceStatus : has
+    APBill --> BillStatus : has
+    Payment --> PaymentMethod : uses
+```
 ```
 
 **Kiến trúc 3 lớp (Clean Architecture):**

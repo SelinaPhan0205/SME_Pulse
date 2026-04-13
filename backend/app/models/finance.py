@@ -1,4 +1,4 @@
-"""Finance Domain Models: AR Invoices, AP Bills, Payments"""
+"""Các mô hình miền Tài chính: Hóa đơn AR, Hóa đơn AP, Thanh toán"""
 from sqlalchemy import String, Integer, ForeignKey, Numeric, Date, Text, CheckConstraint, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Optional
@@ -8,7 +8,7 @@ from app.db.base import Base, TimestampMixin, TenantMixin
 
 
 class ARInvoice(Base, TimestampMixin, TenantMixin):
-    """ARInvoice - Accounts Receivable invoices (sales)"""
+    """ARInvoice - Phải thu hóa đơn (Bán hàng)"""
     __tablename__ = "ar_invoices"
     __table_args__ = (
         Index("ix_ar_invoices_status_org", "status", "org_id"),
@@ -34,15 +34,15 @@ class ARInvoice(Base, TimestampMixin, TenantMixin):
         String(20), 
         default="draft", 
         index=True
-    )  # draft, posted, paid, overdue, cancelled
+    )  # draft, posted, paid, overdue, cancelled (nháp, đã đăng, đã trả, quá hạn, đã hủy)
     notes: Mapped[Optional[str]] = mapped_column(Text)
     
-    # Relationships
+    # Quan hệ
     customer: Mapped["Customer"] = relationship("Customer")  # type: ignore
 
 
 class APBill(Base, TimestampMixin, TenantMixin):
-    """APBill - Accounts Payable bills (purchases)"""
+    """APBill - Phải trả hóa đơn (Mua hàng)"""
     __tablename__ = "ap_bills"
     __table_args__ = (
         Index("ix_ap_bills_status_org", "status", "org_id"),
@@ -68,15 +68,15 @@ class APBill(Base, TimestampMixin, TenantMixin):
         String(20), 
         default="unpaid", 
         index=True
-    )  # unpaid, partial, paid, cancelled
+    )  # unpaid, partial, paid, cancelled (chưa trả, trả một phần, đã trả, đã hủy)
     notes: Mapped[Optional[str]] = mapped_column(Text)
     
-    # Relationships
+    # Quan hệ
     supplier: Mapped["Supplier"] = relationship("Supplier")  # type: ignore
 
 
 class Payment(Base, TimestampMixin, TenantMixin):
-    """Payment - Cash/bank transactions"""
+    """Payment - Giao dịch tiền mặt/ngân hàng"""
     __tablename__ = "payments"
     __table_args__ = (
         Index("ix_payments_transaction_date_org", "transaction_date", "org_id"),
@@ -92,11 +92,11 @@ class Payment(Base, TimestampMixin, TenantMixin):
     transaction_date: Mapped[date] = mapped_column(Date, nullable=False)
     
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
-    payment_method: Mapped[Optional[str]] = mapped_column(String(50))  # cash, transfer, vietqr
-    reference_code: Mapped[Optional[str]] = mapped_column(String(100))  # Bank transaction code
+    payment_method: Mapped[Optional[str]] = mapped_column(String(50))  # tiền mặt, chuyển khoản, vietqr
+    reference_code: Mapped[Optional[str]] = mapped_column(String(100))  # Mã giao dịch ngân hàng
     notes: Mapped[Optional[str]] = mapped_column(Text)
     
-    # Relationships
+    # Quan hệ
     account: Mapped["Account"] = relationship("Account")  # type: ignore
     allocations: Mapped[list["PaymentAllocation"]] = relationship(
         "PaymentAllocation", 
@@ -106,7 +106,7 @@ class Payment(Base, TimestampMixin, TenantMixin):
 
 
 class PaymentAllocation(Base, TimestampMixin, TenantMixin):
-    """PaymentAllocation - Links payments to invoices/bills"""
+    """PaymentAllocation - Liên kết thanh toán với hóa đơn/phiếu"""
     __tablename__ = "payment_allocations"
     __table_args__ = (
         CheckConstraint(
@@ -123,7 +123,7 @@ class PaymentAllocation(Base, TimestampMixin, TenantMixin):
         nullable=False
     )
     
-    # One allocation links to either AR Invoice OR AP Bill (not both)
+    # Một phân bổ liên kết đến Hóa đơn AR HOẶC Phiếu AP (không phải cả hai)
     ar_invoice_id: Mapped[Optional[int]] = mapped_column(
         Integer, 
         ForeignKey("finance.ar_invoices.id", ondelete="RESTRICT")
@@ -136,7 +136,7 @@ class PaymentAllocation(Base, TimestampMixin, TenantMixin):
     allocated_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     notes: Mapped[Optional[str]] = mapped_column(Text)
     
-    # Relationships
+    # Quan hệ
     payment: Mapped["Payment"] = relationship("Payment", back_populates="allocations")
     ar_invoice: Mapped[Optional["ARInvoice"]] = relationship("ARInvoice")
     ap_bill: Mapped[Optional["APBill"]] = relationship("APBill")

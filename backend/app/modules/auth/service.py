@@ -1,4 +1,4 @@
-"""Authentication service layer - business logic."""
+"""Lớp dịch vụ xác thực - logic kinh doanh."""
 
 import logging
 from typing import Optional
@@ -20,12 +20,12 @@ async def authenticate_user(
     password: str
 ) -> Optional[tuple[User, list[str]]]:
     """
-    Authenticate user by email and password.
+    Xác thực người dùng theo email và mật khẩu.
     
-    Returns:
-        Tuple of (User, roles) if successful, None otherwise.
+    Trả lại:
+        Tuple của (Người dùng, vai trò) nếu thành công, None nếu không.
     """
-    # Query user with eager loading of roles (avoid N+1)
+    # Truy vấn người dùng với tải sẵn vai trò (tránh N+1)
     stmt = (
         select(User)
         .options(selectinload(User.roles).selectinload(UserRole.role))
@@ -34,43 +34,43 @@ async def authenticate_user(
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
     
-    # Check user exists
+    # Kiểm tra người dùng tồn tại
     if not user:
-        logger.warning(f"Login attempt with non-existent email: {email}")
+        logger.warning(f"Cố gắng đăng nhập với email không tồn tại: {email}")
         return None
     
-    # Verify password
+    # Xác minh mật khẩu
     if not verify_password(password, user.password_hash):
-        logger.warning(f"Failed login for user: {email} (invalid password)")
+        logger.warning(f"Đăng nhập thất bại cho người dùng: {email} (mật khẩu không hợp lệ)")
         return None
     
-    # Check user is active
+    # Kiểm tra người dùng hoạt động
     if user.status != "active":
-        logger.warning(f"Login attempt for inactive user: {email} (status: {user.status})")
+        logger.warning(f"Cố gắng đăng nhập cho người dùng không hoạt động: {email} (trạng thái: {user.status})")
         return None
     
-    # Extract role codes
+    # Trích xuất mã vai trò
     roles = [ur.role.code for ur in user.roles if ur.role]
     
-    logger.info(f"Successful authentication for: {email} with roles: {roles}")
+    logger.info(f"Xác thực thành công cho: {email} với vai trò: {roles}")
     return user, roles
 
 
 def create_user_token(user_id: int, org_id: int, roles: list[str]) -> tuple[str, int]:
     """
-    Create JWT access token for authenticated user.
+    Tạo JWT access token cho người dùng đã xác thực.
     
-    Args:
-        user_id: User ID
-        org_id: Organization ID (multi-tenancy)
-        roles: List of role codes
+    Đối số:
+        user_id: ID người dùng
+        org_id: ID tổ chức (đa thuê)
+        roles: Danh sách mã vai trò
     
-    Returns:
-        Tuple of (access_token, expires_in_seconds)
+    Trả lại:
+        Tuple của (access_token, hết hạn trong giây)
     """
-    # Build token payload (sub must be string per JWT spec)
+    # Xây dựng tải token (sub phải là chuỗi theo thông số kỹ thuật JWT)
     token_data = {
-        "sub": str(user_id),  # JWT subject claim must be string
+        "sub": str(user_id),  # Claim chủ đề JWT phải là chuỗi
         "org_id": org_id,
         "roles": roles,
     }
@@ -88,37 +88,37 @@ async def change_user_password(
     new_password: str
 ) -> None:
     """
-    Change user password.
+    Thay đổi mật khẩu người dùng.
     
-    Args:
-        db: Database session
-        user: Current authenticated user
-        old_password: Current password
-        new_password: New password
+    Đối số:
+        db: Phiên cơ sở dữ liệu
+        user: Người dùng đã xác thực hiện tại
+        old_password: Mật khẩu hiện tại
+        new_password: Mật khẩu mới
     
-    Raises:
-        HTTPException 400: Old password incorrect or new password too weak
+    Tăng:
+        HTTPException 400: Mật khẩu cũ không chính xác hoặc mật khẩu mới quá yếu
     """
-    # Verify old password
+    # Xác minh mật khẩu cũ
     if not verify_password(old_password, user.password_hash):
-        logger.warning(f"Failed password change for user {user.id}: incorrect old password")
+        logger.warning(f"Thay đổi mật khẩu thất bại cho người dùng {user.id}: mật khẩu cũ không chính xác")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Current password is incorrect"
+            detail="Mật khẩu hiện tại không chính xác"
         )
     
-    # Validate new password strength (min 6 chars)
+    # Xác thực độ mạnh mật khẩu mới (tối thiểu 6 ký tự)
     if len(new_password) < 6:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="New password must be at least 6 characters"
+            detail="Mật khẩu mới phải có ít nhất 6 ký tự"
         )
     
-    # Hash and update password
+    # Mã hóa và cập nhật mật khẩu
     user.password_hash = get_password_hash(new_password)
     await db.commit()
     
-    logger.info(f"Password changed successfully for user {user.id}")
+    logger.info(f"Mật khẩu đã thay đổi thành công cho người dùng {user.id}")
 
 
 async def initiate_password_reset(
@@ -126,35 +126,35 @@ async def initiate_password_reset(
     email: str
 ) -> str:
     """
-    Initiate forgot password flow.
+    Bắt đầu quy trình quên mật khẩu.
     
-    Args:
-        db: Database session
-        email: User email
+    Đối số:
+        db: Phiên cơ sở dữ liệu
+        email: Email người dùng
     
-    Returns:
-        Email address where reset instructions were sent
+    Trả lại:
+        Địa chỉ email nơi gửi hướng dẫn đặt lại
     
-    Note:
-        In production, this should:
-        1. Generate secure reset token
-        2. Store token in DB with expiry
-        3. Send email with reset link
+    Ghi chú:
+        Trong sản xuất, điều này sẽ:
+        1. Tạo token đặt lại an toàn
+        2. Lưu token trong DB với thời gian hết hạn
+        3. Gửi email với liên kết đặt lại
         
-        For now, we just log the request (security: don't reveal if email exists)
+        Hiện tại, chúng ta chỉ ghi nhật ký yêu cầu (bảo mật: không tiết lộ nếu email tồn tại)
     """
-    # Query user (but don't reveal if exists for security)
+    # Truy vấn người dùng (nhưng không tiết lộ nếu tồn tại để bảo mật)
     stmt = select(User).where(User.email == email)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
     
     if user:
-        # TODO: Generate reset token, store in DB, send email
-        logger.info(f"Password reset requested for user {user.id} ({email})")
-        # In production: send_password_reset_email(user.email, reset_token)
+        # TODO: Tạo token đặt lại, lưu trong DB, gửi email
+        logger.info(f"Yêu cầu đặt lại mật khẩu cho người dùng {user.id} ({email})")
+        # Trong sản xuất: send_password_reset_email(user.email, reset_token)
     else:
-        # Security: Don't reveal if email exists
-        logger.info(f"Password reset requested for non-existent email: {email}")
+        # Bảo mật: Không tiết lộ nếu email tồn tại
+        logger.info(f"Yêu cầu đặt lại mật khẩu cho email không tồn tại: {email}")
     
-    # Always return success (don't leak user existence)
+    # Luôn trả lại thành công (đừng rò rỉ sự tồn tại của người dùng)
     return email

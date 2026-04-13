@@ -5,6 +5,7 @@ Dự báo dòng tiền (cashflow) trong 30 ngày tới sử dụng Prophet time 
 
 ## 🎯 Kết quả đạt được
 - ✅ Model Prophet trained thành công với **MAPE = 0.73%** (rất chính xác!)
+- ✅ Đánh giá holdout chuẩn hóa: MAE, RMSE, MAPE, sMAPE, R2
 - ✅ Training dataset: 501 ngày dữ liệu lịch sử (từ `ml_training_cashflow_fcst`)
 - ✅ 10 features bao gồm: seasonality (8), macro indicators (2)
 - ✅ Model registered: `prophet_cashflow_v1` version 1
@@ -240,7 +241,7 @@ Column 'indicator_name' cannot be resolved
 ### 3. Model Monitoring
 - Track prediction accuracy daily
 - Alert nếu MAPE > threshold
-- A/B testing với models khác (LSTM, XGBoost)
+- A/B testing với models khác (LSTM)
 
 ### 4. Metabase Dashboard
 - Line chart: Predicted vs Actual cashflow

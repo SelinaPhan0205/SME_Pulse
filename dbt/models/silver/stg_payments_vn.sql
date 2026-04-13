@@ -19,36 +19,37 @@ norm as (
     {{ dbt_utils.generate_surrogate_key(['order_id']) }} as payment_id_nat,
     
     -- Timestamp processing
-    cast(order_date as date) as transaction_date,
-    order_time as transaction_time,
+    cast(coalesce(payment_date, order_date) as date) as transaction_date,
+    cast(null as varchar) as transaction_time,
     
     -- Amount fields (ngoại tệ gốc - sẽ convert sang VND sau)
     cast(order_amount as decimal(18,2)) as amount_foreign,
-    cast(total_amount as decimal(18,2)) as total_amount_foreign,
+    cast(order_amount as decimal(18,2)) as total_amount_foreign,
     
     -- Customer info
     customer_id,
-    lower(trim(customer_email)) as email_norm,
+    lower(trim(cast(customer_id as varchar))) || '@unknown.local' as email_norm,
     
     -- Original location (for reference only - will be replaced with VN location)
     coalesce(nullif(trim(shipping_country), ''), 'USA') as country_src,
     
     -- Payment info
     coalesce(nullif(trim(payment_method), ''), 'Unknown') as payment_method_src,
+    coalesce(nullif(trim(payment_status), ''), 'Unknown') as payment_status,
     coalesce(nullif(trim(order_status), ''), 'Unknown') as order_status_src,
     
     -- Shipping
     carrier as shipping_method_src,
     
     -- Product info
-    product_category,
-    product_brand,
-    product_type,
-    product_name as products,
+    cast('UNKNOWN' as varchar) as product_category,
+    cast('UNKNOWN' as varchar) as product_brand,
+    cast('UNKNOWN' as varchar) as product_type,
+    cast('UNKNOWN' as varchar) as products,
     
     -- Other
-    rating as ratings,
-    feedback
+    cast(null as double) as ratings,
+    cast(null as varchar) as feedback
     
   from src
 ),
@@ -88,9 +89,9 @@ vn as (
     
     -- Order status standardization
     case 
-      when lower(wl.order_status_src) in ('shipped', 'delivered', 'paid', 'completed') then 'PAID'
-      when lower(wl.order_status_src) in ('processing', 'pending') then 'PENDING'
-      when lower(wl.order_status_src) in ('cancelled', 'refunded') then 'CANCELLED'
+      when lower(coalesce(payment_status, wl.order_status_src)) in ('paid', 'completed', 'success') then 'PAID'
+      when lower(coalesce(payment_status, wl.order_status_src)) in ('processing', 'pending') then 'PENDING'
+      when lower(coalesce(payment_status, wl.order_status_src)) in ('cancelled', 'refunded', 'failed') then 'CANCELLED'
       else 'OTHER' 
     end as payment_status_std,
     wl.order_status_src,

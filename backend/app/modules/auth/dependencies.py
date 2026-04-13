@@ -1,4 +1,4 @@
-"""Authentication dependencies for FastAPI."""
+"""Các dependencies xác thực cho FastAPI."""
 
 import logging
 from typing import List
@@ -14,7 +14,7 @@ from app.core.security import decode_access_token
 
 logger = logging.getLogger(__name__)
 
-# OAuth2 scheme for JWT token
+# Sơ đồ OAuth2 cho JWT token
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
@@ -23,42 +23,42 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db)
 ) -> User:
     """
-    Decode JWT token and return current authenticated user.
+    Giải mã JWT token và trả về người dùng đã xác thực hiện tại.
     
-    Validates:
-    - Token signature and expiry
-    - User exists in database
-    - User is active
-    - Multi-tenancy (org_id matches)
+    Xác thực:
+    - Chữ ký token và hết hạn
+    - Người dùng tồn tại trong cơ sở dữ liệu
+    - Người dùng hoạt động
+    - Đa thuê (org_id khớp)
     
-    Raises:
-        HTTPException 401: Invalid credentials
+    Tăng:
+        HTTPException 401: Thông tin xác thực không hợp lệ
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+        detail="Không thể xác thực thông tin xác thực",
         headers={"WWW-Authenticate": "Bearer"},
     )
     
-    # Decode JWT token
+    # Giải mã JWT token
     payload = decode_access_token(token)
     if payload is None:
-        logger.warning("Invalid or expired JWT token")
+        logger.warning("JWT token không hợp lệ hoặc đã hết hạn")
         raise credentials_exception
     
-    # Extract user_id from token (sub is string per JWT spec)
+    # Trích xuất user_id từ token (sub là chuỗi theo thông số kỹ thuật JWT)
     user_id_str: str = payload.get("sub")
     if user_id_str is None:
-        logger.warning("JWT token missing 'sub' claim")
+        logger.warning("JWT token bị thiếu claim 'sub'")
         raise credentials_exception
     
     try:
         user_id = int(user_id_str)
     except (ValueError, TypeError):
-        logger.warning(f"Invalid user_id in token: {user_id_str}")
+        logger.warning(f"ID người dùng không hợp lệ trong token: {user_id_str}")
         raise credentials_exception
     
-    # Query user with eager loading of roles
+    # Truy vấn người dùng với tải sẵn vai trò
     stmt = (
         select(User)
         .options(selectinload(User.roles).selectinload(UserRole.role))
@@ -68,18 +68,18 @@ async def get_current_user(
     user = result.scalar_one_or_none()
     
     if user is None:
-        logger.warning(f"User ID {user_id} from token not found")
+        logger.warning(f"ID người dùng {user_id} từ token không được tìm thấy")
         raise credentials_exception
     
-    # Validate user is active
+    # Xác thực người dùng hoạt động
     if user.status != "active":
-        logger.warning(f"Inactive user {user.email} attempted access")
+        logger.warning(f"Người dùng không hoạt động {user.email} cố gắng truy cập")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User account is inactive",
+            detail="Tài khoản người dùng không hoạt động",
         )
     
-    # Multi-tenancy check: token org_id must match user's org_id
+    # Kiểm tra đa thuê: org_id của token phải khớp với org_id của người dùng
     token_org_id = payload.get("org_id")
     if token_org_id and token_org_id != user.org_id:
         logger.error(f"Token org_id {token_org_id} != user org_id {user.org_id}")
@@ -92,41 +92,41 @@ async def get_current_active_user(
     current_user: User = Depends(get_current_user)
 ) -> User:
     """
-    Wrapper dependency to ensure user is active.
-    (Redundant with get_current_user, but kept for semantic clarity)
+    Wrapper dependency để đảm bảo người dùng hoạt động.
+    (Dư thừa với get_current_user, nhưng được giữ lại để rõ ràng từ ngữ)
     """
     return current_user
 
 
 def requires_roles(allowed_roles: List[str]):
     """
-    Dependency factory for role-based authorization.
+    Nhà máy dependencies cho ủy quyền dựa trên vai trò.
     
-    Usage:
+    Cách sử dụng:
         @router.get("/admin", dependencies=[Depends(requires_roles(["owner", "admin"]))])
     
-    Args:
-        allowed_roles: List of role codes allowed
+    Đối số:
+        allowed_roles: Danh sách mã vai trò được phép
     
-    Returns:
-        Dependency function
+    Trả lại:
+        Hàm dependency
     
-    Raises:
-        HTTPException 403: User doesn't have required role
+    Tăng:
+        HTTPException 403: Người dùng không có vai trò được yêu cầu
     """
     async def role_checker(current_user: User = Depends(get_current_user)) -> User:
-        # Extract user's role codes
+        # Trích xuất mã vai trò của người dùng
         user_roles = [ur.role.code for ur in current_user.roles if ur.role]
         
-        # Check if user has any of the allowed roles
+        # Kiểm tra xem người dùng có bất kỳ vai trò được phép nào không
         if not any(role in allowed_roles for role in user_roles):
             logger.warning(
-                f"User {current_user.email} with roles {user_roles} "
-                f"attempted access requiring {allowed_roles}"
+                f"Người dùng {current_user.email} có vai trò {user_roles} "
+                f"cố gắng truy cập yêu cầu {allowed_roles}"
             )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Required role: {allowed_roles}",
+                detail=f"Vai trò được yêu cầu: {allowed_roles}",
             )
         
         return current_user

@@ -1,4 +1,4 @@
-"""Account Management Router - REST API endpoints for Bank/Cash Accounts."""
+"""Router Quản lý Tài khoản - REST API endpoints cho Tài khoản Ngân hàng/Tiền mặt."""
 
 import logging
 from typing import Optional
@@ -24,8 +24,8 @@ router = APIRouter(prefix="/accounts", tags=["Accounts"])
 @router.get(
     "/",
     response_model=PaginatedAccountsResponse,
-    summary="List accounts",
-    description="Get paginated list of bank/cash accounts for current organization"
+    summary="Liệt kê tài khoản",
+    description="Lấy danh sách phân trang các tài khoản ngân hàng/tiền mặt cho tổ chức hiện tại"
 )
 async def list_accounts(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
@@ -36,18 +36,18 @@ async def list_accounts(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    List all accounts for current organization.
+    Liệt kê tất cả tài khoản cho tổ chức hiện tại.
     
-    **Multi-tenancy:** Automatically filters by current user's org_id.
+    **Multi-tenancy:** Tự động lọc theo org_id của người dùng hiện tại.
     
-    Query Parameters:
-    - skip: Pagination offset (default: 0)
-    - limit: Max results (default: 100, max: 500)
-    - is_active: Filter active/inactive accounts
-    - account_type: Filter by type (cash, bank)
+    Tham số truy vấn:
+    - skip: Độ lệch phân trang (mặc định: 0)
+    - limit: Kết quả tối đa (mặc định: 100, tối đa: 500)
+    - is_active: Lọc tài khoản hoạt động/bị tắt
+    - account_type: Lọc theo loại (cash, bank)
     
-    Returns:
-    - Paginated list of accounts with total count
+    Trả về:
+    - Danh sách tài khoản phân trang với tổng số
     """
     accounts, total = await service.get_accounts(
         db=db,
@@ -69,8 +69,8 @@ async def list_accounts(
 @router.get(
     "/{account_id}",
     response_model=AccountResponse,
-    summary="Get account by ID",
-    description="Retrieve single account details"
+    summary="Lấy tài khoản theo ID",
+    description="Truy xuất chi tiết tài khoản duy nhất"
 )
 async def get_account(
     account_id: int,
@@ -78,15 +78,15 @@ async def get_account(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Get account by ID.
+    Lấy tài khoản theo ID.
     
-    **Multi-tenancy:** Only returns account if it belongs to current user's organization.
+    **Multi-tenancy:** Chỉ trả về tài khoản nếu nó thuộc tổ chức của người dùng hiện tại.
     
-    Path Parameters:
-    - account_id: Account ID
+    Tham số đường dẫn:
+    - account_id: ID tài khoản
     
-    Raises:
-    - 404: Account not found or doesn't belong to current organization
+    Nâng cao:
+    - 404: Tài khoản không tập hoặc không thuộc tổ chức hiện tại
     """
     account = await service.get_account(
         db=db,
@@ -100,8 +100,8 @@ async def get_account(
     "/",
     response_model=AccountResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Create account",
-    description="Create new bank/cash account for current organization"
+    summary="Tạo tài khoản",
+    description="Tạo tài khoản ngân hàng/tiền mặt mới cho tổ chức hiện tại"
 )
 async def create_account(
     schema: AccountCreate,
@@ -109,22 +109,22 @@ async def create_account(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Create new account.
+    Tạo tài khoản mới.
     
-    **Multi-tenancy:** Account is automatically assigned to current user's organization.
+    **Multi-tenancy:** Tài khoản được tự động gán cho tổ chức của người dùng hiện tại.
     
-    **Business Rules:**
-    - Type must be 'cash' or 'bank'
-    - account_number and bank_name required for bank accounts (optional for cash)
+    **Quy tắc kinh doanh:**
+    - Loại phải là 'cash' hoặc 'bank'
+    - account_number và bank_name bắt buộc cho tài khoản ngân hàng (tùy chọn cho tiền mặt)
     
-    Request Body:
-    - name: Account name (required)
-    - type: Account type (required, one of: cash, bank)
-    - account_number: Account number (optional, for bank accounts)
-    - bank_name: Bank name (optional, for bank accounts)
+    Thân yêu cầu:
+    - name: Tên tài khoản (bắt buộc)
+    - type: Loại tài khoản (bắt buộc, một trong: cash, bank)
+    - account_number: Số tài khoản (tùy chọn, cho tài khoản ngân hàng)
+    - bank_name: Tên ngân hàng (tùy chọn, cho tài khoản ngân hàng)
     
-    Raises:
-    - 400: Invalid account type
+    Nâng cao:
+    - 400: Loại tài khoản không hợp lệ
     """
     account = await service.create_account(
         db=db,
@@ -137,8 +137,8 @@ async def create_account(
 @router.put(
     "/{account_id}",
     response_model=AccountResponse,
-    summary="Update account",
-    description="Update existing account"
+    summary="Cập nhật tài khoản",
+    description="Cập nhật tài khoản hiện có"
 )
 async def update_account(
     account_id: int,
@@ -147,25 +147,25 @@ async def update_account(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Update account.
+    Cập nhật tài khoản.
     
-    **Multi-tenancy:** Only allows updating account if it belongs to current user's organization.
+    **Multi-tenancy:** Chỉ cho phép cập nhật tài khoản nếu nó thuộc tổ chức của người dùng hiện tại.
     
-    **Business Rules:**
-    - All fields are optional (partial update)
-    - Cannot change account type
+    **Quy tắc kinh doanh:**
+    - Tất cả các trường là tùy chọn (cập nhật mặt khóa cơ)
+    - Không thể thay đổi loại tài khoản
     
-    Path Parameters:
-    - account_id: Account ID to update
+    Tham số đường dẫn:
+    - account_id: ID tài khoản cần cập nhật
     
-    Request Body:
-    - name: Account name (optional)
-    - account_number: Account number (optional)
-    - bank_name: Bank name (optional)
-    - is_active: Active status (optional)
+    Thân yêu cầu:
+    - name: Tên tài khoản (tùy chọn)
+    - account_number: Số tài khoản (tùy chọn)
+    - bank_name: Tên ngân hàng (tùy chọn)
+    - is_active: Trạng thái hoạt động (tùy chọn)
     
-    Raises:
-    - 404: Account not found or doesn't belong to current organization
+    Nâng cao:
+    - 404: Tài khoản không tập hoặc không thuộc tổ chức hiện tại
     """
     account = await service.update_account(
         db=db,
@@ -179,8 +179,8 @@ async def update_account(
 @router.delete(
     "/{account_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete account",
-    description="Soft delete account (set is_active=False)"
+    summary="Xóa tài khoản",
+    description="Xóa mềm tài khoản (đặt is_active=False)"
 )
 async def delete_account(
     account_id: int,
@@ -188,17 +188,17 @@ async def delete_account(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Delete account (soft delete).
+    Xóa tài khoản (soft delete).
     
-    **Multi-tenancy:** Only allows deleting account if it belongs to current user's organization.
+    **Multi-tenancy:** Chỉ cho phép xóa tài khoản nếu nó thuộc tổ chức của người dùng hiện tại.
     
-    **Note:** This is a soft delete - sets is_active=False instead of removing from database.
+    **Lưu ý:** Đây là soft delete - đặt is_active=False thay vì xóa khỏi cơ sở dữ liệu.
     
-    Path Parameters:
-    - account_id: Account ID to delete
+    Tham số đường dẫn:
+    - account_id: ID tài khoản cần xóa
     
-    Raises:
-    - 404: Account not found or doesn't belong to current organization
+    Nâng cao:
+    - 404: Tài khoản không tập hoặc không thuộc tổ chức hiện tại
     """
     await service.delete_account(
         db=db,

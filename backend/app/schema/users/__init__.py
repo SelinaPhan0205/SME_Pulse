@@ -1,4 +1,4 @@
-"""User Management Schemas."""
+"""Schema Quản lý Người dùng."""
 
 from app.schema.users.user import (
     UserCreate,

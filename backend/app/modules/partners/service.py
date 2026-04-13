@@ -1,4 +1,4 @@
-"""Service layer for Customers and Suppliers - Business Logic with Multi-tenancy."""
+"""Lớp dịch vụ cho Khách hàng và Nhà cung cấp - Logic kinh doanh với Đa thuê."""
 
 import logging
 from typing import Optional
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================
-# CUSTOMER SERVICES
+# DỊCH VỤ KHÁCH HÀNG
 # ============================================================
 
 async def get_customers(
@@ -29,29 +29,29 @@ async def get_customers(
     is_active: Optional[bool] = None,
 ) -> tuple[list[Customer], int]:
     """
-    Get paginated list of customers for an organization.
+    Lấy danh sách khách hàng được phân trang cho một tổ chức.
     
-    Args:
-        db: Database session
-        org_id: Organization ID (CRITICAL for multi-tenancy)
-        skip: Number of records to skip
-        limit: Max records to return
-        is_active: Filter by active status (optional)
+    Đối số:
+        db: Phiên cơ sở dữ liệu
+        org_id: ID tổ chức (QUAN TRỌNG để đa thuê)
+        skip: Số bản ghi cần bỏ qua
+        limit: Tối đa bản ghi trả về
+        is_active: Lọc theo trạng thái hoạt động (tùy chọn)
     
-    Returns:
-        Tuple of (customers list, total count)
+    Trả lại:
+        Tuple của (danh sách khách hàng, tổng số)
     """
-    # Build base query with multi-tenant filter
+    # Xây dựng câu truy vấn cơ sở với bộ lọc đa thuê
     base_filter = Customer.org_id == org_id
     if is_active is not None:
         base_filter = and_(base_filter, Customer.is_active == is_active)
     
-    # Count total
+    # Đếm tổng số
     count_stmt = select(func.count()).select_from(Customer).where(base_filter)
     total_result = await db.execute(count_stmt)
     total = total_result.scalar_one()
     
-    # Get paginated data
+    # Lấy dữ liệu được phân trang
     stmt = (
         select(Customer)
         .where(base_filter)
@@ -72,25 +72,25 @@ async def get_customer(
     org_id: int,
 ) -> Customer:
     """
-    Get single customer by ID.
+    Lấy một khách hàng theo ID.
     
-    CRITICAL: Always filter by org_id to prevent cross-tenant access.
+    QUAN TRỌNG: Luôn lọc theo org_id để ngăn chặn truy cập xuyên thuê.
     
-    Args:
-        db: Database session
-        customer_id: Customer ID
-        org_id: Organization ID
+    Tham số:
+        db: Phiên cơ sở dữ liệu
+        customer_id: ID khách hàng
+        org_id: ID tổ chức
     
-    Returns:
-        Customer object
+    Trả lại:
+        Đối tượng khách hàng
     
-    Raises:
-        HTTPException 404: Customer not found
+    Tăng:
+        HTTPException 404: Khách hàng không được tìm thấy
     """
     stmt = select(Customer).where(
         and_(
             Customer.id == customer_id,
-            Customer.org_id == org_id  # Multi-tenancy protection
+            Customer.org_id == org_id  # Bảo vệ đa thuê
         )
     )
     result = await db.execute(stmt)
@@ -112,24 +112,24 @@ async def create_customer(
     org_id: int,
 ) -> Customer:
     """
-    Create new customer.
+    Tạo khách hàng mới.
     
-    Business Rules:
-    - Customer code must be unique within organization (if provided)
-    - org_id is INJECTED from current_user, NOT from request body
+    Quy tắc kinh doanh:
+    - Mã khách hàng phải duy nhất trong tổ chức (nếu cung cấp)
+    - org_id được TIÊM từ current_user, KHÔNG từ thân yêu cầu
     
-    Args:
-        db: Database session
-        schema: Customer creation data
-        org_id: Organization ID (injected from auth)
+    Tham số:
+        db: Phiên cơ sở dữ liệu
+        schema: Dữ liệu tạo khách hàng
+        org_id: ID tổ chức (được tiêm từ xác thực)
     
-    Returns:
-        Created customer
+    Trả lại:
+        Khách hàng được tạo
     
-    Raises:
-        HTTPException 400: Duplicate customer code
+    Tăng:
+        HTTPException 400: Mã khách hàng trùng lặp
     """
-    # Check for duplicate code within organization
+    # Kiểm tra mã trùng lặp trong tổ chức
     if schema.code:
         stmt = select(Customer).where(
             and_(
@@ -149,10 +149,10 @@ async def create_customer(
                 detail=f"Customer with code '{schema.code}' already exists"
             )
     
-    # Create customer - inject org_id
+    # Tạo khách hàng - tiêm org_id
     customer = Customer(
         **schema.model_dump(),
-        org_id=org_id  # CRITICAL: Inject from auth, not from request
+        org_id=org_id  # QUAN TRỌNG: Tiêm từ xác thực, không từ yêu cầu
     )
     
     db.add(customer)
@@ -170,36 +170,36 @@ async def update_customer(
     org_id: int,
 ) -> Customer:
     """
-    Update existing customer.
+    Cập nhật khách hàng hiện có.
     
-    Business Rules:
-    - Customer must belong to current organization
-    - Code must be unique within organization (if changed)
+    Quy tắc kinh doanh:
+    - Khách hàng phải thuộc tổ chức hiện tại
+    - Mã phải duy nhất trong tổ chức (nếu thay đổi)
     
-    Args:
-        db: Database session
-        customer_id: Customer ID to update
-        schema: Update data (partial)
-        org_id: Organization ID
+    Tham số:
+        db: Phiên cơ sở dữ liệu
+        customer_id: ID khách hàng cần cập nhật
+        schema: Dữ liệu cập nhật (một phần)
+        org_id: ID tổ chức
     
-    Returns:
-        Updated customer
+    Trả lại:
+        Khách hàng được cập nhật
     
-    Raises:
-        HTTPException 404: Customer not found
-        HTTPException 400: Duplicate code
+    Tăng:
+        HTTPException 404: Khách hàng không được tìm thấy
+        HTTPException 400: Mã trùng lặp
     """
-    # Get existing customer (with multi-tenant check)
+    # Lấy khách hàng hiện có (với kiểm tra đa thuê)
     customer = await get_customer(db, customer_id, org_id)
     
-    # Check for duplicate code if code is being updated
+    # Kiểm tra mã trùng lặp nếu mã đang được cập nhật
     update_data = schema.model_dump(exclude_unset=True)
     if "code" in update_data and update_data["code"] != customer.code:
         stmt = select(Customer).where(
             and_(
                 Customer.code == update_data["code"],
                 Customer.org_id == org_id,
-                Customer.id != customer_id  # Exclude current customer
+                Customer.id != customer_id  # Bỏ qua khách hàng hiện tại
             )
         )
         result = await db.execute(stmt)
@@ -211,7 +211,7 @@ async def update_customer(
                 detail=f"Customer with code '{update_data['code']}' already exists"
             )
     
-    # Update fields
+    # Cập nhật các trường
     for field, value in update_data.items():
         setattr(customer, field, value)
     
@@ -228,19 +228,19 @@ async def delete_customer(
     org_id: int,
 ) -> None:
     """
-    Delete customer (soft delete by setting is_active=False).
+    Xóa khách hàng (xóa mềm bằng cách đặt is_active=False).
     
-    Args:
-        db: Database session
-        customer_id: Customer ID
-        org_id: Organization ID
+    Tham số:
+        db: Phiên cơ sở dữ liệu
+        customer_id: ID khách hàng
+        org_id: ID tổ chức
     
-    Raises:
-        HTTPException 404: Customer not found
+    Tăng:
+        HTTPException 404: Khách hàng không được tìm thấy
     """
     customer = await get_customer(db, customer_id, org_id)
     
-    # Soft delete
+    # Xóa mềm
     customer.is_active = False
     await db.commit()
     
@@ -248,7 +248,7 @@ async def delete_customer(
 
 
 # ============================================================
-# SUPPLIER SERVICES
+# DỊCH VỤ NHÀ CUNG CẤP
 # ============================================================
 
 async def get_suppliers(
@@ -259,29 +259,29 @@ async def get_suppliers(
     is_active: Optional[bool] = None,
 ) -> tuple[list[Supplier], int]:
     """
-    Get paginated list of suppliers for an organization.
+    Lấy danh sách nhà cung cấp được phân trang cho một tổ chức.
     
-    Args:
-        db: Database session
-        org_id: Organization ID (CRITICAL for multi-tenancy)
-        skip: Number of records to skip
-        limit: Max records to return
-        is_active: Filter by active status (optional)
+    Tham số:
+        db: Phiên cơ sở dữ liệu
+        org_id: ID tổ chức (QUAN TRỌNG cho đa thuê)
+        skip: Số bản ghi cần bỏ qua
+        limit: Tối đa bản ghi trả về
+        is_active: Lọc theo trạng thái hoạt động (tùy chọn)
     
-    Returns:
-        Tuple of (suppliers list, total count)
+    Trả lại:
+        Tuple của (danh sách nhà cung cấp, tổng số)
     """
-    # Build base query with multi-tenant filter
+    # Xây dựng câu truy vấn cơ sở với bộ lọc đa thuê
     base_filter = Supplier.org_id == org_id
     if is_active is not None:
         base_filter = and_(base_filter, Supplier.is_active == is_active)
     
-    # Count total
+    # Đếm tổng số
     count_stmt = select(func.count()).select_from(Supplier).where(base_filter)
     total_result = await db.execute(count_stmt)
     total = total_result.scalar_one()
     
-    # Get paginated data
+    # Lấy dữ liệu được phân trang
     stmt = (
         select(Supplier)
         .where(base_filter)
@@ -302,25 +302,25 @@ async def get_supplier(
     org_id: int,
 ) -> Supplier:
     """
-    Get single supplier by ID.
+    Lấy một nhà cung cấp theo ID.
     
-    CRITICAL: Always filter by org_id to prevent cross-tenant access.
+    QUAN TRỌNG: Luôn lọc theo org_id để ngăn chặn truy cập xuyên thuê.
     
-    Args:
-        db: Database session
-        supplier_id: Supplier ID
-        org_id: Organization ID
+    Tham số:
+        db: Phiên cơ sở dữ liệu
+        supplier_id: ID nhà cung cấp
+        org_id: ID tổ chức
     
-    Returns:
-        Supplier object
+    Trả lại:
+        Đối tượng nhà cung cấp
     
-    Raises:
-        HTTPException 404: Supplier not found
+    Tăng:
+        HTTPException 404: Nhà cung cấp không được tìm thấy
     """
     stmt = select(Supplier).where(
         and_(
             Supplier.id == supplier_id,
-            Supplier.org_id == org_id  # Multi-tenancy protection
+            Supplier.org_id == org_id  # Bảo vệ đa thuê
         )
     )
     result = await db.execute(stmt)
@@ -342,24 +342,24 @@ async def create_supplier(
     org_id: int,
 ) -> Supplier:
     """
-    Create new supplier.
+    Tạo nhà cung cấp mới.
     
-    Business Rules:
-    - Supplier code must be unique within organization (if provided)
-    - org_id is INJECTED from current_user, NOT from request body
+    Quy tắc kinh doanh:
+    - Mã nhà cung cấp phải duy nhất trong tổ chức (nếu cung cấp)
+    - org_id được TIÊM từ current_user, KHÔNG từ thân yêu cầu
     
-    Args:
-        db: Database session
-        schema: Supplier creation data
-        org_id: Organization ID (injected from auth)
+    Tham số:
+        db: Phiên cơ sở dữ liệu
+        schema: Dữ liệu tạo nhà cung cấp
+        org_id: ID tổ chức (được tiêm từ xác thực)
     
-    Returns:
-        Created supplier
+    Trả lại:
+        Nhà cung cấp được tạo
     
-    Raises:
-        HTTPException 400: Duplicate supplier code
+    Tăng:
+        HTTPException 400: Mã nhà cung cấp trùng lặp
     """
-    # Check for duplicate code within organization
+    # Kiểm tra mã trùng lặp trong tổ chức
     if schema.code:
         stmt = select(Supplier).where(
             and_(
@@ -379,10 +379,10 @@ async def create_supplier(
                 detail=f"Supplier with code '{schema.code}' already exists"
             )
     
-    # Create supplier - inject org_id
+    # Tạo nhà cung cấp - tiêm org_id
     supplier = Supplier(
         **schema.model_dump(),
-        org_id=org_id  # CRITICAL: Inject from auth, not from request
+        org_id=org_id  # QUAN TRỌNG: Tiêm từ xác thực, không từ yêu cầu
     )
     
     db.add(supplier)
@@ -400,36 +400,36 @@ async def update_supplier(
     org_id: int,
 ) -> Supplier:
     """
-    Update existing supplier.
+    Cập nhật nhà cung cấp hiện có.
     
-    Business Rules:
-    - Supplier must belong to current organization
-    - Code must be unique within organization (if changed)
+    Quy tắc kinh doanh:
+    - Nhà cung cấp phải thuộc tổ chức hiện tại
+    - Mã phải duy nhất trong tổ chức (nếu thay đổi)
     
-    Args:
-        db: Database session
-        supplier_id: Supplier ID to update
-        schema: Update data (partial)
-        org_id: Organization ID
+    Tham số:
+        db: Phiên cơ sở dữ liệu
+        supplier_id: ID nhà cung cấp cần cập nhật
+        schema: Dữ liệu cập nhật (một phần)
+        org_id: ID tổ chức
     
-    Returns:
-        Updated supplier
+    Trả lại:
+        Nhà cung cấp được cập nhật
     
-    Raises:
-        HTTPException 404: Supplier not found
-        HTTPException 400: Duplicate code
+    Tăng:
+        HTTPException 404: Nhà cung cấp không được tìm thấy
+        HTTPException 400: Mã trùng lặp
     """
-    # Get existing supplier (with multi-tenant check)
+    # Lấy nhà cung cấp hiện có (với kiểm tra đa thuê)
     supplier = await get_supplier(db, supplier_id, org_id)
     
-    # Check for duplicate code if code is being updated
+    # Kiểm tra mã trùng lặp nếu mã đang được cập nhật
     update_data = schema.model_dump(exclude_unset=True)
     if "code" in update_data and update_data["code"] != supplier.code:
         stmt = select(Supplier).where(
             and_(
                 Supplier.code == update_data["code"],
                 Supplier.org_id == org_id,
-                Supplier.id != supplier_id  # Exclude current supplier
+                Supplier.id != supplier_id  # Bỏ qua nhà cung cấp hiện tại
             )
         )
         result = await db.execute(stmt)
@@ -441,7 +441,7 @@ async def update_supplier(
                 detail=f"Supplier with code '{update_data['code']}' already exists"
             )
     
-    # Update fields
+    # Cập nhật các trường
     for field, value in update_data.items():
         setattr(supplier, field, value)
     
@@ -458,19 +458,19 @@ async def delete_supplier(
     org_id: int,
 ) -> None:
     """
-    Delete supplier (soft delete by setting is_active=False).
+    Xóa nhà cung cấp (xóa mềm bằng cách đặt is_active=False).
     
-    Args:
-        db: Database session
-        supplier_id: Supplier ID
-        org_id: Organization ID
+    Tham số:
+        db: Phiên cơ sở dữ liệu
+        supplier_id: ID nhà cung cấp
+        org_id: ID tổ chức
     
-    Raises:
-        HTTPException 404: Supplier not found
+    Tăng:
+        HTTPException 404: Nhà cung cấp không được tìm thấy
     """
     supplier = await get_supplier(db, supplier_id, org_id)
     
-    # Soft delete
+    # Xóa mềm
     supplier.is_active = False
     await db.commit()
     

@@ -1,4 +1,4 @@
-"""Custom exceptions and exception handlers."""
+"""Các ngoại lệ tùy chỉnh và trình xử lý ngoại lệ."""
 
 import logging
 from typing import Union
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 class SMEPulseException(Exception):
-    """Base exception for SME Pulse application."""
+    """Ngoại lệ cơ sở cho ứng dụng SME Pulse."""
     
     def __init__(
         self,
@@ -32,7 +32,7 @@ class SMEPulseException(Exception):
 
 
 class AuthenticationError(SMEPulseException):
-    """Authentication failed - invalid credentials."""
+    """Xác thực thất bại - thông tin đăng nhập không hợp lệ."""
     
     def __init__(self, message: str = "Authentication failed"):
         super().__init__(
@@ -42,7 +42,7 @@ class AuthenticationError(SMEPulseException):
 
 
 class AuthorizationError(SMEPulseException):
-    """Authorization failed - insufficient permissions."""
+    """Ủy quyền thất bại - quyền không đủ."""
     
     def __init__(self, message: str = "Insufficient permissions"):
         super().__init__(
@@ -52,7 +52,7 @@ class AuthorizationError(SMEPulseException):
 
 
 class ResourceNotFoundError(SMEPulseException):
-    """Resource not found."""
+    """Tài nguyên không tìm thấy."""
     
     def __init__(self, resource: str, identifier: Union[int, str]):
         super().__init__(
@@ -63,7 +63,7 @@ class ResourceNotFoundError(SMEPulseException):
 
 
 class ValidationError(SMEPulseException):
-    """Business logic validation error."""
+    """Lỗi xác thực logic kinh doanh."""
     
     def __init__(self, message: str, errors: dict = None):
         super().__init__(
@@ -74,7 +74,7 @@ class ValidationError(SMEPulseException):
 
 
 class DatabaseError(SMEPulseException):
-    """Database operation error."""
+    """Lỗi hoạt động Database."""
     
     def __init__(self, message: str = "Database operation failed"):
         super().__init__(
@@ -92,8 +92,8 @@ async def sme_pulse_exception_handler(
     exc: SMEPulseException
 ) -> JSONResponse:
     """
-    Handle custom SME Pulse exceptions.
-    Returns structured error response.
+    Xử lý các ngoại lệ tùy chỉnh SME Pulse.
+    Trả về phản hồi lỗi có cấu trúc.
     """
     request_id = getattr(request.state, "request_id", "unknown")
     
@@ -123,12 +123,12 @@ async def validation_exception_handler(
     exc: RequestValidationError
 ) -> JSONResponse:
     """
-    Handle Pydantic validation errors (422).
-    Provides detailed field-level validation errors.
+    Xử lý lỗi xác thực Pydantic (422).
+    Cung cấp lỗi xác thực chi tiết ở cấp độ trường.
     """
     request_id = getattr(request.state, "request_id", "unknown")
     
-    # Extract validation errors
+    # Trích xuất lỗi xác thực
     errors = []
     for error in exc.errors():
         errors.append({
@@ -161,8 +161,8 @@ async def sqlalchemy_exception_handler(
     exc: SQLAlchemyError
 ) -> JSONResponse:
     """
-    Handle SQLAlchemy database errors.
-    Logs full error but returns generic message to client.
+    Xử lý lỗi Database của SQLAlchemy.
+    Ghi lại đầy đủ lỗi nhưng trả về thông báo chung cho client.
     """
     request_id = getattr(request.state, "request_id", "unknown")
     
@@ -190,8 +190,8 @@ async def general_exception_handler(
     exc: Exception
 ) -> JSONResponse:
     """
-    Catch-all handler for unexpected exceptions.
-    Logs full error but returns generic message to client.
+    Trình xử lý bắt tất cả cho các ngoại lệ không mong muốn.
+    Ghi lại đầy đủ lỗi nhưng trả về thông báo chung cho client.
     """
     request_id = getattr(request.state, "request_id", "unknown")
     

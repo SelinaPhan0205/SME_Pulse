@@ -1,4 +1,4 @@
-"""Analytics schemas - Pydantic response models for KPI and reporting."""
+"""Schema phân tích - Các mô hình phản hồi Pydantic cho KPI và báo cáo."""
 
 from typing import List, Optional
 from pydantic import BaseModel, Field
@@ -7,11 +7,11 @@ from decimal import Decimal
 
 
 # ============================================================
-# KPI & DASHBOARD SCHEMAS
+# SCHEMAS KPI & BẢNG ĐIỀU KHIỂN
 # ============================================================
 
 class AgingBucketDetail(BaseModel):
-    """Single aging bucket breakdown."""
+    """Phân tích một khoảng lão hóa."""
     bucket_days: str = Field(..., description="Aging bucket: '0-30', '31-60', '61-90', '>90'")
     count: int = Field(..., ge=0, description="Number of invoices/bills in this bucket")
     total_amount: Decimal = Field(..., ge=0, description="Total amount in this bucket (VND)")
@@ -19,7 +19,7 @@ class AgingBucketDetail(BaseModel):
 
 
 class DashboardSummary(BaseModel):
-    """Dashboard KPI summary - Real-time from App DB."""
+    """Tóm tắt KPI bảng điều khiển - Dữ liệu thực tế từ App DB."""
     dso: float = Field(..., description="Days Sales Outstanding")
     dpo: float = Field(..., description="Days Payable Outstanding")
     ccc: float = Field(..., description="Cash Conversion Cycle = DSO - DPO")
@@ -37,7 +37,7 @@ class DashboardSummary(BaseModel):
 
 
 class ARAgingResponse(BaseModel):
-    """AR Aging Report - Breakdown by due date."""
+    """Báo cáo lão hóa AR - Phân tích theo ngày đề hạn."""
     total_ar: Decimal = Field(..., ge=0, description="Total AR amount (VND)")
     total_invoices: int = Field(..., ge=0, description="Total number of invoices")
     buckets: List[AgingBucketDetail] = Field(..., description="Aging breakdown by bucket")
@@ -45,7 +45,7 @@ class ARAgingResponse(BaseModel):
 
 
 class APAgingResponse(BaseModel):
-    """AP Aging Report - Breakdown by due date."""
+    """Báo cáo lão hóa AP - Phân tích theo ngày đề hạn."""
     total_ap: Decimal = Field(..., ge=0, description="Total AP amount (VND)")
     total_bills: int = Field(..., ge=0, description="Total number of bills")
     buckets: List[AgingBucketDetail] = Field(..., description="Aging breakdown by bucket")
@@ -53,13 +53,13 @@ class APAgingResponse(BaseModel):
 
 
 class DailyRevenueDataPoint(BaseModel):
-    """Single day revenue data point."""
+    """Một điểm dữ liệu doanh thu hàng ngày."""
     date: str = Field(..., description="Date in YYYY-MM-DD format")
     revenue: Decimal = Field(..., ge=0, description="Revenue for this day (VND)")
 
 
 class DailyRevenueResponse(BaseModel):
-    """Daily Revenue KPI - Last N days."""
+    """KPI Doanh thu hàng ngày - N ngày gần đây."""
     total_revenue: Decimal = Field(..., ge=0, description="Total revenue in period (VND)")
     average_daily_revenue: Decimal = Field(..., ge=0, description="Average daily revenue (VND)")
     data: List[DailyRevenueDataPoint] = Field(..., description="Daily breakdown")
@@ -67,7 +67,7 @@ class DailyRevenueResponse(BaseModel):
 
 
 class PaymentSuccessRateResponse(BaseModel):
-    """Payment Success Rate KPI."""
+    """KPI Tỷ lệ Thanh toán thành công."""
     success_rate: float = Field(..., ge=0, le=100, description="Percentage of successful payments")
     total_transactions: int = Field(..., ge=0, description="Total payment transactions")
     successful: int = Field(..., ge=0, description="Number of successful payments")
@@ -76,7 +76,7 @@ class PaymentSuccessRateResponse(BaseModel):
 
 
 class ReconciliationDiscrepancy(BaseModel):
-    """Single reconciliation discrepancy."""
+    """Một ngoại lệ sức Điều hòa."""
     transaction_id: int = Field(..., description="Transaction ID")
     amount_expected: Decimal = Field(..., description="Expected amount (VND)")
     amount_received: Decimal = Field(..., description="Actual received amount (VND)")
@@ -84,7 +84,7 @@ class ReconciliationDiscrepancy(BaseModel):
 
 
 class ReconciliationResponse(BaseModel):
-    """Payment Reconciliation Status."""
+    """Trạng thái Điều hòa Thanh toán."""
     total_transactions: int = Field(..., ge=0, description="Total transactions for date")
     reconciled: int = Field(..., ge=0, description="Number of reconciled transactions")
     pending: int = Field(..., ge=0, description="Number of pending reconciliation")
@@ -94,11 +94,11 @@ class ReconciliationResponse(BaseModel):
 
 
 # ============================================================
-# EXPORT JOB SCHEMAS
+# SCHEMA CÔNG VIỆC XUẤT
 # ============================================================
 
 class ExportJobResponse(BaseModel):
-    """Export job status response."""
+    """Phản hồi trạng thái công việc xuất."""
     job_id: str = Field(..., description="Unique job ID")
     status: str = Field(..., description="pending, running, completed, failed")
     report_type: str = Field(..., description="ar_aging, ap_aging, cashflow, payment")
@@ -112,11 +112,11 @@ class ExportJobResponse(BaseModel):
 
 
 # ============================================================
-# METABASE EMBEDDING SCHEMAS
+# SCHEMA NHÚNG METABASE
 # ============================================================
 
 class MetabaseTokenResponse(BaseModel):
-    """Metabase embedding token response."""
+    """Phản hồi JWT token nhúng ngắm tất Metabase."""
     token: str = Field(..., description="JWT token for Metabase embedding")
     embed_url: str = Field(..., description="Full embed URL for iframe")
     dashboard_id: int = Field(..., description="Metabase dashboard ID")
@@ -126,11 +126,11 @@ class MetabaseTokenResponse(BaseModel):
 
 
 # ============================================================
-# ML FORECAST & ANOMALY SCHEMAS
+# SCHEMAS DỰ BÁO ML & PHÁT HIỆN BẤT THƯỜNG
 # ============================================================
 
 class ForecastPoint(BaseModel):
-    """Single cashflow forecast data point."""
+    """Một điểm dữ liệu dự báo dòng tiền."""
     date: str = Field(..., description="Forecast date in YYYY-MM-DD format")
     actual: Optional[float] = Field(None, description="Actual cashflow if available (historical data)")
     forecast: float = Field(..., description="Predicted cashflow (VND)")
@@ -139,7 +139,7 @@ class ForecastPoint(BaseModel):
 
 
 class ForecastResponse(BaseModel):
-    """Revenue forecast response - Prophet ML predictions."""
+    """Phản hồi dự báo doanh thu - Các dự đoán ML Prophet."""
     data: List[ForecastPoint] = Field(..., description="Forecast data points")
     model_name: Optional[str] = Field(None, description="ML model name")
     total_days: int = Field(..., ge=0, description="Number of forecast days")
@@ -147,7 +147,7 @@ class ForecastResponse(BaseModel):
 
 
 class AnomalyPoint(BaseModel):
-    """Single anomaly detection alert."""
+    """Một cảnh báo phát hiện bất thường."""
     date: str = Field(..., description="Transaction date in YYYY-MM-DD format")
     amount: float = Field(..., description="Transaction amount (VND)")
     expected: Optional[float] = Field(None, description="Expected amount based on historical patterns")
@@ -158,7 +158,7 @@ class AnomalyPoint(BaseModel):
 
 
 class AnomalyResponse(BaseModel):
-    """Revenue anomaly detection response - Isolation Forest ML alerts."""
+    """Phản hồi phát hiện bất thường doanh thu - Các cảnh báo ML Isolation Forest."""
     data: List[AnomalyPoint] = Field(..., description="Anomaly alerts")
     total_anomalies: int = Field(..., ge=0, description="Total number of anomalies detected")
     severity_breakdown: Optional[dict] = Field(None, description="Count by severity level")
@@ -166,11 +166,11 @@ class AnomalyResponse(BaseModel):
 
 
 # ============================================================
-# RECONCILIATION ACTION SCHEMAS
+# SCHEMA HÀNH ĐỘNG ĐIỀU HÒA
 # ============================================================
 
 class ReconciliationMatch(BaseModel):
-    """Single matched transaction pair."""
+    """Một cặp giao dịch khớp."""
     bank_transaction_id: int = Field(..., description="Bank transaction ID")
     payment_id: int = Field(..., description="System payment ID")
     bank_amount: Decimal = Field(..., description="Bank transaction amount")
@@ -180,7 +180,7 @@ class ReconciliationMatch(BaseModel):
 
 
 class ReconciliationAutoMatchResponse(BaseModel):
-    """Auto-match result response."""
+    """Phản hồi kết quả tự-khớp."""
     total_bank_transactions: int = Field(..., ge=0)
     total_matched: int = Field(..., ge=0)
     total_unmatched: int = Field(..., ge=0)
@@ -191,14 +191,14 @@ class ReconciliationAutoMatchResponse(BaseModel):
 
 
 class ReconciliationConfirmRequest(BaseModel):
-    """Request to confirm a reconciliation match."""
+    """Yêu cầu xác nhận một khớp điều hòa."""
     bank_transaction_id: int = Field(..., description="Bank transaction ID")
     payment_id: int = Field(..., description="System payment ID to match")
     notes: Optional[str] = Field(None, description="Optional notes")
 
 
 class ReconciliationActionResponse(BaseModel):
-    """Response for reconciliation confirm/reject actions."""
+    """Phản hồi cho các hành động xác nhận/từ chối điều hòa."""
     success: bool = Field(..., description="Whether action succeeded")
     message: str = Field(..., description="Action result message")
     transaction_id: int = Field(..., description="Affected transaction ID")

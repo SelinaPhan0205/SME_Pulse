@@ -1,4 +1,4 @@
-"""Logging configuration with structured JSON output."""
+"""Cấu hình ghi nhật ký với đầu ra JSON có cấu trúc."""
 
 import logging
 import sys
@@ -12,8 +12,8 @@ from app.core.config import settings
 
 class JSONFormatter(logging.Formatter):
     """
-    Custom JSON formatter for structured logging.
-    Outputs logs in JSON format for easy parsing by log aggregation tools.
+    Trình định dạng JSON tùy chỉnh để ghi nhật ký có cấu trúc.
+    Xuất các bản ghi ở định dạng JSON để dễ dàng phân tích cú pháp bởi các công cụ tổng hợp nhật ký.
     """
     
     def format(self, record: logging.LogRecord) -> str:
@@ -27,7 +27,7 @@ class JSONFormatter(logging.Formatter):
             "line": record.lineno,
         }
         
-        # Add extra fields (e.g., request_id, user_id)
+        # Thêm các trường bổ sung (ví dụ: request_id, user_id)
         if hasattr(record, "request_id"):
             log_data["request_id"] = record.request_id
         if hasattr(record, "user_id"):
@@ -35,7 +35,7 @@ class JSONFormatter(logging.Formatter):
         if hasattr(record, "org_id"):
             log_data["org_id"] = record.org_id
         
-        # Add custom extra fields
+        # Thêm các trường bổ sung tùy chỉnh
         for key, value in record.__dict__.items():
             if key not in [
                 "name", "msg", "args", "created", "filename", "funcName",
@@ -45,7 +45,7 @@ class JSONFormatter(logging.Formatter):
             ]:
                 log_data[key] = value
         
-        # Add exception info
+        # Thêm thông tin ngoại lệ
         if record.exc_info:
             log_data["exception"] = self.formatException(record.exc_info)
         
@@ -54,32 +54,32 @@ class JSONFormatter(logging.Formatter):
 
 def setup_logging():
     """
-    Configure application logging.
+    Cấu hình ghi nhật ký ứng dụng.
     
-    - JSON format for production (easy parsing)
-    - Text format for development (human-readable)
-    - Outputs to both console and file
+    - Định dạng JSON cho sản xuất (dễ phân tích)
+    - Định dạng văn bản cho phát triển (dễ đọc bởi con người)
+    - Xuất ra cả bằng điều khiển và tệp
     """
-    # Create logs directory if not exists
+    # Tạo thư mục logs nếu nó không tồn tại
     log_file = Path(settings.BACKEND_LOG_FILE)
     log_file.parent.mkdir(parents=True, exist_ok=True)
     
-    # Root logger
+    # Trình ghi nhật ký gốc
     root_logger = logging.getLogger()
     root_logger.setLevel(settings.BACKEND_LOG_LEVEL)
     
-    # Remove existing handlers
+    # Xóa các trình xử lý hiện có
     root_logger.handlers.clear()
     
-    # Console handler
+    # Trình xử lý bằng điều khiển
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(settings.BACKEND_LOG_LEVEL)
     
-    # File handler
+    # Trình xử lý tệp
     file_handler = logging.FileHandler(log_file)
     file_handler.setLevel(settings.BACKEND_LOG_LEVEL)
     
-    # Format based on config
+    # Format dựa trên cấu hình
     if settings.BACKEND_LOG_FORMAT == "json":
         formatter = JSONFormatter()
     else:
@@ -91,11 +91,11 @@ def setup_logging():
     console_handler.setFormatter(formatter)
     file_handler.setFormatter(formatter)
     
-    # Add handlers
+    # Thêm các trình xử lý
     root_logger.addHandler(console_handler)
     root_logger.addHandler(file_handler)
     
-    # Suppress noisy loggers
+    # Triệt tiêu các trình ghi nhật ký ồn ào
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
     logging.getLogger("asyncio").setLevel(logging.WARNING)
     

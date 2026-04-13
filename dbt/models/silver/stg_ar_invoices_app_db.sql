@@ -18,7 +18,7 @@
 -- ===================================================================
 
 with src as (
-    select * from {{ source('app_db', 'ar_invoices_app_db_raw') }}
+    select * from {{ source('bronze_app_db', 'ar_invoices_app') }}
 ),
 
 -- Standardize and clean data

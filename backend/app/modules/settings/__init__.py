@@ -1,1 +1,1 @@
-"""Settings module."""
+"""Mô-đun Cài đặt."""

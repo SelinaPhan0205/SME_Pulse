@@ -1,4 +1,4 @@
-"""Analytics Router - Real-time KPI and reporting APIs."""
+"""Router Phân tích - API KPI thực tế và báo cáo."""
 
 import logging
 import json
@@ -39,7 +39,7 @@ router = APIRouter()
 
 
 # ============================================================
-# DASHBOARD & KPI ENDPOINTS
+# BẢNG ĐIỀU KHIỂN & ĐIỂM KPI
 # ============================================================
 
 @router.get("/summary", response_model=DashboardSummary)
@@ -48,14 +48,14 @@ async def get_dashboard_summary(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Get complete dashboard KPI summary.
+    Lấy tóm tắt KPI bảng điều khiển hoàn chỉnh.
     
-    **UC08 - Dashboard**
+    **UC08 - Bảng điều khiển**
     
-    Returns:
-    - DSO, DPO, CCC, Total AR/AP, Cash Balance, Working Capital
-    - Overdue invoice/bill counts and amounts
-    - Real-time data from Application DB
+    Trả lại:
+    - DSO, DPO, CCC, Tổng AR/AP, Số dư Tiền mặt, Vốn lưu động
+    - Số lượng hóa đơn/hợp đồng quá hạn và số tiền
+    - Dữ liệu thực tế từ Application DB
     """
     try:
         summary = await service.get_dashboard_summary(db, current_user.org_id)
@@ -70,7 +70,7 @@ async def get_dashboard_summary(
 
 
 # ============================================================
-# AGING REPORTS
+# BÁO CÁO LÃO HÓA
 # ============================================================
 
 @router.get("/aging/ar", response_model=ARAgingResponse)
@@ -79,14 +79,14 @@ async def get_ar_aging(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Get AR (Accounts Receivable) aging report.
+    Lấy báo cáo lão hóa AR (Công nợ Phải thu).
     
     **UC05 - Công nợ AR**
     
-    Returns:
-    - Total AR amount and invoice count
-    - Breakdown by aging buckets: 0-30, 31-60, 61-90, >90 days
-    - Amount and count for each bucket
+    Trả lại:
+    - Tổng số AR và số lượng hóa đơn
+    - Phân tích theo các khoảng lão hóa: 0-30, 31-60, 61-90, >90 ngày
+    - Số tiền và số lượng cho mỗi khoảng
     """
     try:
         aging = await service.get_ar_aging(db, current_user.org_id)
@@ -106,14 +106,14 @@ async def get_ap_aging(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Get AP (Accounts Payable) aging report.
+    Lấy báo cáo lão hóa AP (Công nợ Phải trả).
     
     **UC06 - Công nợ AP**
     
-    Returns:
-    - Total AP amount and bill count
-    - Breakdown by aging buckets: 0-30, 31-60, 61-90, >90 days
-    - Amount and count for each bucket
+    Trả lại:
+    - Tổng số AP và số lượng hợp đồng
+    - Phân tích theo các khoảng lão hóa: 0-30, 31-60, 61-90, >90 ngày
+    - Số tiền và số lượng cho mỗi khoảng
     """
     try:
         aging = await service.get_ap_aging(db, current_user.org_id)
@@ -128,7 +128,7 @@ async def get_ap_aging(
 
 
 # ============================================================
-# KPI ENDPOINTS
+# ĐIỂM KPI
 # ============================================================
 
 @router.get("/kpi/daily-revenue", response_model=DailyRevenueResponse)
@@ -138,16 +138,16 @@ async def get_daily_revenue(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Get daily revenue KPI for last N days.
+    Lấy KPI doanh thu hàng ngày cho N ngày gần đây.
     
-    **UC08 - Dashboard (mini chart)**
+    **UC08 - Bảng điều khiển (biểu đồ nhỏ)**
     
-    Query Parameters:
-    - days: Number of days (default: 7, max: 90)
+    Tham số truy vấn:
+    - days: Số ngày (mặc định: 7, tối đa: 90)
     
-    Returns:
-    - Total revenue, average daily revenue
-    - Daily breakdown with date and amount
+    Trả lại:
+    - Tổng doanh thu, doanh thu trung bình hàng ngày
+    - Phân tích hàng ngày với ngày tháng và số tiền
     """
     try:
         revenue = await service.get_daily_revenue_kpi(db, current_user.org_id, days)
@@ -168,17 +168,17 @@ async def get_payment_success_rate(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Get payment success rate KPI for last N days.
+    Lấy KPI tỷ lệ thanh toán thành công cho N ngày gần đây.
     
-    **UC08 - Dashboard (mini chart)**
-    **UC05 - Payments (Reconcile tab)**
+    **UC08 - Bảng điều khiển (biểu đồ nhỏ)**
+    **UC05 - Thanh toán (Thẻ Điều hòa)**
     
-    Query Parameters:
-    - days: Number of days (default: 7, max: 90)
+    Tham số truy vấn:
+    - days: Số ngày (mặc định: 7, tối đa: 90)
     
-    Returns:
-    - Success rate percentage
-    - Total transactions, successful count, failed count
+    Trả lại:
+    - Phần trăm tỷ lệ thành công
+    - Tổng giao dịch, số lượng thành công, số lượng thất bại
     """
     try:
         success_rate = await service.get_payment_success_rate_kpi(db, current_user.org_id, days)
@@ -199,17 +199,17 @@ async def get_reconciliation(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Get payment reconciliation status for a specific date.
+    Lấy trạng thái điều hòa thanh toán cho một ngày cụ thể.
     
-    **UC05 - Payments (Reconcile tab)**
+    **UC05 - Thanh toán (Thẻ Điều hòa)**
     
-    Query Parameters:
-    - reconcile_date: Date to reconcile (default: today, format: YYYY-MM-DD)
+    Tham số truy vấn:
+    - reconcile_date: Ngày cần điều hòa (mặc định: hôm nay, định dạng: YYYY-MM-DD)
     
-    Returns:
-    - Total transactions, reconciled count, pending count
-    - Reconciliation rate percentage
-    - List of discrepancies
+    Trả lại:
+    - Tổng giao dịch, số lượng đã điều hòa, số lượng đang chờ xử lý
+    - Phần trăm tỷ lệ điều hòa
+    - Danh sách các chênh lệch
     """
     try:
         if reconcile_date is None:
@@ -227,7 +227,7 @@ async def get_reconciliation(
 
 
 # ============================================================
-# RECONCILIATION ACTION ENDPOINTS
+# ĐIỂM CUỐI HÀNH ĐỘNG ĐIỀU HÒA
 # ============================================================
 
 @router.post("/reconciliation/auto-match", response_model=ReconciliationAutoMatchResponse)
@@ -238,19 +238,19 @@ async def auto_match_transactions(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Auto-match bank transactions with system payments.
+    Tự động khớp các giao dịch ngân hàng với các khoản thanh toán hệ thống.
     
-    **UC05 - Payment Reconciliation**
+    **UC05 - Điều hòa Thanh toán**
     
-    Algorithm:
-    1. Get all bank transactions for the date
-    2. Get all system payments for the date
-    3. Match by amount within tolerance (±tolerance VND)
-    4. Return matched pairs and unmatched transactions
+    Thuật toán:
+    1. Lấy tất cả các giao dịch ngân hàng cho ngày hôm đó
+    2. Lấy tất cả các khoản thanh toán hệ thống cho ngày hôm đó
+    3. Khớp theo số tiền trong giới hạn dung sai (±dung_sai VND)
+    4. Trả lại các cặp đã khớp và giao dịch không khớp
     
-    Query Parameters:
-    - reconcile_date: Date to reconcile (default: today)
-    - tolerance: Amount tolerance for matching (default: 1000 VND)
+    Tham số truy vấn:
+    - reconcile_date: Ngày cần điều hòa (mặc định: hôm nay)
+    - tolerance: Dung sai số tiền cho khớp (mặc định: 1000 VND)
     """
     try:
         if reconcile_date is None:
@@ -280,17 +280,17 @@ async def confirm_reconciliation_match(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Confirm a reconciliation match between bank transaction and payment.
+    Xác nhận khớp điều hòa giữa giao dịch ngân hàng và khoản thanh toán.
     
-    **UC05 - Manual Reconciliation Confirmation**
+    **UC05 - Xác nhận Điều hòa Thủ công**
     
-    Path Parameters:
-    - transaction_id: Bank transaction ID to confirm
+    Tham số đường dẫn:
+    - transaction_id: ID Giao dịch ngân hàng cần xác nhận
     
-    Request Body:
-    - bank_transaction_id: Bank transaction ID
-    - payment_id: System payment ID to match
-    - notes: Optional notes for audit trail
+    Phần thân yêu cầu:
+    - bank_transaction_id: ID Giao dịch ngân hàng
+    - payment_id: ID Khoản thanh toán hệ thống cần khớp
+    - notes: Ghi chú tùy chọn cho đường audit
     """
     try:
         result = await service.confirm_reconciliation(
@@ -317,12 +317,12 @@ async def reject_reconciliation_match(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Reject a suggested reconciliation match.
+    Từ chối một gợi ý khớp điều hòa.
     
-    **UC05 - Reject Reconciliation**
+    **UC05 - Từ chối Điều hòa**
     
-    Path Parameters:
-    - transaction_id: Bank transaction ID to reject suggested match
+    Tham số đường dẫn:
+    - transaction_id: ID Giao dịch ngân hàng để từ chối gợi ý khớp
     """
     try:
         result = await service.reject_reconciliation(
@@ -347,11 +347,11 @@ async def get_pending_reconciliations(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Get list of unmatched/pending transactions for reconciliation.
+    Lấy danh sách các giao dịch không khớp/chờ xử lý để điều hòa.
     
-    **UC05 - View Pending Reconciliation**
+    **UC05 - Xem Điều hòa Chờ xử lý**
     
-    Returns transactions that have not been matched yet.
+    Trả lại các giao dịch chưa được khớp.
     """
     try:
         if reconcile_date is None:
@@ -376,7 +376,7 @@ async def get_pending_reconciliations(
 
 
 # ============================================================
-# EXPORT ENDPOINTS
+# ĐIỂM CUỐI XUẤT
 # ============================================================
 
 @router.post("/reports/export", response_model=ExportJobResponse, status_code=202)
@@ -387,25 +387,25 @@ async def export_report(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Create async export job for report generation.
+    Tạo công việc xuất không đồng bộ để tạo báo cáo.
     
-    **STEP 4 - Excel Export Worker**
+    **BƯỚC 4 - Công nhân xuất Excel**
     
-    Query Parameters:
-    - report_type: ar_aging, ap_aging, or cashflow
-    - format: xlsx (default)
+    Tham số truy vấn:
+    - report_type: ar_aging, ap_aging, hoặc cashflow
+    - format: xlsx (mặc định)
     
-    Returns:
-    - job_id: Use to poll status via GET /reports/jobs/{job_id}
-    - status: pending (processing in background)
+    Trả lại:
+    - job_id: Sử dụng để kiểm tra trạng thái qua GET /reports/jobs/{job_id}
+    - status: pending (xử lý trong nền)
     
-    Notes:
-    - Export is processed asynchronously (5-30 seconds)
-    - Poll job status to get download URL
-    - Download URL expires after 48 hours
+    Ghi chú:
+    - Xuất được xử lý không đồng bộ (5-30 giây)
+    - Kiểm tra trạng thái công việc để lấy URL tải xuống
+    - URL tải xuống hết hạn sau 48 giờ
     """
     try:
-        # Validate report_type
+        # Xác thực report_type
         valid_types = ["ar_aging", "ap_aging", "cashflow"]
         if report_type not in valid_types:
             raise HTTPException(
@@ -413,14 +413,14 @@ async def export_report(
                 detail=f"Invalid report_type. Must be one of: {valid_types}"
             )
         
-        # Validate format
+        # Xác thực định dạng
         if format != "xlsx":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Only xlsx format is supported"
             )
         
-        # Route to correct Celery task (get task_id from Celery)
+        # Định tuyến tới tác vụ Celery chính xác (lấy task_id từ Celery)
         if report_type == "ar_aging":
             celery_task = tasks.export_ar_aging.delay(current_user.org_id)
         elif report_type == "ap_aging":
@@ -428,7 +428,7 @@ async def export_report(
         elif report_type == "cashflow":
             celery_task = tasks.export_cashflow_forecast.delay(current_user.org_id)
         
-        # Use Celery task ID as job_id
+        # Sử dụng ID tác vụ Celery làm job_id
         job_id = celery_task.id
         
         logger.info(f"Created export job {job_id} for org_id={current_user.org_id}, type={report_type}")
@@ -460,29 +460,29 @@ async def get_export_job_status(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Poll export job status and get download URL.
+    Kiểm tra trạng thái công việc xuất và lấy URL tải xuống.
     
-    **STEP 4 - Excel Export Worker**
+    **BƯỚC 4 - Công nhân xuất Excel**
     
-    Path Parameters:
-    - job_id: Job ID from POST /reports/export
+    Tham số đường dẫn:
+    - job_id: ID Công việc từ POST /reports/export
     
-    Returns:
-    - status: pending → processing → completed (or failed)
-    - file_url: Download link (48h expiry)
+    Trả lại:
+    - status: pending → processing → completed (hoặc failed)
+    - file_url: Liên kết tải xuống (hết hạn 48h)
     - progress: 0-100%
     
-    Polling Strategy:
-    - Pending: Retry every 2-5 seconds
-    - Processing: Retry every 1-2 seconds
-    - Completed: Use file_url to download
-    - Failed: Check error_message for details
+    Chiến lược thăm dò:
+    - Pending: Thử lại mỗi 2-5 giây
+    - Processing: Thử lại mỗi 1-2 giây
+    - Completed: Sử dụng file_url để tải xuống
+    - Failed: Kiểm tra error_message để biết chi tiết
     """
     try:
-        # Get Celery task result
+        # Lấy kết quả tác vụ Celery
         task_result = AsyncResult(job_id, app=celery_app)
         
-        # Map Celery states to our states
+        # Ánh xạ trạng thái Celery tới các trạng thái của chúng tôi
         if task_result.state == "PENDING":
             status_val = "pending"
             file_url = None
@@ -515,7 +515,7 @@ async def get_export_job_status(
         return ExportJobResponse(
             job_id=job_id,
             status=status_val,
-            report_type="ar_aging",  # Default, would be tracked if stored in DB
+            report_type="ar_aging",  # Mặc định, sẽ được theo dõi nếu lưu trữ trong DB
             format="xlsx",
             file_url=file_url,
             error_message=error_message,
@@ -548,7 +548,7 @@ async def get_export_job_status(
 
 
 # ============================================================
-# METABASE EMBEDDING ENDPOINTS
+# ĐIỂM CUỐI NHÚNG METABASE
 # ============================================================
 
 @router.get("/metabase-token", response_model=MetabaseTokenResponse)
@@ -558,53 +558,53 @@ async def get_metabase_token(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Generate JWT token for Metabase dashboard/question embedding.
+    Tạo token JWT để nhúng bảng điều khiển/câu hỏi Metabase.
     
-    **UC03 - Metabase Embedding**
+    **UC03 - Nhúng Metabase**
     
-    Query Parameters:
-    - resource_id: Metabase resource ID (e.g., 2, 5)
-    - resource_type: Type of resource - 'dashboard' or 'question' (default: dashboard)
+    Tham số truy vấn:
+    - resource_id: ID tài nguyên Metabase (ví dụ: 2, 5)
+    - resource_type: Loại tài nguyên - 'dashboard' hoặc 'question' (mặc định: dashboard)
     
-    Available Dashboards:
-    - resource_id=2 → Cashflow Forecast Dashboard
-    - resource_id=5 → Anomaly Alerts Dashboard
+    Bảng điều khiển có sẵn:
+    - resource_id=2 → Bảng điều khiển Dự báo Dòng tiền
+    - resource_id=5 → Bảng điều khiển Cảnh báo Bất thường
     
-    Returns:
-    - token: JWT token for embedding
-    - embed_url: Full URL for iframe src attribute
-    - resource_id: The requested resource ID
-    - expires_in: Token expiration time in seconds
+    Trả lại:
+    - token: Token JWT để nhúng
+    - embed_url: URL đầy đủ cho thuộc tính src của iframe
+    - resource_id: ID tài nguyên được yêu cầu
+    - expires_in: Thời gian hết hạn token tính bằng giây
     
-    Usage in Frontend:
+    Sử dụng trong Frontend:
     ```javascript
-    // Get token for Cashflow Forecast Dashboard
+    // Lấy token cho Bảng điều khiển Dự báo Dòng tiền
     const response = await fetch('/api/v1/analytics/metabase-token?resource_id=2');
     const data = await response.json();
     
-    // Embed in iframe
+    // Nhúng trong iframe
     <iframe src={data.embed_url} frameBorder="0" width="100%" height="800" />
     ```
     
-    Notes:
-    - Token is valid for 10 minutes (600 seconds)
-    - Each request generates a new token
-    - Token is signed with Metabase embedding secret key
-    - Works for both dashboards and questions (queries)
+    Ghi chú:
+    - Token có hiệu lực trong 10 phút (600 giây)
+    - Mỗi yêu cầu tạo một token mới
+    - Token được ký bằng khóa bí mật nhúng Metabase
+    - Hoạt động cho cả bảng điều khiển và câu hỏi (truy vấn)
     """
     try:
         import hashlib
         import hmac
         import base64
         
-        # Validate resource_type
+        # Xác thực resource_type
         if resource_type not in ["dashboard", "question"]:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="resource_type must be 'dashboard' or 'question'"
             )
         
-        # Create payload for JWT
+        # Tạo payload cho JWT
         payload = {
             "resource": {resource_type: resource_id},
             "params": {"user_id": current_user.id, "org_id": current_user.org_id},
@@ -612,15 +612,15 @@ async def get_metabase_token(
             "exp": int(time.time()) + settings.METABASE_TOKEN_EXPIRE_SECONDS,
         }
         
-        # Encode JWT using HMAC with secret key
-        # Metabase uses HS256 algorithm
+        # Mã hóa JWT sử dụng HMAC với khóa bí mật
+        # Metabase sử dụng thuật toán HS256
         secret = settings.METABASE_EMBEDDING_SECRET_KEY
         
-        # Create JWT manually for compatibility with Metabase
+        # Tạo JWT thủ công để tương thích với Metabase
         header = base64.urlsafe_b64encode(json.dumps({"alg": "HS256", "typ": "JWT"}).encode()).decode().rstrip('=')
         payload_str = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip('=')
         
-        # Create signature
+        # Tạo chữ ký
         message = f"{header}.{payload_str}"
         signature = base64.urlsafe_b64encode(
             hmac.new(secret.encode(), message.encode(), hashlib.sha256).digest()
@@ -628,7 +628,7 @@ async def get_metabase_token(
         
         token = f"{message}.{signature}"
         
-        # Construct embed URL based on resource type
+        # Xây dựng URL nhúng dựa trên loại tài nguyên
         if resource_type == "question":
             embed_url = f"{settings.METABASE_SITE_URL}/embed/question/{token}#bordered=true&titled=true"
         else:
@@ -654,7 +654,7 @@ async def get_metabase_token(
 
 
 # ============================================================
-# ML FORECAST & ANOMALY ENDPOINTS
+# ĐIỂM CUỐI DỰ BÁO ML & PHÁT HIỆN BẤT THƯỜNG
 # ============================================================
 
 @router.get("/forecast/revenue", response_model=ForecastResponse)
@@ -665,30 +665,30 @@ async def get_forecast_revenue(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Get revenue forecast predictions from Prophet ML model.
+    Nhận dự đoán dự báo doanh thu từ mô hình ML Prophet.
     
-    **UC09 - Cashflow Forecasting**
+    **UC09 - Dự báo Dòng tiền**
     
-    Query Parameters:
-    - start_date: Filter forecasts from this date (optional)
-    - end_date: Filter forecasts until this date (optional)
+    Tham số truy vấn:
+    - start_date: Lọc dự báo từ ngày này (không bắt buộc)
+    - end_date: Lọc dự báo cho đến ngày này (không bắt buộc)
     
-    Returns:
-    - List of forecast data points with predicted cashflow, confidence bounds
-    - Model metadata (name, prediction timestamp)
+    Trả lại:
+    - Danh sách các điểm dữ liệu dự báo với dòng tiền dự đoán, giới hạn tự tin
+    - Thông tin siêu dữ liệu mô hình (tên, dấu thời gian dự đoán)
     
-    Example:
+    Ví dụ:
     - GET /api/v1/analytics/forecast/revenue?start_date=2024-12-01&end_date=2024-12-31
     
-    Notes:
-    - Forecasts are generated daily by Airflow ML pipeline
-    - Data source: sme_lake.gold.ml_cashflow_forecast (Trino)
-    - Model: Prophet v1 trained on historical cashflow data
+    Ghi chú:
+    - Dự báo được tạo hàng ngày bởi đường ống ML Airflow
+    - Nguồn dữ liệu: sme_lake.gold.ml_cashflow_forecast (Trino)
+    - Mô hình: Prophet v1 được đào tạo trên dữ liệu dòng tiền lịch sử
     """
     try:
         logger.info(f"Fetching revenue forecast for org_id={current_user.org_id}, dates={start_date} to {end_date}")
         
-        # Query forecast data from Trino Gold layer
+        # Truy vấn dữ liệu dự báo từ lớp Gold Trino
         forecast_data = await service.get_revenue_forecast(
             db=db,
             org_id=current_user.org_id,
@@ -696,7 +696,7 @@ async def get_forecast_revenue(
             end_date=end_date,
         )
         
-        # Calculate severity breakdown
+        # Tính toán phân tích mức độ nghiêm trọng
         total_days = len(forecast_data)
         
         return ForecastResponse(
@@ -723,32 +723,32 @@ async def get_revenue_anomalies(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Get revenue anomaly detection alerts from Isolation Forest ML model.
+    Nhận cảnh báo phát hiện bất thường doanh thu từ mô hình ML Isolation Forest.
     
-    **UC10 - Anomaly Detection**
+    **UC10 - Phát hiện Bất thường**
     
-    Query Parameters:
-    - start_date: Filter anomalies from this date (optional)
-    - end_date: Filter anomalies until this date (optional)
-    - severity: Filter by severity level (CRITICAL, HIGH, MEDIUM, LOW)
+    Tham số truy vấn:
+    - start_date: Lọc bất thường từ ngày này (không bắt buộc)
+    - end_date: Lọc bất thường cho đến ngày này (không bắt buộc)
+    - severity: Lọc theo mức độ nghiêm trọng (CRITICAL, HIGH, MEDIUM, LOW)
     
-    Returns:
-    - List of anomaly alerts with transaction details, anomaly scores, severity
-    - Severity breakdown statistics
+    Trả lại:
+    - Danh sách cảnh báo bất thường với chi tiết giao dịch, điểm bất thường, mức độ nghiêm trọng
+    - Thống kê phân tích mức độ nghiêm trọng
     
-    Example:
+    Ví dụ:
     - GET /api/v1/analytics/anomalies/revenue?start_date=2024-11-01&severity=HIGH
     
-    Notes:
-    - Anomalies detected daily by Airflow ML pipeline
-    - Data source: sme_lake.gold.ml_anomaly_alerts (Trino)
-    - Model: Isolation Forest trained on bank transaction features
-    - Severity levels: CRITICAL (score < -1.0), HIGH (-0.75), MEDIUM (-0.5), LOW (> -0.5)
+    Ghi chú:
+    - Bất thường được phát hiện hàng ngày bởi đường ống ML Airflow
+    - Nguồn dữ liệu: sme_lake.gold.ml_anomaly_alerts (Trino)
+    - Mô hình: Isolation Forest được đào tạo trên các tính năng giao dịch ngân hàng
+    - Mức độ nghiêm trọng: CRITICAL (điểm < -1.0), HIGH (-0.75), MEDIUM (-0.5), LOW (> -0.5)
     """
     try:
         logger.info(f"Fetching revenue anomalies for org_id={current_user.org_id}, severity={severity}")
         
-        # Validate severity if provided
+        # Xác thực mức độ nghiêm trọng nếu được cung cấp
         if severity:
             valid_severities = ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
             if severity.upper() not in valid_severities:
@@ -757,7 +757,7 @@ async def get_revenue_anomalies(
                     detail=f"Invalid severity. Must be one of: {valid_severities}"
                 )
         
-        # Query anomaly data from Trino Gold layer
+        # Truy vấn dữ liệu bất thường từ lớp Gold Trino
         anomaly_data = await service.get_revenue_anomalies(
             db=db,
             org_id=current_user.org_id,
@@ -766,7 +766,7 @@ async def get_revenue_anomalies(
             severity=severity,
         )
         
-        # Calculate severity breakdown
+        # Tính toán phân tích mức độ nghiêm trọng
         severity_counts = {}
         for item in anomaly_data:
             sev = item.get("severity", "UNKNOWN")

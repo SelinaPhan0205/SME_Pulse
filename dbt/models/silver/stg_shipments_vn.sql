@@ -23,29 +23,29 @@ norm as (
     
     -- Timing
     cast(order_date as date) as order_date,
-    order_time as order_time,
+    cast(null as varchar) as order_time,
     
     -- Customer info (for linking)
     customer_id,
-    lower(trim(customer_email)) as email_norm,
+    lower(trim(cast(customer_id as varchar))) || '@unknown.local' as email_norm,
     
     -- Shipping details
     coalesce(nullif(trim(carrier), ''), 'Unknown') as shipping_method_src,
     coalesce(nullif(trim(order_status), ''), 'Unknown') as order_status_src,
     
     -- Product info (what's being shipped)
-    product_category,
-    product_brand,
-    product_type,
-    product_name as products,
+    cast('UNKNOWN' as varchar) as product_category,
+    cast('UNKNOWN' as varchar) as product_brand,
+    cast('UNKNOWN' as varchar) as product_type,
+    cast('UNKNOWN' as varchar) as products,
     
     -- Order value (for shipping cost analysis)
-    cast(total_amount as decimal(18,2)) as order_value_foreign,
+    cast(order_amount as decimal(18,2)) as order_value_foreign,
     coalesce(nullif(trim(shipping_country), ''), 'USA') as country_src,
     
     -- Customer satisfaction
-    rating as ratings,
-    feedback
+    cast(null as double) as ratings,
+    cast(null as varchar) as feedback
     
   from src
 ),

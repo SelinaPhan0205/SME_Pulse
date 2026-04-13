@@ -1,4 +1,4 @@
-"""Account Management Service Layer - Business Logic for Bank/Cash Accounts."""
+"""Lớp dịch vụ quản lý tài khoản - Logic kinh doanh cho tài khoản ngân hàng/tiền mặt."""
 
 import logging
 from typing import Optional
@@ -21,20 +21,20 @@ async def get_accounts(
     account_type: Optional[str] = None,
 ) -> tuple[list[Account], int]:
     """
-    Get paginated list of accounts for an organization.
+    Lấy danh sách tài khoản phân trang cho một tổ chức.
     
-    Args:
+    Tham số:
         db: Database session
-        org_id: Organization ID (CRITICAL for multi-tenancy)
-        skip: Number of records to skip
-        limit: Max records to return
-        is_active: Filter by active status (optional)
-        account_type: Filter by type: cash, bank (optional)
+        org_id: ID tổ chức (CRITICAL cho multi-tenancy)
+        skip: Số bản ghi cần bỏ qua
+        limit: Số bản ghi tối đa trả về
+        is_active: Lọc theo trạng thái hoạt động (tùy chọn)
+        account_type: Lọc theo loại: cash, bank (tùy chọn)
     
-    Returns:
-        Tuple of (accounts list, total count)
+    Trả về:
+        Tuple (danh sách tài khoản, tổng số)
     """
-    # Build filters
+    # Xây dựng bộ lọc
     filters = [Account.org_id == org_id]
     
     if is_active is not None:
@@ -43,12 +43,12 @@ async def get_accounts(
     if account_type:
         filters.append(Account.type == account_type)
     
-    # Count total
+    # Đếm tổng số
     count_stmt = select(func.count()).select_from(Account).where(and_(*filters))
     total_result = await db.execute(count_stmt)
     total = total_result.scalar_one()
     
-    # Get paginated data
+    # Lấy danh sách với phân trang
     stmt = (
         select(Account)
         .where(and_(*filters))
@@ -69,20 +69,20 @@ async def get_account(
     org_id: int,
 ) -> Account:
     """
-    Get single account by ID.
+    Lấy một tài khoản theo ID.
     
-    CRITICAL: Always filter by org_id to prevent cross-tenant access.
+    CRITICAL: Luôn lọc theo org_id để ngăn chặn cross-tenant access.
     
-    Args:
+    Tham số:
         db: Database session
-        account_id: Account ID
-        org_id: Organization ID
+        account_id: ID tài khoản
+        org_id: ID tổ chức
     
-    Returns:
+    Trả về:
         Account object
     
-    Raises:
-        HTTPException 404: Account not found
+    Nâng cao:
+        HTTPException 404: Tài khoản không tìm thấy
     """
     stmt = select(Account).where(
         and_(
@@ -109,31 +109,31 @@ async def create_account(
     org_id: int,
 ) -> Account:
     """
-    Create new account.
+    Tạo tài khoản mới.
     
-    Business Rules:
-    - Account name should be unique within organization (warning only)
-    - Type must be 'cash' or 'bank'
+    Quy tắc kinh doanh:
+    - Tên tài khoản nên độc lập trong tổ chức (chỉ cảnh báo)
+    - Loại phải là 'cash' hoặc 'bank'
     
-    Args:
+    Tham số:
         db: Database session
         schema: AccountCreate schema
-        org_id: Organization ID
+        org_id: ID tổ chức
     
-    Returns:
-        Created account
+    Trả về:
+        Tài khoản được tạo
     
-    Raises:
-        HTTPException 400: Invalid account type
+    Nâng cao:
+        HTTPException 400: Loại tài khoản không hợp lệ
     """
-    # Validate type
+    # Kiểm tra loại tài khoản
     if schema.type not in ['cash', 'bank']:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Account type must be 'cash' or 'bank'"
         )
     
-    # Create account
+    # Tạo tài khoản
     account = Account(
         name=schema.name,
         type=schema.type,
@@ -158,24 +158,24 @@ async def update_account(
     org_id: int,
 ) -> Account:
     """
-    Update account.
+    Cập nhật tài khoản.
     
-    Args:
+    Tham số:
         db: Database session
-        account_id: Account ID to update
+        account_id: ID tài khoản cần cập nhật
         schema: AccountUpdate schema
-        org_id: Organization ID
+        org_id: ID tổ chức
     
-    Returns:
-        Updated account
+    Trả về:
+        Tài khoản được cập nhật
     
-    Raises:
-        HTTPException 404: Account not found
+    Nâng cao:
+        HTTPException 404: Tài khoản không tìm thấy
     """
-    # Get account
+    # Lấy tài khoản
     account = await get_account(db, account_id, org_id)
     
-    # Update fields
+    # Cập nhật các trường
     if schema.name is not None:
         account.name = schema.name
     
@@ -201,20 +201,20 @@ async def delete_account(
     org_id: int,
 ) -> None:
     """
-    Delete account (soft delete - set is_active to False).
+    Xóa tài khoản (soft delete - đặt is_active thành False).
     
-    Args:
+    Tham số:
         db: Database session
-        account_id: Account ID to delete
-        org_id: Organization ID
+        account_id: ID tài khoản cần xóa
+        org_id: ID tổ chức
     
-    Raises:
-        HTTPException 404: Account not found
+    Nâng cao:
+        HTTPException 404: Tài khoản không tìm thấy
     """
-    # Get account
+    # Lây tài khoản
     account = await get_account(db, account_id, org_id)
     
-    # Soft delete
+    # Đặt is_active thành False
     account.is_active = False
     
     await db.commit()

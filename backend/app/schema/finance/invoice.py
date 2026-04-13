@@ -1,4 +1,4 @@
-"""AR Invoice schemas."""
+"""Schema Hóa đơn AR."""
 
 from datetime import date, datetime
 from decimal import Decimal
@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, computed_field
 
 
 class InvoiceBase(BaseModel):
-    """Base schema for AR Invoice."""
+    """Schema cơ bản cho Hóa đơn AR."""
     invoice_no: str = Field(..., min_length=1, max_length=50, description="Invoice number")
     customer_id: int = Field(..., gt=0, description="Customer ID")
     issue_date: date = Field(..., description="Invoice issue date")
@@ -17,12 +17,12 @@ class InvoiceBase(BaseModel):
 
 
 class InvoiceCreate(InvoiceBase):
-    """Schema for creating AR Invoice (always starts as DRAFT)."""
+    """Schema cho việc tạo Hóa đơn AR (luôn bắt đầu với trạng thái NHÁP)."""
     pass
 
 
 class InvoiceUpdate(BaseModel):
-    """Schema for updating AR Invoice (only allowed in DRAFT status)."""
+    """Schema cho việc cập nhật Hóa đơn AR (chỉ cho phép khi ở trạng thái NHÁP)."""
     invoice_no: Optional[str] = Field(None, min_length=1, max_length=50)
     customer_id: Optional[int] = Field(None, gt=0)
     issue_date: Optional[date] = None
@@ -32,12 +32,12 @@ class InvoiceUpdate(BaseModel):
 
 
 class InvoicePost(BaseModel):
-    """Schema for posting invoice (DRAFT → POSTED transition)."""
+    """Schema cho việc đăng Hóa đơn (chuyên NHÁP → ĐĂNG)."""
     pass  # No fields needed, just triggers state change
 
 
 class InvoiceResponse(InvoiceBase):
-    """Schema for AR Invoice response."""
+    """Schema cho phản hồi Hóa đơn AR."""
     id: int
     org_id: int
     status: str = Field(..., description="draft, posted, partial, paid, overdue, cancelled")
@@ -48,14 +48,14 @@ class InvoiceResponse(InvoiceBase):
     @computed_field
     @property
     def remaining_amount(self) -> Decimal:
-        """Calculate remaining unpaid balance."""
+        """Tính toán số dư chưa thanh toán."""
         return self.total_amount - self.paid_amount
     
     model_config = {"from_attributes": True}
 
 
 class PaginatedInvoicesResponse(BaseModel):
-    """Paginated response for invoices list."""
+    """Phản hồi có phân trang cho danh sách hóa đơn."""
     total: int
     skip: int
     limit: int
@@ -65,7 +65,7 @@ class PaginatedInvoicesResponse(BaseModel):
 # ==================== BULK IMPORT SCHEMAS ====================
 
 class InvoiceBulkImportItem(BaseModel):
-    """Schema for single invoice in bulk import."""
+    """Schema cho một hóa đơn trong nhập khẩu hàng loạt."""
     invoice_no: str = Field(..., min_length=1, max_length=50, description="Invoice number")
     customer_id: int = Field(..., gt=0, description="Customer ID")
     issue_date: date = Field(..., description="Invoice issue date")
@@ -75,13 +75,13 @@ class InvoiceBulkImportItem(BaseModel):
 
 
 class InvoiceBulkImportRequest(BaseModel):
-    """Schema for bulk invoice import request."""
+    """Schema cho yêu cầu nhập khẩu hàng loạt hóa đơn."""
     invoices: list[InvoiceBulkImportItem] = Field(..., min_length=1, max_length=100, description="List of invoices to import")
     auto_post: bool = Field(False, description="Automatically post invoices after creation")
 
 
 class InvoiceBulkImportResultItem(BaseModel):
-    """Result for single invoice in bulk import."""
+    """Kết quả cho một hóa đơn trong nhập khẩu hàng loạt."""
     invoice_no: str
     success: bool
     id: Optional[int] = None
@@ -89,7 +89,7 @@ class InvoiceBulkImportResultItem(BaseModel):
 
 
 class InvoiceBulkImportResponse(BaseModel):
-    """Response for bulk invoice import."""
+    """Phản hồi cho nhập khẩu hàng loạt hóa đơn."""
     total_submitted: int
     total_success: int
     total_failed: int

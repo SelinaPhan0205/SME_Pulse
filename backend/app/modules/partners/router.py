@@ -1,4 +1,4 @@
-"""FastAPI routers for Customers and Suppliers - REST API endpoints."""
+"""Bộ định tuyến FastAPI cho Khách hàng và Nhà cung cấp - Các điểm cuối API REST."""
 
 import logging
 from typing import Optional
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================
-# CUSTOMERS ROUTER
+# ROUTER KHÁCH HÀNG
 # ============================================================
 
 customers_router = APIRouter(prefix="/customers", tags=["Customers"])
@@ -33,32 +33,32 @@ customers_router = APIRouter(prefix="/customers", tags=["Customers"])
 @customers_router.get(
     "/",
     response_model=PaginatedCustomersResponse,
-    summary="List customers",
-    description="Get paginated list of customers for current organization"
+    summary="Liệt kê khách hàng",
+    description="Lấy danh sách phân trang khách hàng cho tổ chức hiện tại"
 )
 async def list_customers(
-    skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(100, ge=1, le=500, description="Max records to return"),
-    is_active: Optional[bool] = Query(None, description="Filter by active status"),
+    skip: int = Query(0, ge=0, description="Số bản ghi cần bỏ qua"),
+    limit: int = Query(100, ge=1, le=500, description="Kết quả tối đa trả về"),
+    is_active: Optional[bool] = Query(None, description="Lọc theo trạng thái hoạt động"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    List all customers for current organization.
+    Liệt kê tất cả khách hàng cho tổ chức hiện tại.
     
-    **Multi-tenancy:** Automatically filters by current user's org_id.
+    **Đa thuê:** Tự động lọc theo org_id của người dùng hiện tại.
     
     Query Parameters:
-    - skip: Pagination offset (default: 0)
-    - limit: Max results (default: 100, max: 500)
-    - is_active: Filter active/inactive (optional)
+    - skip: Offset phân trang (mặc định: 0)
+    - limit: Kết quả tối đa (mặc định: 100, tối đa: 500)
+    - is_active: Lọc hoạt động/không hoạt động (tùy chọn)
     
-    Returns:
-    - Paginated list of customers with total count
+    Trả lại:
+    - Danh sách khách hàng được phân trang kèm tổng số
     """
     customers, total = await service.get_customers(
         db=db,
-        org_id=current_user.org_id,  # Multi-tenancy filter
+        org_id=current_user.org_id,  # Bộ lọc đa thuê
         skip=skip,
         limit=limit,
         is_active=is_active,
@@ -75,8 +75,8 @@ async def list_customers(
 @customers_router.get(
     "/{customer_id}",
     response_model=CustomerResponse,
-    summary="Get customer by ID",
-    description="Retrieve single customer details"
+    summary="Lấy khách hàng theo ID",
+    description="Truy xuất chi tiết khách hàng duy nhất"
 )
 async def get_customer(
     customer_id: int,
@@ -84,20 +84,20 @@ async def get_customer(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Get customer by ID.
+    Lấy khách hàng theo ID.
     
-    **Multi-tenancy:** Only returns customer if it belongs to current user's organization.
+    **Đa thuê:** Chỉ trả lại khách hàng nếu nó thuộc tổ chức của người dùng hiện tại.
     
     Path Parameters:
-    - customer_id: Customer ID
+    - customer_id: ID khách hàng
     
-    Raises:
-    - 404: Customer not found or doesn't belong to current organization
+    Tăng:
+    - 404: Khách hàng không được tìm thấy hoặc không thuộc tổ chức hiện tại
     """
     customer = await service.get_customer(
         db=db,
         customer_id=customer_id,
-        org_id=current_user.org_id,  # Multi-tenancy protection
+        org_id=current_user.org_id,  # Bảo vệ đa thuê
     )
     return customer
 
@@ -106,8 +106,8 @@ async def get_customer(
     "/",
     response_model=CustomerResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Create customer",
-    description="Create new customer for current organization"
+    summary="Tạo khách hàng",
+    description="Tạo khách hàng mới cho tổ chức hiện tại"
 )
 async def create_customer(
     schema: CustomerCreate,
@@ -115,28 +115,28 @@ async def create_customer(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Create new customer.
+    Tạo khách hàng mới.
     
-    **Multi-tenancy:** Customer is automatically assigned to current user's organization.
+    **Đa thuê:** Khách hàng được tự động gán cho tổ chức của người dùng hiện tại.
     
-    **Business Rules:**
-    - Customer code must be unique within organization (if provided)
-    - org_id is injected from authentication, NOT from request body
+    **Quy tắc kinh doanh:**
+    - Mã khách hàng phải duy nhất trong tổ chức (nếu cung cấp)
+    - org_id được tiêm từ xác thực, KHÔNG từ thân yêu cầu
     
-    Request Body:
-    - name: Customer name (required)
-    - code: Unique code within org (optional)
-    - tax_code, email, phone, address: Contact info (optional)
-    - credit_term: Days (default: 30)
-    - is_active: Active status (default: true)
+    Thân yêu cầu:
+    - name: Tên khách hàng (bắt buộc)
+    - code: Mã duy nhất trong org (tùy chọn)
+    - tax_code, email, phone, address: Thông tin liên hệ (tùy chọn)
+    - credit_term: Ngày (mặc định: 30)
+    - is_active: Trạng thái hoạt động (mặc định: true)
     
-    Raises:
-    - 400: Duplicate customer code
+    Tăng:
+    - 400: Mã khách hàng trùng lặp
     """
     customer = await service.create_customer(
         db=db,
         schema=schema,
-        org_id=current_user.org_id,  # Inject org_id from auth
+        org_id=current_user.org_id,  # Tiêm org_id từ xác thực
     )
     return customer
 
@@ -144,8 +144,8 @@ async def create_customer(
 @customers_router.put(
     "/{customer_id}",
     response_model=CustomerResponse,
-    summary="Update customer",
-    description="Update existing customer"
+    summary="Cập nhật khách hàng",
+    description="Cập nhật khách hàng hiện có"
 )
 async def update_customer(
     customer_id: int,
@@ -154,29 +154,29 @@ async def update_customer(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Update customer.
+    Cập nhật khách hàng.
     
-    **Multi-tenancy:** Only allows updating customer if it belongs to current user's organization.
+    **Đa thuê:** Chỉ cho phép cập nhật khách hàng nếu nó thuộc tổ chức của người dùng hiện tại.
     
-    **Business Rules:**
-    - All fields are optional (partial update)
-    - Code must remain unique within organization (if changed)
+    **Quy tắc kinh doanh:**
+    - Tất cả các trường là tùy chọn (cập nhật một phần)
+    - Mã phải vẫn duy nhất trong tổ chức (nếu thay đổi)
     
-    Path Parameters:
-    - customer_id: Customer ID to update
+    Tham số đường dẫn:
+    - customer_id: ID khách hàng cần cập nhật
     
-    Request Body:
-    - Any CustomerUpdate fields (all optional)
+    Thân yêu cầu:
+    - Bất kỳ trường CustomerUpdate nào (tất cả tùy chọn)
     
-    Raises:
-    - 404: Customer not found or doesn't belong to current organization
-    - 400: Duplicate customer code
+    Tăng:
+    - 404: Khách hàng không được tìm thấy hoặc không thuộc tổ chức hiện tại
+    - 400: Mã khách hàng trùng lặp
     """
     customer = await service.update_customer(
         db=db,
         customer_id=customer_id,
         schema=schema,
-        org_id=current_user.org_id,  # Multi-tenancy protection
+        org_id=current_user.org_id,  # Bảo vệ đa thuê
     )
     return customer
 
@@ -184,8 +184,8 @@ async def update_customer(
 @customers_router.delete(
     "/{customer_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete customer",
-    description="Soft delete customer (set is_active=False)"
+    summary="Xóa khách hàng",
+    description="Xóa mềm khách hàng (đặt is_active=False)"
 )
 async def delete_customer(
     customer_id: int,
@@ -193,28 +193,28 @@ async def delete_customer(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Delete customer (soft delete).
+    Xóa khách hàng (xóa mềm).
     
-    **Multi-tenancy:** Only allows deleting customer if it belongs to current user's organization.
+    **Đa thuê:** Chỉ cho phép xóa khách hàng nếu nó thuộc tổ chức của người dùng hiện tại.
     
-    **Note:** This is a soft delete - sets is_active=False instead of removing from database.
+    **Ghi chú:** Đây là xóa mềm - đặt is_active=False thay vì xóa khỏi cơ sở dữ liệu.
     
-    Path Parameters:
-    - customer_id: Customer ID to delete
+    Tham số đường dẫn:
+    - customer_id: ID khách hàng cần xóa
     
-    Raises:
-    - 404: Customer not found or doesn't belong to current organization
+    Tăng:
+    - 404: Khách hàng không được tìm thấy hoặc không thuộc tổ chức hiện tại
     """
     await service.delete_customer(
         db=db,
         customer_id=customer_id,
-        org_id=current_user.org_id,  # Multi-tenancy protection
+        org_id=current_user.org_id,  # Bảo vệ đa thuê
     )
     return None
 
 
 # ============================================================
-# SUPPLIERS ROUTER
+# ROUTER NHÀ CUNG CẤP
 # ============================================================
 
 suppliers_router = APIRouter(prefix="/suppliers", tags=["Suppliers"])
@@ -223,32 +223,32 @@ suppliers_router = APIRouter(prefix="/suppliers", tags=["Suppliers"])
 @suppliers_router.get(
     "/",
     response_model=PaginatedSuppliersResponse,
-    summary="List suppliers",
-    description="Get paginated list of suppliers for current organization"
+    summary="Liệt kê nhà cung cấp",
+    description="Lấy danh sách phân trang nhà cung cấp cho tổ chức hiện tại"
 )
 async def list_suppliers(
-    skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(100, ge=1, le=500, description="Max records to return"),
-    is_active: Optional[bool] = Query(None, description="Filter by active status"),
+    skip: int = Query(0, ge=0, description="Số bản ghi cần bỏ qua"),
+    limit: int = Query(100, ge=1, le=500, description="Kết quả tối đa trả về"),
+    is_active: Optional[bool] = Query(None, description="Lọc theo trạng thái hoạt động"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    List all suppliers for current organization.
+    Liệt kê tất cả nhà cung cấp cho tổ chức hiện tại.
     
-    **Multi-tenancy:** Automatically filters by current user's org_id.
+    **Đa thuê:** Tự động lọc theo org_id của người dùng hiện tại.
     
-    Query Parameters:
-    - skip: Pagination offset (default: 0)
-    - limit: Max results (default: 100, max: 500)
-    - is_active: Filter active/inactive (optional)
+    Tham số truy vấn:
+    - skip: Offset phân trang (mặc định: 0)
+    - limit: Kết quả tối đa (mặc định: 100, tối đa: 500)
+    - is_active: Lọc hoạt động/không hoạt động (tùy chọn)
     
-    Returns:
-    - Paginated list of suppliers with total count
+    Trả lại:
+    - Danh sách nhà cung cấp được phân trang kèm tổng số
     """
     suppliers, total = await service.get_suppliers(
         db=db,
-        org_id=current_user.org_id,  # Multi-tenancy filter
+        org_id=current_user.org_id,  # Bộ lọc đa thuê
         skip=skip,
         limit=limit,
         is_active=is_active,
@@ -265,8 +265,8 @@ async def list_suppliers(
 @suppliers_router.get(
     "/{supplier_id}",
     response_model=SupplierResponse,
-    summary="Get supplier by ID",
-    description="Retrieve single supplier details"
+    summary="Lấy nhà cung cấp theo ID",
+    description="Truy xuất chi tiết nhà cung cấp duy nhất"
 )
 async def get_supplier(
     supplier_id: int,
@@ -274,20 +274,20 @@ async def get_supplier(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Get supplier by ID.
+    Lấy nhà cung cấp theo ID.
     
-    **Multi-tenancy:** Only returns supplier if it belongs to current user's organization.
+    **Đa thuê:** Chỉ trả lại nhà cung cấp nếu nó thuộc tổ chức của người dùng hiện tại.
     
-    Path Parameters:
-    - supplier_id: Supplier ID
+    Tham số đường dẫn:
+    - supplier_id: ID nhà cung cấp
     
-    Raises:
-    - 404: Supplier not found or doesn't belong to current organization
+    Tăng:
+    - 404: Nhà cung cấp không được tìm thấy hoặc không thuộc tổ chức hiện tại
     """
     supplier = await service.get_supplier(
         db=db,
         supplier_id=supplier_id,
-        org_id=current_user.org_id,  # Multi-tenancy protection
+        org_id=current_user.org_id,  # Bảo vệ đa thuê
     )
     return supplier
 
@@ -296,8 +296,8 @@ async def get_supplier(
     "/",
     response_model=SupplierResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Create supplier",
-    description="Create new supplier for current organization"
+    summary="Tạo nhà cung cấp",
+    description="Tạo nhà cung cấp mới cho tổ chức hiện tại"
 )
 async def create_supplier(
     schema: SupplierCreate,
@@ -305,28 +305,28 @@ async def create_supplier(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Create new supplier.
+    Tạo nhà cung cấp mới.
     
-    **Multi-tenancy:** Supplier is automatically assigned to current user's organization.
+    **Đa thuê:** Nhà cung cấp được tự động gán cho tổ chức của người dùng hiện tại.
     
-    **Business Rules:**
-    - Supplier code must be unique within organization (if provided)
-    - org_id is injected from authentication, NOT from request body
+    **Quy tắc kinh doanh:**
+    - Mã nhà cung cấp phải duy nhất trong tổ chức (nếu cung cấp)
+    - org_id được tiêm từ xác thực, KHÔNG từ thân yêu cầu
     
-    Request Body:
-    - name: Supplier name (required)
-    - code: Unique code within org (optional)
-    - tax_code, email, phone, address: Contact info (optional)
-    - payment_term: Days (default: 30)
-    - is_active: Active status (default: true)
+    Thân yêu cầu:
+    - name: Tên nhà cung cấp (bắt buộc)
+    - code: Mã duy nhất trong org (tùy chọn)
+    - tax_code, email, phone, address: Thông tin liên hệ (tùy chọn)
+    - payment_term: Ngày (mặc định: 30)
+    - is_active: Trạng thái hoạt động (mặc định: true)
     
-    Raises:
-    - 400: Duplicate supplier code
+    Tăng:
+    - 400: Mã nhà cung cấp trùng lặp
     """
     supplier = await service.create_supplier(
         db=db,
         schema=schema,
-        org_id=current_user.org_id,  # Inject org_id from auth
+        org_id=current_user.org_id,  # Tiêm org_id từ xác thực
     )
     return supplier
 
@@ -334,8 +334,8 @@ async def create_supplier(
 @suppliers_router.put(
     "/{supplier_id}",
     response_model=SupplierResponse,
-    summary="Update supplier",
-    description="Update existing supplier"
+    summary="Cập nhật nhà cung cấp",
+    description="Cập nhật nhà cung cấp hiện có"
 )
 async def update_supplier(
     supplier_id: int,
@@ -344,29 +344,29 @@ async def update_supplier(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Update supplier.
+    Cập nhật nhà cung cấp.
     
-    **Multi-tenancy:** Only allows updating supplier if it belongs to current user's organization.
+    **Đa thuê:** Chỉ cho phép cập nhật nhà cung cấp nếu nó thuộc tổ chức của người dùng hiện tại.
     
-    **Business Rules:**
-    - All fields are optional (partial update)
-    - Code must remain unique within organization (if changed)
+    **Quy tắc kinh doanh:**
+    - Tất cả các trường là tùy chọn (cập nhật một phần)
+    - Mã phải vẫn duy nhất trong tổ chức (nếu thay đổi)
     
-    Path Parameters:
-    - supplier_id: Supplier ID to update
+    Tham số đường dẫn:
+    - supplier_id: ID nhà cung cấp cần cập nhật
     
-    Request Body:
-    - Any SupplierUpdate fields (all optional)
+    Thân yêu cầu:
+    - Bất kỳ trường SupplierUpdate nào (tất cả tùy chọn)
     
-    Raises:
-    - 404: Supplier not found or doesn't belong to current organization
-    - 400: Duplicate supplier code
+    Tăng:
+    - 404: Nhà cung cấp không được tìm thấy hoặc không thuộc tổ chức hiện tại
+    - 400: Mã nhà cung cấp trùng lặp
     """
     supplier = await service.update_supplier(
         db=db,
         supplier_id=supplier_id,
         schema=schema,
-        org_id=current_user.org_id,  # Multi-tenancy protection
+        org_id=current_user.org_id,  # Bảo vệ đa thuê
     )
     return supplier
 
@@ -374,8 +374,8 @@ async def update_supplier(
 @suppliers_router.delete(
     "/{supplier_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete supplier",
-    description="Soft delete supplier (set is_active=False)"
+    summary="Xóa nhà cung cấp",
+    description="Xóa mềm nhà cung cấp (đặt is_active=False)"
 )
 async def delete_supplier(
     supplier_id: int,
@@ -383,21 +383,21 @@ async def delete_supplier(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Delete supplier (soft delete).
+    Xóa nhà cung cấp (xóa mềm).
     
-    **Multi-tenancy:** Only allows deleting supplier if it belongs to current user's organization.
+    **Đa thuê:** Chỉ cho phép xóa nhà cung cấp nếu nó thuộc tổ chức của người dùng hiện tại.
     
-    **Note:** This is a soft delete - sets is_active=False instead of removing from database.
+    **Ghi chú:** Đây là xóa mềm - đặt is_active=False thay vì xóa khỏi cơ sở dữ liệu.
     
-    Path Parameters:
-    - supplier_id: Supplier ID to delete
+    Tham số đường dẫn:
+    - supplier_id: ID nhà cung cấp cần xóa
     
-    Raises:
-    - 404: Supplier not found or doesn't belong to current organization
+    Tăng:
+    - 404: Nhà cung cấp không được tìm thấy hoặc không thuộc tổ chức hiện tại
     """
     await service.delete_supplier(
         db=db,
         supplier_id=supplier_id,
-        org_id=current_user.org_id,  # Multi-tenancy protection
+        org_id=current_user.org_id,  # Bảo vệ đa thuê
     )
     return None

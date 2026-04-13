@@ -1,4 +1,4 @@
-"""Auth schemas - re-export for easy imports."""
+"""Schema xác thực - tái xuất cho nhập khẩu dễ dàng."""
 
 from app.schema.auth.login import (
     LoginRequest, 

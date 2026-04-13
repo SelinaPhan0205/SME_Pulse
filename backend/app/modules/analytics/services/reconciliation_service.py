@@ -1,4 +1,4 @@
-"""Reconciliation Service - Payment reconciliation status."""
+"""Service Điều hòa - Trạng thái điều hòa thanh toán."""
 
 import logging
 from decimal import Decimal
@@ -16,16 +16,16 @@ async def get_reconciliation_status(
     reconcile_date: date
 ) -> tuple[int, int, int, float, list]:
     """
-    Get payment reconciliation status for a specific date.
-    Returns: (total_transactions, reconciled_count, pending_count, reconciliation_rate%, discrepancies_list)
+    Lấy trạng thái điều hòa thanh toán cho một ngày cụ thể.
+    Trả lại: (tổng_giao_dịch, số_đã_điều_hòa, số_chờ_xử_lý, tỷ_lệ_điều_hòa%, danh_sách_chênh_lệch)
     
-    Note: This is a simplified implementation. In a real system, you would:
-    1. Compare bank transactions with recorded payments
-    2. Track reconciliation_status in Payment table
-    3. Identify and store discrepancies
+    Ghi chú: Đây là một triển khai đơn giản hóa. Trong một hệ thống thực, bạn sẽ:
+    1. So sánh giao dịch ngân hàng với các khoản thanh toán được ghi lại
+    2. Theo dõi reconciliation_status trong bảng Payment
+    3. Xác định và lưu trữ các chênh lệch
     """
     try:
-        # Count total payments for the date
+        # Đếm tổng số khoản thanh toán cho ngày hôm đó
         total_query = select(func.count(Payment.id)).where(
             Payment.org_id == org_id,
             Payment.transaction_date == reconcile_date
@@ -36,8 +36,8 @@ async def get_reconciliation_status(
         if total_transactions == 0:
             return 0, 0, 0, 0.0, []
         
-        # For now, assume all payments are reconciled (no discrepancies)
-        # In a real system, you would track reconciliation_status and actual bank balance
+        # Hiện tại, giả sử tất cả các khoản thanh toán đều được điều hòa (không có chênh lệch)
+        # Trong một hệ thống thực, bạn sẽ theo dõi reconciliation_status và số dư ngân hàng thực tế
         reconciled_count = total_transactions
         pending_count = 0
         reconciliation_rate = 100.0

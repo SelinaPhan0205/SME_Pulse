@@ -1,4 +1,4 @@
-"""Customer schemas."""
+"""Schema Khách hàng."""
 
 from datetime import datetime
 from typing import Optional
@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, EmailStr
 
 
 class CustomerBase(BaseModel):
-    """Base schema for Customer - shared fields."""
+    """Schema cơ bản cho Khách hàng - các trường chia sẻ."""
     name: str = Field(..., min_length=1, max_length=255, description="Customer name")
     code: Optional[str] = Field(None, max_length=50, description="Customer code (unique within org)")
     tax_code: Optional[str] = Field(None, max_length=50, description="Tax identification number")
@@ -18,12 +18,12 @@ class CustomerBase(BaseModel):
 
 
 class CustomerCreate(CustomerBase):
-    """Schema for creating a new Customer."""
+    """Schema cho việc tạo mới Khách hàng."""
     pass
 
 
 class CustomerUpdate(BaseModel):
-    """Schema for updating a Customer - all fields optional."""
+    """Schema cho việc cập nhật Khách hàng - tất cả các trường là tuy chọn."""
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     code: Optional[str] = Field(None, max_length=50)
     tax_code: Optional[str] = Field(None, max_length=50)
@@ -35,7 +35,7 @@ class CustomerUpdate(BaseModel):
 
 
 class CustomerResponse(CustomerBase):
-    """Schema for Customer response - includes DB fields."""
+    """Schema cho phản hồi Khách hàng - bao gồm các trường CSDL."""
     id: int
     org_id: int
     created_at: datetime
@@ -45,7 +45,7 @@ class CustomerResponse(CustomerBase):
 
 
 class PaginatedCustomersResponse(BaseModel):
-    """Paginated response for customers list."""
+    """Phản hồi có phân trang cho danh sách khách hàng."""
     total: int
     skip: int
     limit: int

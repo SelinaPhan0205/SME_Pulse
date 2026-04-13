@@ -1,13 +1,18 @@
 {{ config(
-    materialized = 'table',
+    materialized = 'incremental',
+    unique_key = 'match_key',
+    incremental_strategy = 'merge',
     tags = ['gold', 'link', 'reconciliation', 'cross_channel']
 ) }}
 
 -- =====================================================================
 -- 🔗 LINK_ORDER_PAYMENT: Wholesale Orders ↔ Retail Payments
 -- Purpose: Cross-channel reconciliation (orders from wholesale vs retail payments)
--- Grain: 1 row = 1 potential order-payment match
--- Note: This is INDIRECT linking - no direct FK, use fuzzy matching
+-- Grain: 1 row = 1 order-payment match (bijective: 1 order ↔ 1 payment)
+-- Fixes applied:
+--   [P0] Removed 1% sampling (MOD hack)
+--   [P1] Enforced bijective matching to prevent double-counting
+--   [P1] Added incremental strategy for performance at scale
 -- =====================================================================
 
 WITH wholesale_orders AS (
@@ -22,8 +27,10 @@ WITH wholesale_orders AS (
     revenue AS order_revenue_vnd,
     gross_profit
   FROM {{ ref('fact_orders') }}
-  WHERE channel_key != 'Online'  -- Exclude online (those go to payments directly)
-    AND MOD(date_key, 100) = 0  -- SAMPLE 1% for testing
+  WHERE channel_key != 'Online'
+    {% if is_incremental() %}
+    AND order_date >= (SELECT COALESCE(MAX(order_date), DATE '2020-01-01') FROM {{ this }}) - INTERVAL '7' DAY
+    {% endif %}
 ),
 
 retail_payments AS (
@@ -38,7 +45,9 @@ retail_payments AS (
     is_successful_payment
   FROM {{ ref('fact_payments') }}
   WHERE is_successful_payment = TRUE
-    AND MOD(date_key, 100) = 0  -- SAMPLE 1% for testing
+    {% if is_incremental() %}
+    AND payment_date >= (SELECT COALESCE(MAX(payment_date), DATE '2020-01-01') FROM {{ this }}) - INTERVAL '7' DAY
+    {% endif %}
 ),
 
 -- Match on: customer + product + date proximity + amount similarity
@@ -112,7 +121,9 @@ scored_matches AS (
   FROM potential_matches
 )
 
-SELECT 
+-- FIX: Enforce bijective matching — only keep pairs where BOTH sides are best match
+SELECT
+  CAST(CAST(order_id AS VARCHAR) || '_' || CAST(payment_id AS VARCHAR) AS VARCHAR) AS match_key,
   order_id,
   order_date,
   customer_key,
@@ -129,10 +140,11 @@ SELECT
   date_match_score,
   total_match_score,
   match_confidence,
-  CASE WHEN match_rank_per_order = 1 THEN TRUE ELSE FALSE END AS is_best_match_for_order,
-  CASE WHEN match_rank_per_payment = 1 THEN TRUE ELSE FALSE END AS is_best_match_for_payment,
+  TRUE AS is_best_match_for_order,
+  TRUE AS is_best_match_for_payment,
   created_at
 FROM scored_matches
-WHERE total_match_score >= 50  -- Minimum threshold: customer + product must match
+WHERE match_rank_per_order = 1 AND match_rank_per_payment = 1
+  AND total_match_score >= 50
 ORDER BY order_id, total_match_score DESC
 

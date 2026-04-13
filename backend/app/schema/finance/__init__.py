@@ -1,4 +1,4 @@
-"""Finance schemas - re-export for easy imports."""
+"""Schema tài chính - tái xuất cho nhập khẩu dễ dàng."""
 
 from app.schema.finance.invoice import (
     InvoiceBase,

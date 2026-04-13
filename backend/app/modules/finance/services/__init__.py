@@ -1,4 +1,4 @@
-"""Finance services package."""
+"""Gói dịch vụ tài chính."""
 
 from app.modules.finance.services import invoice_service, payment_service
 

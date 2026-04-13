@@ -1,4 +1,4 @@
-"""AP Bill (Accounts Payable) Schemas - Pydantic models for Bills CRUD."""
+"""Schema Hợp đồng AP (Các khoản Phải trả) - Các mô hình Pydantic cho CRUD Hợp đồng."""
 
 from typing import Optional
 from pydantic import BaseModel, Field
@@ -7,7 +7,7 @@ from decimal import Decimal
 
 
 class BillCreate(BaseModel):
-    """Schema for creating new AP bill."""
+    """Schema cho việc tạo hợp đồng AP mới."""
     bill_no: str = Field(..., min_length=1, max_length=50, description="Bill number (unique within org)")
     supplier_id: int = Field(..., gt=0, description="Supplier ID")
     issue_date: date = Field(..., description="Bill issue date")
@@ -29,7 +29,7 @@ class BillCreate(BaseModel):
 
 
 class BillUpdate(BaseModel):
-    """Schema for updating bill (all fields optional, only for DRAFT bills)."""
+    """Schema cho việc cập nhật hợp đồng (tất cả các trường là tuy chọn, chỉ cho hợp đồng NHÁP)."""
     supplier_id: Optional[int] = Field(None, gt=0)
     issue_date: Optional[date] = None
     due_date: Optional[date] = None
@@ -38,7 +38,7 @@ class BillUpdate(BaseModel):
 
 
 class BillResponse(BaseModel):
-    """Schema for bill response."""
+    """Schema cho phản hồi hợp đồng."""
     id: int
     bill_no: str
     supplier_id: int
@@ -57,7 +57,7 @@ class BillResponse(BaseModel):
 
 
 class PaginatedBillsResponse(BaseModel):
-    """Paginated response for bill list."""
+    """Phản hồi có phân trang cho danh sách hợp đồng."""
     items: list[BillResponse]
     total: int
     skip: int
@@ -67,7 +67,7 @@ class PaginatedBillsResponse(BaseModel):
 # ==================== BULK IMPORT SCHEMAS ====================
 
 class BillBulkImportItem(BaseModel):
-    """Schema for single bill in bulk import."""
+    """Schema cho một hợp đồng trong nhập khẩu hàng loạt."""
     bill_no: str = Field(..., min_length=1, max_length=50, description="Bill number")
     supplier_id: int = Field(..., gt=0, description="Supplier ID")
     issue_date: date = Field(..., description="Bill issue date")
@@ -77,13 +77,13 @@ class BillBulkImportItem(BaseModel):
 
 
 class BillBulkImportRequest(BaseModel):
-    """Schema for bulk bill import request."""
+    """Schema cho yêu cầu nhập khẩu hàng loạt hợp đồng."""
     bills: list[BillBulkImportItem] = Field(..., min_length=1, max_length=100, description="List of bills to import")
     auto_post: bool = Field(False, description="Automatically post bills after creation")
 
 
 class BillBulkImportResultItem(BaseModel):
-    """Result for single bill in bulk import."""
+    """Kết quả cho một hợp đồng trong nhập khẩu hàng loạt."""
     bill_no: str
     success: bool
     id: Optional[int] = None
@@ -91,7 +91,7 @@ class BillBulkImportResultItem(BaseModel):
 
 
 class BillBulkImportResponse(BaseModel):
-    """Response for bulk bill import."""
+    """Phản hồi cho nhập khẩu hàng loạt hợp đồng."""
     total_submitted: int
     total_success: int
     total_failed: int

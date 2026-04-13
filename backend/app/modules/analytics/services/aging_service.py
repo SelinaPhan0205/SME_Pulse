@@ -1,4 +1,4 @@
-"""Aging Service - AR/AP aging bucket calculations."""
+"""Service Lão hóa - Tính toán các khoảng lão hóa AR/AP."""
 
 import logging
 from decimal import Decimal
@@ -13,13 +13,13 @@ logger = logging.getLogger(__name__)
 
 async def get_ar_aging_buckets(db: AsyncSession, org_id: int) -> tuple[Decimal, int, list[AgingBucketDetail]]:
     """
-    Calculate AR aging buckets: 0-30, 31-60, 61-90, >90 days.
-    Returns: (total_ar, total_invoices, buckets_list)
+    Tính toán các khoảng lão hóa AR: 0-30, 31-60, 61-90, >90 ngày.
+    Trả lại: (tổng_ar, tổng_hóa_đơn, danh_sách_khoảng)
     """
     try:
         today = datetime.utcnow().date()
         
-        # Get total AR
+        # Lấy tổng AR
         total_query = select(func.sum(ARInvoice.total_amount - ARInvoice.paid_amount)).where(
             ARInvoice.org_id == org_id,
             ARInvoice.status.in_(["posted", "partial", "overdue"])
@@ -27,7 +27,7 @@ async def get_ar_aging_buckets(db: AsyncSession, org_id: int) -> tuple[Decimal, 
         total_result = await db.execute(total_query)
         total_ar = total_result.scalar() or Decimal(0)
         
-        # Get invoice count
+        # Lấy số lượng hóa đơn
         count_query = select(func.count(ARInvoice.id)).where(
             ARInvoice.org_id == org_id,
             ARInvoice.status.in_(["posted", "partial", "overdue"])
@@ -69,7 +69,7 @@ async def _get_ar_bucket(
     today,
     total_ar: Decimal
 ) -> AgingBucketDetail:
-    """Get single AR aging bucket."""
+    """Lấy một khoảng lão hóa AR."""
     min_date = today - timedelta(days=max_days)
     max_date = today - timedelta(days=min_days)
     
@@ -101,13 +101,13 @@ async def _get_ar_bucket(
 
 async def get_ap_aging_buckets(db: AsyncSession, org_id: int) -> tuple[Decimal, int, list[AgingBucketDetail]]:
     """
-    Calculate AP aging buckets: 0-30, 31-60, 61-90, >90 days.
-    Returns: (total_ap, total_bills, buckets_list)
+    Tính toán các khoảng lão hóa AP: 0-30, 31-60, 61-90, >90 ngày.
+    Trả lại: (tổng_ap, tổng_hợp_đồng, danh_sách_khoảng)
     """
     try:
         today = datetime.utcnow().date()
         
-        # Get total AP
+        # Lấy tổng AP
         total_query = select(func.sum(APBill.total_amount - APBill.paid_amount)).where(
             APBill.org_id == org_id,
             APBill.status.in_(["unpaid", "partial"])
@@ -115,7 +115,7 @@ async def get_ap_aging_buckets(db: AsyncSession, org_id: int) -> tuple[Decimal, 
         total_result = await db.execute(total_query)
         total_ap = total_result.scalar() or Decimal(0)
         
-        # Get bill count
+        # Lấy số lượng hợp đồng
         count_query = select(func.count(APBill.id)).where(
             APBill.org_id == org_id,
             APBill.status.in_(["unpaid", "partial"])
@@ -157,7 +157,7 @@ async def _get_ap_bucket(
     today,
     total_ap: Decimal
 ) -> AgingBucketDetail:
-    """Get single AP aging bucket."""
+    """Lấy một khoảng lão hóa AP."""
     min_date = today - timedelta(days=max_days)
     max_date = today - timedelta(days=min_days)
     

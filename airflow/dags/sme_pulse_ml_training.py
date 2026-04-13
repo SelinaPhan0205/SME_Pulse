@@ -11,10 +11,14 @@ Tasks:
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from airflow.sensors.external_task import ExternalTaskSensor
 from airflow.utils.task_group import TaskGroup
+from airflow.utils.state import DagRunState
 import logging
+import os
 
 logger = logging.getLogger(__name__)
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "file:///opt/airflow/mlflow")
 
 # Default DAG arguments
 default_args = {
@@ -44,7 +48,7 @@ def train_cashflow_model_uc09(**context):
     
     # Set MLflow tracking URI
     env = os.environ.copy()
-    env['MLFLOW_TRACKING_URI'] = 'file:///tmp/airflow_mlflow'
+    env['MLFLOW_TRACKING_URI'] = MLFLOW_TRACKING_URI
     
     result = subprocess.run(
         ['python', '/opt/ops/ml/UC09-forecasting/train_cashflow_model.py'],
@@ -77,7 +81,7 @@ def train_anomaly_model_uc10(**context):
     
     # Set MLflow tracking URI
     env = os.environ.copy()
-    env['MLFLOW_TRACKING_URI'] = 'file:///tmp/airflow_mlflow'
+    env['MLFLOW_TRACKING_URI'] = MLFLOW_TRACKING_URI
     
     result = subprocess.run(
         ['python', '/opt/ops/ml/UC10-anomoly_detection/ops-ML-anomaly_detection/train_isolation_forest.py'],
@@ -135,7 +139,7 @@ with DAG(
         python_callable=train_cashflow_model_uc09,
         execution_timeout=timedelta(minutes=30)
     )
-    
+
     # Task 2: Train UC10 Isolation Forest Model
     train_uc10_task = PythonOperator(
         task_id='train_uc10',
@@ -154,5 +158,18 @@ with DAG(
     # TASK DEPENDENCIES
     # ============================================================================
     
-    # Train both models in parallel, then validate
-    [train_uc09_task, train_uc10_task] >> validate_task
+    # FIX [P2]: Add freshness guard — wait for daily ETL to complete before training
+    wait_for_etl = ExternalTaskSensor(
+        task_id='wait_for_daily_etl',
+        external_dag_id='sme_pulse_daily_etl',
+        external_task_id=None,  # Wait for entire DAG to complete
+        allowed_states=[DagRunState.SUCCESS],
+        failed_states=[DagRunState.FAILED],
+        mode='reschedule',  # Free up worker slot while waiting
+        timeout=3600,  # 1 hour max wait
+        poke_interval=120,  # Check every 2 minutes
+        execution_delta=timedelta(hours=1),  # ETL runs 1h before training
+    )
+    
+    # ETL must complete → then train both models in parallel → then validate
+    wait_for_etl >> [train_uc09_task, train_uc10_task] >> validate_task

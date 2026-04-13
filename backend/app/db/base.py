@@ -1,4 +1,4 @@
-﻿"""SQLAlchemy Base Models and Reusable Mixins"""
+﻿"""SQLAlchemy - Các lớp cơ sở và Mixin tái sử dụng"""
 from datetime import datetime, timezone
 from typing import Any
 from sqlalchemy import BigInteger, DateTime
@@ -6,11 +6,11 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
-    """Base class for all SQLAlchemy models"""
+    """Lớp cơ sở cho tất cả các SQLAlchemy models"""
     __abstract__ = True
     
     def dict(self) -> dict[str, Any]:
-        """Convert model instance to dictionary"""
+        """Chuyển đổi instance model thành dictionary"""
         return {
             column.name: getattr(self, column.name)
             for column in self.__table__.columns
@@ -18,7 +18,7 @@ class Base(DeclarativeBase):
 
 
 class TimestampMixin:
-    """Mixin for automatic timestamp tracking"""
+    """Mixin để tự động theo dõi thời gian tạo/cập nhật"""
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
@@ -33,7 +33,7 @@ class TimestampMixin:
 
 
 class TenantMixin:
-    """Mixin for multi-tenancy support"""
+    """Mixin để hỗ trợ đa thuê (multi-tenancy)"""
     org_id: Mapped[int] = mapped_column(
         BigInteger,
         nullable=False,

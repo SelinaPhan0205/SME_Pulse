@@ -1,4 +1,4 @@
-"""Models Package - Register all domain models for Alembic"""
+"""Gói Models - Đăng ký tất cả các mô hình miền cho Alembic"""
 
 # Import Base to expose metadata
 from app.db.base import Base

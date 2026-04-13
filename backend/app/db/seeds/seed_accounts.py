@@ -1,11 +1,11 @@
-"""Seed script for accounts."""
+"""Kịch bản seed cho các tài khoản."""
 
 from sqlalchemy import select
 from app.models.core import Account, Organization
 
 
 async def seed_accounts(session):
-    """Insert sample accounts (cash and bank) into the database."""
+    """Chèn các tài khoản mẫu (tiền mặt và ngân hàng) vào cơ sở dữ liệu."""
     org = (await session.execute(select(Organization))).scalar_one()
 
     accounts = [

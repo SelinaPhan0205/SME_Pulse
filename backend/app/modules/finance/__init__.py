@@ -1,4 +1,4 @@
-"""Finance module - AR/AP invoices, payments, accounts, and bills."""
+"""Mô-đun Tài chính - Hóa đơn AR/AP, thanh toán, tài khoản và hóa đơn."""
 
 from app.modules.finance.router import router as finance_router
 from app.modules.finance.accounts.router import router as accounts_router

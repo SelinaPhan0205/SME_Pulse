@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 
 def run_dbt_command(
     command: str,
-    dbt_dir: str = "/opt/airflow/dbt",
-    profiles_dir: str = "/opt/airflow/dbt"
+    dbt_dir: str = "/opt/dbt",
+    profiles_dir: str = "/opt/dbt"
 ) -> Dict[str, Any]:
     """
     Chạy dbt command và parse kết quả
@@ -29,7 +29,11 @@ def run_dbt_command(
     """
     try:
         # Build full command
-        full_command = f"cd {dbt_dir} && {command} --profiles-dir {profiles_dir}"
+        full_command = f"cd {dbt_dir} && {command}"
+        if "--profiles-dir" not in command:
+            full_command += f" --profiles-dir {profiles_dir}"
+        if "--project-dir" not in command:
+            full_command += f" --project-dir {dbt_dir}"
         
         logger.info(f"Running: {full_command}")
         
@@ -112,7 +116,7 @@ def parse_dbt_output(stdout: str, stderr: str) -> Dict[str, Any]:
     return results
 
 
-def check_run_results(dbt_dir: str = "/opt/airflow/dbt") -> Dict[str, Any]:
+def check_run_results(dbt_dir: str = "/opt/dbt") -> Dict[str, Any]:
     """
     Đọc run_results.json từ dbt để lấy chi tiết execution
     
@@ -156,7 +160,7 @@ def check_run_results(dbt_dir: str = "/opt/airflow/dbt") -> Dict[str, Any]:
         }
 
 
-def check_seed_changes(dbt_dir: str = "/opt/airflow/dbt") -> bool:
+def check_seed_changes(dbt_dir: str = "/opt/dbt") -> bool:
     """
     Kiểm tra xem seed files có thay đổi không
     So sánh checksums hoặc timestamps
@@ -220,14 +224,17 @@ def validate_dbt_models(
     }
     
     # Get thresholds từ config
-    warning_threshold = config.get('data_quality', {}).get('row_count_variance_warning', 0.05)
-    critical_threshold = config.get('data_quality', {}).get('row_count_variance_critical', 0.10)
+    row_count_variance = config.get('data_quality', {}).get('row_count_variance', {})
+    warning_threshold = row_count_variance.get('warning', 0.05)
+    critical_threshold = row_count_variance.get('critical', 0.10)
     
+    trino_config = config.get('trino', {})
+
     for model_name, expected_count in expected_counts.items():
         try:
             # Query actual count
             query = f"SELECT COUNT(*) as cnt FROM {layer}.{model_name}"
-            result = execute_trino_query(config, query)
+            result = execute_trino_query(trino_config, query)
             
             if result['status'] == 'success' and result['rows']:
                 actual_count = result['rows'][0]['cnt']
