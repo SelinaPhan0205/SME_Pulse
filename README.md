@@ -140,8 +140,7 @@
 sme-pulse/
 ├── 📄 README.md                    # This file
 ├── 🐳 docker-compose.yml           # 11 default services orchestration (+ optional dbt profile)
-├── 🔒 .env                         # Environment variables (SECRET_KEY, DB passwords)
-├── 📚 docs/                        # Documentation
+├──  docs/                        # Documentation
 │   ├── architecture/               # System design docs
 │   │   ├── CURRENT_SYSTEM_STATUS.md       # Complete system status report
 │   │   ├── API_AUDIT_REPORT.md            # API endpoint documentation
@@ -256,17 +255,9 @@ cd sme-pulse
 # Copy environment template
 cp .env.example .env
 
-# Edit .env with your settings (required)
-nano .env  # or use any text editor
+# Edit .env with your settings (use any text editor)
+# Note: .env is protected by .gitignore
 ```
-
-**Key configurations to update in `.env`:**
-- `POSTGRES_PASSWORD` - Secure password for PostgreSQL
-- `BACKEND_DB_PASSWORD` - OLTP database password
-- `MINIO_ROOT_PASSWORD` - MinIO admin password
-- `BACKEND_SECRET_KEY` - JWT secret (generate: `openssl rand -hex 32`)
-- `AIRFLOW__WEBSERVER__SECRET_KEY` - Airflow secret key
-- `AIRFLOW__CORE__FERNET_KEY` - Airflow encryption key
 
 ### 3️⃣ Install Python Dependencies (Optional - for local dev)
 
@@ -523,9 +514,16 @@ We welcome contributions! Please follow these steps:
 
 ---
 
-## 📜 License
+## 📜 License & Attribution
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is an academic initiative by the **University of Information Technology - Vietnam National University Ho Chi Minh City (UIT VNUHCM)**, developed as part of the Software Engineering curriculum. All rights reserved by UIT VNUHCM.
+
+**Citation**: If you use this project in academic or professional work, please cite:
+```
+SME Pulse: Financial Analytics Platform
+University of Information Technology - VNUHCM
+https://github.com/SelinaPhan0205/SME_Pulse
+```
 
 ---
 

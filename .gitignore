@@ -2,8 +2,43 @@
 # .gitignore for SME Pulse Project
 # ===================================================
 
-# Environment variables (chứa secrets)
+# ⚠️ SENSITIVE: Environment & Secrets
 .env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+.env.development
+.env.test
+.env.*.bak
+*.key
+*.pem
+*.p12
+*.jks
+*.keystore
+backend/app/core/.secrets/
+backend/secrets/
+ops/ml/models/local/
+ops/ml/secrets/
+
+# Credentials & API Keys
+*_credentials.json
+*_secrets.json
+credentials.json
+secrets.json
+.aws/
+.gcp/
+apikeys.json
+tokens.json
+
+# Logs & Runtime
+*.log
+*.logs
+airflow/logs/
+airflow/*.log
+dbt/logs/
+backend/logs/
+*.db
 
 # Python
 __pycache__/
@@ -14,15 +49,27 @@ __pycache__/
 env/
 venv/
 ENV/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
 *.egg-info/
 dist/
 build/
+.eggs/
+.pytest_cache/
+.coverage
+.mypy_cache/
+.dmypy.json
+dmypy.json
+site-packages/
 
 # dbt
 dbt/target/
 dbt/dbt_packages/
 dbt/logs/
 dbt/.user.yml
+dbt/profiles.yml
+dbt/dbt_project.yml.bak
 
 # Airflow
 airflow/logs/
@@ -30,26 +77,76 @@ airflow/airflow.db
 airflow/airflow.cfg
 airflow/webserver_config.py
 airflow/*.pid
+airflow/dags/__pycache__/
+airflow/plugins/__pycache__/
 
-# IDE
+# IDE & Editor
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 .DS_Store
+.project
+.pydevproject
+*.sublime-project
+*.sublime-workspace
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
 
-# Docker
+# Docker & Container
 *.log
+.docker/
+docker-compose.override.yml
+
+# Node & Frontend
+node_modules/
+npm-debug.log
+yarn-error.log
+.next/
+out/
+build/
+dist/
+frontend/build/
+frontend/dist/
 
 # Metabase
 metabase.db/
 metabase.db.mv.db
 metabase.db.trace.db
+metabase-data/
 
-# Exclude large JAR files (download during build)
+# Build Artifacts
+*.jar
+*.war
+*.zip
+*.tar.gz
 hive-metastore/*.jar
 trino/*.jar
 
-#data
-/data
+# Data & Temp
+/data/
+/data_local/
+/temp/
+test/temp/
+*.parquet.tmp
+*.csv.tmp
+.tmp/
+
+# Cache & Backup
+.cache/
+*.bak
+*.backup
+*~.bak
+.DS_Store
+Thumbs.db
+
+# System
+.Spotlight-V100/
+.Trashes/
+ehthumbs.db
+.env.bak
+.env.*.bak
