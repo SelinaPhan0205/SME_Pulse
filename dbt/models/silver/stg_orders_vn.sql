@@ -5,7 +5,7 @@
 
 WITH src AS (
   SELECT *
-  FROM minio.default.sales_snapshot_raw
+  FROM {{ source('bronze', 'sales_snapshot_raw') }}
 ),
 
 clean AS (

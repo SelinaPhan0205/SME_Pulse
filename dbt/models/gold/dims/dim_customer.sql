@@ -1,12 +1,16 @@
 {{ config(
     materialized = 'table',
-    tags = ['gold', 'dimension', 'scd2']
+    tags = ['gold', 'dimension', 'scd1']
 ) }}
 
 -- =====================================================================
--- 👤 DIM_CUSTOMER: Customer dimension (SCD Type 2)
--- Purpose: Customer master data from orders + payments
--- Grain: 1 row = 1 customer (current + historical versions)
+-- 👤 DIM_CUSTOMER: Customer dimension (SCD Type 1 — upsert on rebuild)
+-- Purpose: Customer master data consolidated from orders + payments
+-- Grain: 1 row = 1 unique customer_id (current state only)
+--
+-- NOTE: SCD Type 2 history tracking requires a dedicated customer master
+-- table with an updated_at field (e.g. from the app DB). When that source
+-- becomes available, migrate to a dbt snapshot on top of it and join here.
 -- =====================================================================
 
 WITH customer_from_orders AS (
@@ -58,12 +62,7 @@ customer_enriched AS (
     
     -- Derived: Customer segment (based on activity - to be enriched later)
     'STANDARD' AS customer_segment,  -- Placeholder: 'VIP', 'STANDARD', 'NEW', 'INACTIVE'
-    
-    -- SCD Type 2 attributes
-    DATE '2022-01-01' AS valid_from,
-    DATE '9999-12-31' AS valid_to,
-    TRUE AS is_current,
-    
+
     -- Audit
     CURRENT_TIMESTAMP AS created_at,
     CURRENT_TIMESTAMP AS updated_at

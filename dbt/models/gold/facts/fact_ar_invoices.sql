@@ -130,11 +130,6 @@ WITH ar_invoices_enriched AS (
     CURRENT_DATE AS fact_date
     
   FROM {{ ref('stg_ar_invoices_vn') }} i
-  
-  {% if is_incremental() %}
-    -- Only load new/updated invoices
-    WHERE i.ingested_at > (SELECT MAX(fact_created_at) FROM {{ this }})
-  {% endif %}
 )
 
 SELECT * FROM ar_invoices_enriched
